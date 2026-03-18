@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useTemplates, useCreateAgent, useSkillDefs, useAddKnowledge } from '@/hooks/use-agents';
+import { useTemplates, useCreateAgent, useSkillDefs, useAddKnowledge, useToggleSkill } from '@/hooks/use-agents';
 import { useRouter } from '@/lib/store';
 import { ScreenHeader, Button, Input, Textarea, Card, Switch } from '@/components/ui';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -27,6 +27,7 @@ export function CreateAgentView() {
   const { data: skillDefs, isLoading: skillsLoading } = useSkillDefs();
   const create = useCreateAgent();
   const addKnowledge = useAddKnowledge();
+  const toggleSkillMutation = useToggleSkill();
   const pop = useRouter(s => s.pop);
   const push = useRouter(s => s.push);
 
@@ -71,6 +72,11 @@ export function CreateAgentView() {
       humorStyle: formData.humorStyle,
       personaTemplate: formData.personaTemplate,
     });
+
+    // Enable each selected skill sequentially
+    for (const skillId of selectedSkills) {
+      await toggleSkillMutation.mutateAsync({ agentId: newAgent.id, skillId, enable: true }).catch(() => {});
+    }
 
     // Upload knowledge entries sequentially
     for (const entry of knowledgeEntries) {
@@ -352,9 +358,9 @@ export function CreateAgentView() {
                 <Button
                   className="flex-1"
                   onClick={handleCreate}
-                  disabled={create.isPending || addKnowledge.isPending}
+                  disabled={create.isPending || addKnowledge.isPending || toggleSkillMutation.isPending}
                 >
-                  {(create.isPending || addKnowledge.isPending) ? 'Creating...' : 'Create Agent 🚀'}
+                  {(create.isPending || addKnowledge.isPending || toggleSkillMutation.isPending) ? 'Creating...' : 'Create Agent 🚀'}
                 </Button>
               </div>
             </motion.div>

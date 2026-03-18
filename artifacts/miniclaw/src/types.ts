@@ -15,14 +15,16 @@ export interface Agent {
   description: string;
   status: 'active' | 'inactive' | 'error' | string;
   humorStyle: HumorStyle;
-  interests?: string;
-  topicsToWatch?: string;
-  premiumModel?: boolean;
-  model?: string;
+  interests?: string[];
+  topicsToWatch?: string[];
+  model?: ModelTier;
   socialHandles?: SocialHandles;
 }
 
 export type HumorStyle = 'none' | 'dry' | 'warm' | 'playful' | 'sarcastic';
+
+// Model tiers as documented by SelfClaw API
+export type ModelTier = 'none' | 'grok-4' | 'gpt-5.4' | string;
 
 export interface SocialHandles {
   twitter?: string;
@@ -48,8 +50,8 @@ export interface CreateAgentPayload {
   name: string;
   emoji: string;
   description: string;
-  interests?: string;
-  topicsToWatch?: string;
+  interests?: string[];
+  topicsToWatch?: string[];
   personaTemplate: string;
   humorStyle: HumorStyle;
 }
@@ -58,13 +60,13 @@ export interface UpdateAgentSettingsPayload {
   name?: string;
   emoji?: string;
   description?: string;
-  interests?: string;
-  topicsToWatch?: string;
+  interests?: string[];
+  topicsToWatch?: string[];
   socialHandles?: SocialHandles;
   enabledSkills?: string[];
   personalContext?: string;
   humorStyle?: HumorStyle;
-  premiumModel?: boolean;
+  model?: ModelTier;
 }
 
 export interface Knowledge {
@@ -76,14 +78,15 @@ export interface Knowledge {
 
 export interface Memory {
   id: string;
-  content?: string;
-  text?: string;
+  /** The `fact` field is what the API uses (maps to content in UI) */
+  fact?: string;
   pinned?: boolean;
   createdAt?: string;
 }
 
 export interface SoulDocument {
-  document: string;
+  /** The `soul` field is what the API uses for get/set */
+  soul: string;
 }
 
 export interface Conversation {
@@ -115,8 +118,9 @@ export interface TelegramStatus {
   botName?: string;
 }
 
-export interface TelegramSettings {
+export type TelegramNotificationLevel = 'all' | 'mentions' | 'none';
+
+export interface TelegramSettingsPayload {
+  notificationLevel: TelegramNotificationLevel;
   greeting?: string;
-  notifyOnMention?: boolean;
-  broadcastEnabled?: boolean;
 }

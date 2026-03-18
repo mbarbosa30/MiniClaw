@@ -4,7 +4,7 @@ import { useRouter } from '@/lib/store';
 import { ScreenHeader, Button, Input, Textarea, Card, Switch } from '@/components/ui';
 import { Settings, MessageSquare, Menu, Send, Trash2, Plus } from 'lucide-react';
 import { BASE_URL } from '@/lib/api-client';
-import type { Agent, HumorStyle, ChatMessage, Conversation } from '@/types';
+import type { Agent, HumorStyle, ModelTier, ChatMessage, Conversation } from '@/types';
 
 export function AgentDetailView() {
   const currentView = useRouter(s => s.currentView);
@@ -74,8 +74,6 @@ function ChatTab({ agent }: { agent: Agent }) {
   const { data: conversations } = useConversations(agent.id);
   const [activeConversationId, setActiveConversationId] = useState<string | undefined>();
   const [showConversations, setShowConversations] = useState(false);
-
-  // Load history when conversation selected
   const { data: history } = useMessages(agent.id, activeConversationId);
 
   const [messages, setMessages] = useState<ChatMessage[]>([
@@ -85,7 +83,7 @@ function ChatTab({ agent }: { agent: Agent }) {
   const [isStreaming, setIsStreaming] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
 
-  // When history loads for a conversation, replace messages
+  // Load message history when switching to a past conversation
   useEffect(() => {
     if (history && history.length > 0) {
       setMessages(history);
@@ -131,12 +129,6 @@ function ChatTab({ agent }: { agent: Agent }) {
 
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
-      // Extract conversation ID from response headers if available
-      const newConvId = res.headers.get('x-conversation-id');
-      if (newConvId && !activeConversationId) {
-        setActiveConversationId(newConvId);
-      }
-
       const reader = res.body?.getReader();
       const decoder = new TextDecoder();
       if (!reader) throw new Error('No stream');
@@ -153,12 +145,23 @@ function ChatTab({ agent }: { agent: Agent }) {
           const data = line.slice(6).trim();
           if (data === '[DONE]') continue;
           let chunk = '';
+          let eventConvId: string | undefined;
           try {
-            const parsed: { choices?: Array<{ delta?: { content?: string } }>; content?: string; text?: string } = JSON.parse(data);
+            const parsed: {
+              choices?: Array<{ delta?: { content?: string } }>;
+              content?: string;
+              text?: string;
+              conversationId?: string;
+            } = JSON.parse(data);
+            // Capture conversationId from final SSE event if present
+            if (parsed.conversationId && !activeConversationId) {
+              eventConvId = parsed.conversationId;
+            }
             chunk = parsed?.choices?.[0]?.delta?.content ?? parsed?.content ?? parsed?.text ?? '';
           } catch {
             chunk = data;
           }
+          if (eventConvId) setActiveConversationId(eventConvId);
           if (chunk) {
             setMessages(prev => {
               const msgs = [...prev];
@@ -180,7 +183,7 @@ function ChatTab({ agent }: { agent: Agent }) {
   };
 
   return (
-    <div className="h-full flex flex-col bg-muted/20">
+    <div className="h-full flex flex-col bg-muted/20 relative">
       {/* Conversation selector bar */}
       <div className="flex items-center gap-2 px-3 py-2 bg-background border-b border-black/5">
         <button
@@ -200,12 +203,12 @@ function ChatTab({ agent }: { agent: Agent }) {
 
       {/* Conversation list dropdown */}
       {showConversations && conversations && conversations.length > 0 && (
-        <div className="absolute top-[120px] left-3 right-3 z-50 bg-white rounded-2xl shadow-xl border border-black/5 overflow-hidden">
+        <div className="absolute top-[56px] left-3 right-3 z-50 bg-white rounded-2xl shadow-xl border border-black/5 overflow-hidden">
           <div className="p-2 max-h-48 overflow-y-auto no-scrollbar">
             {conversations.map((conv) => (
               <button
                 key={conv.id}
-                className="w-full text-left px-3 py-2.5 rounded-xl hover:bg-muted/50 transition-colors text-sm"
+                className={`w-full text-left px-3 py-2.5 rounded-xl hover:bg-muted/50 transition-colors text-sm ${activeConversationId === conv.id ? 'bg-primary/5 text-primary font-medium' : ''}`}
                 onClick={() => selectConversation(conv)}
               >
                 <p className="font-medium truncate">{conv.title || `Conversation ${conv.id.slice(-6)}`}</p>
@@ -284,16 +287,21 @@ function SettingsTab({ agent, onDeleted }: { agent: Agent; onDeleted: () => void
     name: agent.name ?? '',
     emoji: agent.emoji ?? '🤖',
     description: agent.description ?? '',
-    interests: agent.interests ?? '',
-    topicsToWatch: agent.topicsToWatch ?? '',
+    // interests and topicsToWatch are string[] arrays — display as comma-separated
+    interests: (agent.interests ?? []).join(', '),
+    topicsToWatch: (agent.topicsToWatch ?? []).join(', '),
     humorStyle: agent.humorStyle as HumorStyle,
-    premiumModel: agent.premiumModel ?? false,
+    model: (agent.model ?? 'none') as ModelTier,
     socialHandles: {
       twitter: agent.socialHandles?.twitter ?? '',
       telegram: agent.socialHandles?.telegram ?? '',
       farcaster: agent.socialHandles?.farcaster ?? '',
     },
   });
+
+  // Parse comma-separated string to array, removing empty entries
+  const toArray = (s: string): string[] =>
+    s.split(',').map(x => x.trim()).filter(Boolean);
 
   const handleSave = () => {
     update.mutate({
@@ -302,10 +310,10 @@ function SettingsTab({ agent, onDeleted }: { agent: Agent; onDeleted: () => void
         name: form.name,
         emoji: form.emoji,
         description: form.description,
-        interests: form.interests,
-        topicsToWatch: form.topicsToWatch,
+        interests: toArray(form.interests),
+        topicsToWatch: toArray(form.topicsToWatch),
         humorStyle: form.humorStyle,
-        premiumModel: form.premiumModel,
+        model: form.model,
         socialHandles: {
           twitter: form.socialHandles.twitter || undefined,
           telegram: form.socialHandles.telegram || undefined,
@@ -347,12 +355,24 @@ function SettingsTab({ agent, onDeleted }: { agent: Agent; onDeleted: () => void
 
       <div>
         <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Interests</label>
-        <Input value={form.interests} onChange={e => setForm(p => ({ ...p, interests: e.target.value }))} className="mt-1" placeholder="e.g. DeFi, NFTs, AI" />
+        <Input
+          value={form.interests}
+          onChange={e => setForm(p => ({ ...p, interests: e.target.value }))}
+          className="mt-1"
+          placeholder="DeFi, NFTs, AI (comma-separated)"
+        />
+        <p className="text-xs text-muted-foreground mt-1">Separate topics with commas</p>
       </div>
 
       <div>
         <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Topics to Watch</label>
-        <Input value={form.topicsToWatch} onChange={e => setForm(p => ({ ...p, topicsToWatch: e.target.value }))} className="mt-1" placeholder="e.g. Celo price, ETH news" />
+        <Input
+          value={form.topicsToWatch}
+          onChange={e => setForm(p => ({ ...p, topicsToWatch: e.target.value }))}
+          className="mt-1"
+          placeholder="Celo price, ETH news (comma-separated)"
+        />
+        <p className="text-xs text-muted-foreground mt-1">Separate topics with commas</p>
       </div>
 
       <div>
@@ -366,6 +386,33 @@ function SettingsTab({ agent, onDeleted }: { agent: Agent; onDeleted: () => void
               onClick={() => setForm(p => ({ ...p, humorStyle: style }))}
             >
               {style}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Model tier */}
+      <div>
+        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 block">AI Model Tier</label>
+        <div className="space-y-2">
+          {([
+            { value: 'none', label: 'Standard', description: 'Default model included in your plan' },
+            { value: 'grok-4', label: 'Grok 4', description: 'Advanced reasoning and analysis' },
+            { value: 'gpt-5.4', label: 'GPT-5.4', description: 'Latest OpenAI model' },
+          ] as { value: ModelTier; label: string; description: string }[]).map(({ value, label, description }) => (
+            <button
+              key={value}
+              type="button"
+              className={`w-full text-left p-3.5 rounded-2xl border-2 transition-all ${form.model === value ? 'border-primary bg-primary/5' : 'border-black/5 bg-white'}`}
+              onClick={() => setForm(p => ({ ...p, model: value }))}
+            >
+              <div className="flex items-center justify-between">
+                <span className="font-semibold text-sm">{label}</span>
+                <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${form.model === value ? 'border-primary bg-primary' : 'border-black/20'}`}>
+                  {form.model === value && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground mt-0.5">{description}</p>
             </button>
           ))}
         </div>
@@ -398,18 +445,6 @@ function SettingsTab({ agent, onDeleted }: { agent: Agent; onDeleted: () => void
             placeholder="@username"
           />
         </div>
-      </div>
-
-      {/* Premium Model */}
-      <div className="flex items-center justify-between p-4 bg-white rounded-2xl border border-black/5 shadow-sm">
-        <div>
-          <p className="font-semibold text-sm">Premium Model</p>
-          <p className="text-xs text-muted-foreground mt-0.5">Use a more capable AI model (uses more credits)</p>
-        </div>
-        <Switch
-          checked={form.premiumModel}
-          onChange={(checked) => setForm(p => ({ ...p, premiumModel: checked }))}
-        />
       </div>
 
       {update.isError && (
@@ -475,5 +510,4 @@ function MoreTab({ agentId, onNavigate }: { agentId: string; onNavigate: (path: 
   );
 }
 
-// Re-export Card for use in subviews (avoid circular dep)
 export { Card };

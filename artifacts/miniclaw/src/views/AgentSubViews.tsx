@@ -7,12 +7,12 @@ import {
   useSoul, useUpdateSoul,
   useMemories, useUpdateMemory, useDeleteMemory,
   useTasks, useResolveTask,
-  useTelegramStatus,
+  useTelegramStatus, useUpdateTelegramSettings,
 } from '@/hooks/use-agents';
 import { apiFetch } from '@/lib/api-client';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Trash2, Link as LinkIcon, FileText, Pin, PinOff, Check, X, Send } from 'lucide-react';
-import type { Memory, TelegramSettings } from '@/types';
+import type { Memory, TelegramNotificationLevel } from '@/types';
 
 function SubScreenLayout({ title, children }: { title: string; children: React.ReactNode }) {
   const pop = useRouter(s => s.pop);
@@ -156,11 +156,11 @@ export function SoulView() {
   const agentId: string = useRouter(s => s.currentView.params?.id ?? '');
   const { data: soul, isLoading } = useSoul(agentId);
   const update = useUpdateSoul();
-  const [doc, setDoc] = useState('');
+  const [soulText, setSoulText] = useState('');
 
   useEffect(() => {
-    if (soul?.document) setDoc(soul.document);
-  }, [soul?.document]);
+    if (soul?.soul) setSoulText(soul.soul);
+  }, [soul?.soul]);
 
   return (
     <SubScreenLayout title="Soul Document">
@@ -173,13 +173,21 @@ export function SoulView() {
         <>
           <Textarea
             className="min-h-[320px] font-mono text-sm leading-relaxed"
-            value={doc}
-            onChange={e => setDoc(e.target.value)}
+            value={soulText}
+            onChange={e => setSoulText(e.target.value)}
             placeholder="System prompt and identity directives..."
           />
+          {update.isError && (
+            <p className="text-xs text-destructive px-1">
+              {update.error instanceof Error ? update.error.message : 'Failed to save.'}
+            </p>
+          )}
+          {update.isSuccess && (
+            <p className="text-xs text-green-700 px-1">Soul document saved.</p>
+          )}
           <Button
             className="w-full"
-            onClick={() => update.mutate({ agentId, document: doc })}
+            onClick={() => update.mutate({ agentId, soul: soulText })}
             disabled={update.isPending}
           >
             {update.isPending ? 'Saving...' : 'Save Soul Document'}
@@ -197,17 +205,17 @@ export function MemoriesView() {
   const updateMemory = useUpdateMemory();
   const deleteMemory = useDeleteMemory();
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editContent, setEditContent] = useState('');
+  const [editFact, setEditFact] = useState('');
 
   const handleEdit = (memory: Memory) => {
     setEditingId(memory.id);
-    setEditContent(memory.content ?? memory.text ?? '');
+    setEditFact(memory.fact ?? '');
   };
 
   const handleSaveEdit = (memoryId: string) => {
     updateMemory.mutate(
-      { agentId, id: memoryId, data: { content: editContent } },
-      { onSuccess: () => { setEditingId(null); setEditContent(''); } }
+      { agentId, id: memoryId, data: { fact: editFact } },
+      { onSuccess: () => { setEditingId(null); setEditFact(''); } }
     );
   };
 
@@ -228,8 +236,8 @@ export function MemoriesView() {
             {editingId === memory.id ? (
               <div className="space-y-2">
                 <Textarea
-                  value={editContent}
-                  onChange={e => setEditContent(e.target.value)}
+                  value={editFact}
+                  onChange={e => setEditFact(e.target.value)}
                   rows={3}
                   className="text-sm"
                   autoFocus
@@ -242,7 +250,7 @@ export function MemoriesView() {
             ) : (
               <>
                 <p className="text-sm leading-relaxed text-foreground/85 mb-3">
-                  {memory.content ?? memory.text ?? JSON.stringify(memory)}
+                  {memory.fact ?? JSON.stringify(memory)}
                 </p>
                 <div className="flex items-center gap-2">
                   <button
@@ -351,14 +359,12 @@ export function TasksView() {
 export function TelegramView() {
   const agentId: string = useRouter(s => s.currentView.params?.id ?? '');
   const { data: status, isLoading } = useTelegramStatus(agentId);
+  const updateSettings = useUpdateTelegramSettings();
   const qc = useQueryClient();
 
   const [botToken, setBotToken] = useState('');
-  const [settings, setSettings] = useState<TelegramSettings>({
-    greeting: '',
-    notifyOnMention: true,
-    broadcastEnabled: false,
-  });
+  const [notificationLevel, setNotificationLevel] = useState<TelegramNotificationLevel>('all');
+  const [greeting, setGreeting] = useState('');
 
   const connect = useMutation({
     mutationFn: () => apiFetch<void>(`/api/selfclaw/v1/hosted-agents/${agentId}/telegram/connect`, {
@@ -370,14 +376,6 @@ export function TelegramView() {
 
   const disconnect = useMutation({
     mutationFn: () => apiFetch<void>(`/api/selfclaw/v1/hosted-agents/${agentId}/telegram/disconnect`, { method: 'DELETE' }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['telegram-status', agentId] })
-  });
-
-  const updateSettings = useMutation({
-    mutationFn: () => apiFetch<void>(`/api/selfclaw/v1/hosted-agents/${agentId}/telegram/settings`, {
-      method: 'PATCH',
-      body: JSON.stringify(settings)
-    }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['telegram-status', agentId] })
   });
 
@@ -447,39 +445,45 @@ export function TelegramView() {
             <div className="space-y-3">
               <div className="bg-white rounded-2xl p-4 border border-black/5 shadow-sm space-y-4">
                 <h3 className="font-semibold text-sm">Bot Settings</h3>
+
+                <div>
+                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 block">Notification Level</label>
+                  <div className="flex gap-1.5">
+                    {(['all', 'mentions', 'none'] as TelegramNotificationLevel[]).map(level => (
+                      <button
+                        key={level}
+                        className={`flex-1 py-2 text-sm font-semibold rounded-xl capitalize transition-all ${notificationLevel === level ? 'bg-primary text-primary-foreground shadow-md' : 'bg-muted text-muted-foreground hover:bg-muted/80'}`}
+                        onClick={() => setNotificationLevel(level)}
+                      >
+                        {level}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 <div>
                   <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Greeting Message</label>
                   <Textarea
                     placeholder="Message sent to new users when they start the bot..."
-                    value={settings.greeting ?? ''}
-                    onChange={e => setSettings(p => ({ ...p, greeting: e.target.value }))}
+                    value={greeting}
+                    onChange={e => setGreeting(e.target.value)}
                     rows={3}
                     className="mt-1"
                   />
                 </div>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-semibold">Notify on Mention</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">Alert when mentioned in groups</p>
-                  </div>
-                  <Switch
-                    checked={settings.notifyOnMention ?? true}
-                    onChange={c => setSettings(p => ({ ...p, notifyOnMention: c }))}
-                  />
-                </div>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-semibold">Broadcast Mode</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">Send messages to all connected users</p>
-                  </div>
-                  <Switch
-                    checked={settings.broadcastEnabled ?? false}
-                    onChange={c => setSettings(p => ({ ...p, broadcastEnabled: c }))}
-                  />
-                </div>
+
+                {updateSettings.isError && (
+                  <p className="text-xs text-destructive">
+                    {updateSettings.error instanceof Error ? updateSettings.error.message : 'Failed to save settings.'}
+                  </p>
+                )}
+                {updateSettings.isSuccess && (
+                  <p className="text-xs text-green-700">Settings saved.</p>
+                )}
+
                 <Button
                   className="w-full"
-                  onClick={() => updateSettings.mutate()}
+                  onClick={() => updateSettings.mutate({ agentId, data: { notificationLevel, greeting: greeting || undefined } })}
                   disabled={updateSettings.isPending}
                 >
                   {updateSettings.isPending ? 'Saving...' : 'Save Settings'}
@@ -502,5 +506,4 @@ export function TelegramView() {
   );
 }
 
-// Keep Card export for backward compatibility
 export { Card };

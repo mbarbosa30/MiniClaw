@@ -12,6 +12,8 @@ import type {
   Conversation,
   ChatMessage,
   AgentTask,
+  TelegramStatus,
+  TelegramSettingsPayload,
 } from '@/types';
 
 export type { Agent, PersonaTemplate, SkillDef };
@@ -149,7 +151,8 @@ export function useMemories(agentId: string | undefined) {
 export function useUpdateMemory() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ agentId, id, data }: { agentId: string; id: string; data: Partial<Pick<Memory, 'content' | 'pinned'>> }) =>
+    // API field for memory text is `fact`; `pinned` stays as-is
+    mutationFn: ({ agentId, id, data }: { agentId: string; id: string; data: { fact?: string; pinned?: boolean } }) =>
       apiFetch<Memory>(`/api/selfclaw/v1/hosted-agents/${agentId}/memories/${id}`, {
         method: 'PATCH',
         body: JSON.stringify(data)
@@ -180,10 +183,11 @@ export function useSoul(agentId: string | undefined) {
 export function useUpdateSoul() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ agentId, document }: { agentId: string; document: string }) =>
+    // API field is `soul` not `document`
+    mutationFn: ({ agentId, soul }: { agentId: string; soul: string }) =>
       apiFetch<SoulDocument>(`/api/selfclaw/v1/hosted-agents/${agentId}/soul`, {
         method: 'PUT',
-        body: JSON.stringify({ document })
+        body: JSON.stringify({ soul })
       }),
     onSuccess: (_, variables) => qc.invalidateQueries({ queryKey: ['soul', variables.agentId] })
   });
@@ -238,9 +242,21 @@ export function useResolveTask() {
 export function useTelegramStatus(agentId: string | undefined) {
   return useQuery({
     queryKey: ['telegram-status', agentId],
-    queryFn: () => apiFetch<import('@/types').TelegramStatus>(
+    queryFn: () => apiFetch<TelegramStatus>(
       `/api/selfclaw/v1/hosted-agents/${agentId}/telegram/status`
     ),
     enabled: !!agentId
+  });
+}
+
+export function useUpdateTelegramSettings() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ agentId, data }: { agentId: string; data: TelegramSettingsPayload }) =>
+      apiFetch<void>(`/api/selfclaw/v1/hosted-agents/${agentId}/telegram/settings`, {
+        method: 'PATCH',
+        body: JSON.stringify(data)
+      }),
+    onSuccess: (_, variables) => qc.invalidateQueries({ queryKey: ['telegram-status', variables.agentId] })
   });
 }
