@@ -64,7 +64,10 @@ export function CreateAgentView() {
     setKnowledgeEntries(prev => prev.filter((_, i) => i !== index));
   };
 
+  const [postCreateErrors, setPostCreateErrors] = useState<string[]>([]);
+
   const handleCreate = async () => {
+    setPostCreateErrors([]);
     const newAgent = await create.mutateAsync({
       name: formData.name,
       emoji: formData.emoji,
@@ -73,17 +76,31 @@ export function CreateAgentView() {
       personaTemplate: formData.personaTemplate,
     });
 
-    // Enable each selected skill sequentially
+    const errors: string[] = [];
+
+    // Enable each selected skill sequentially; collect failures
     for (const skillId of selectedSkills) {
-      await toggleSkillMutation.mutateAsync({ agentId: newAgent.id, skillId, enable: true }).catch(() => {});
+      try {
+        await toggleSkillMutation.mutateAsync({ agentId: newAgent.id, skillId, enable: true });
+      } catch {
+        errors.push(`Failed to enable skill: ${skillId}`);
+      }
     }
 
-    // Upload knowledge entries sequentially
+    // Upload knowledge entries sequentially; collect failures
     for (const entry of knowledgeEntries) {
-      await addKnowledge.mutateAsync({ agentId: newAgent.id, data: entry }).catch(() => {});
+      try {
+        await addKnowledge.mutateAsync({ agentId: newAgent.id, data: entry });
+      } catch {
+        errors.push(`Failed to add knowledge entry: ${entry.content.slice(0, 40)}`);
+      }
     }
 
-    // Navigate to the new agent
+    if (errors.length > 0) {
+      setPostCreateErrors(errors);
+      // Still navigate — agent was created, partial config can be fixed in settings
+    }
+
     pop();
     push('agent-detail', { id: newAgent.id });
   };

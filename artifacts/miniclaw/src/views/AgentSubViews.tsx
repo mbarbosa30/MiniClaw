@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from '@/lib/store';
 import { ScreenHeader, Card, Switch, Button, Input, Textarea } from '@/components/ui';
 import {
-  useAgentSkills, useToggleSkill,
+  useSkillDefs, useAgent, useToggleSkill,
   useKnowledge, useAddKnowledge, useDeleteKnowledge,
   useSoul, useUpdateSoul,
   useMemories, useUpdateMemory, useDeleteMemory,
@@ -46,14 +46,27 @@ function EmptyState({ icon, title, description }: { icon: string; title: string;
 }
 
 // --- SKILLS VIEW ---
+// Per API docs, there is no GET /:id/skills endpoint.
+// We derive enabled state by cross-referencing:
+//   - GET /skills (global list) via useSkillDefs()
+//   - agent.enabledSkills[] from GET /:id via useAgent()
 export function SkillsView() {
   const agentId: string = useRouter(s => s.currentView.params?.id ?? '');
-  const { data: skills, isLoading } = useAgentSkills(agentId);
+  const { data: skillDefs, isLoading: skillsLoading } = useSkillDefs();
+  const { data: agent, isLoading: agentLoading } = useAgent(agentId);
   const toggle = useToggleSkill();
+  const isLoading = skillsLoading || agentLoading;
+
+  const enabledSet = new Set(agent?.enabledSkills ?? []);
+
+  const skills = (skillDefs ?? []).map(skill => ({
+    ...skill,
+    enabled: enabledSet.has(skill.id),
+  }));
 
   return (
     <SubScreenLayout title="Skills">
-      {isLoading ? <LoadingState /> : !skills?.length ? (
+      {isLoading ? <LoadingState /> : !skills.length ? (
         <EmptyState icon="⚡" title="No skills available" description="Skills will appear here once the API returns them." />
       ) : (
         skills.map(skill => (
@@ -63,7 +76,7 @@ export function SkillsView() {
               <p className="text-xs text-muted-foreground leading-relaxed mt-0.5">{skill.description}</p>
             </div>
             <Switch
-              checked={!!skill.enabled}
+              checked={skill.enabled}
               onChange={(c) => toggle.mutate({ agentId, skillId: skill.id, enable: c })}
             />
           </div>
