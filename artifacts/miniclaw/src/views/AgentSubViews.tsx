@@ -363,8 +363,9 @@ export function TelegramView() {
   const qc = useQueryClient();
 
   const [botToken, setBotToken] = useState('');
-  const [notificationLevel, setNotificationLevel] = useState<TelegramNotificationLevel>('all');
-  const [greeting, setGreeting] = useState('');
+  const [notificationLevel, setNotificationLevel] = useState<TelegramNotificationLevel>(
+    (status?.notificationLevel) ?? 'all'
+  );
 
   const connect = useMutation({
     mutationFn: () => apiFetch<void>(`/api/selfclaw/v1/hosted-agents/${agentId}/telegram/connect`, {
@@ -390,8 +391,8 @@ export function TelegramView() {
             </div>
             <div className="flex-1">
               <p className="font-semibold text-sm">{status?.connected ? 'Bot Connected' : 'Not Connected'}</p>
-              {status?.connected && status.username && (
-                <p className="text-xs text-muted-foreground mt-0.5">@{status.username}</p>
+              {status?.connected && status.botUsername && (
+                <p className="text-xs text-muted-foreground mt-0.5">@{status.botUsername}</p>
               )}
               {!status?.connected && (
                 <p className="text-xs text-muted-foreground mt-0.5">Connect a Telegram bot to chat via Telegram</p>
@@ -449,7 +450,7 @@ export function TelegramView() {
                 <div>
                   <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 block">Notification Level</label>
                   <div className="flex gap-1.5">
-                    {(['all', 'mentions', 'none'] as TelegramNotificationLevel[]).map(level => (
+                    {(['all', 'important', 'none'] as TelegramNotificationLevel[]).map(level => (
                       <button
                         key={level}
                         className={`flex-1 py-2 text-sm font-semibold rounded-xl capitalize transition-all ${notificationLevel === level ? 'bg-primary text-primary-foreground shadow-md' : 'bg-muted text-muted-foreground hover:bg-muted/80'}`}
@@ -459,17 +460,6 @@ export function TelegramView() {
                       </button>
                     ))}
                   </div>
-                </div>
-
-                <div>
-                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Greeting Message</label>
-                  <Textarea
-                    placeholder="Message sent to new users when they start the bot..."
-                    value={greeting}
-                    onChange={e => setGreeting(e.target.value)}
-                    rows={3}
-                    className="mt-1"
-                  />
                 </div>
 
                 {updateSettings.isError && (
@@ -483,7 +473,7 @@ export function TelegramView() {
 
                 <Button
                   className="w-full"
-                  onClick={() => updateSettings.mutate({ agentId, data: { notificationLevel, greeting: greeting || undefined } })}
+                  onClick={() => updateSettings.mutate({ agentId, data: { notificationLevel } })}
                   disabled={updateSettings.isPending}
                 >
                   {updateSettings.isPending ? 'Saving...' : 'Save Settings'}

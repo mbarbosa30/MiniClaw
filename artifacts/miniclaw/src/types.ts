@@ -1,4 +1,4 @@
-// API DTOs for the SelfClaw API
+// API DTOs for the SelfClaw / MiniClaw API
 
 export interface AuthStatus {
   loggedIn: boolean;
@@ -13,18 +13,20 @@ export interface Agent {
   name: string;
   emoji: string;
   description: string;
-  status: 'active' | 'inactive' | 'error' | string;
+  status: 'active' | 'paused' | 'error' | string;
   humorStyle: HumorStyle;
   interests?: string[];
   topicsToWatch?: string[];
-  model?: ModelTier;
+  premiumModel?: PremiumModel;
   socialHandles?: SocialHandles;
+  enabledSkills?: string[];
+  personalContext?: string;
 }
 
 export type HumorStyle = 'none' | 'dry' | 'warm' | 'playful' | 'sarcastic';
 
-// Model tiers as documented by SelfClaw API
-export type ModelTier = 'none' | 'grok-4' | 'gpt-5.4' | string;
+// premiumModel values per API: "grok-4" | "gpt-5.4" | "none"
+export type PremiumModel = 'none' | 'grok-4' | 'gpt-5.4';
 
 export interface SocialHandles {
   twitter?: string;
@@ -43,19 +45,42 @@ export interface SkillDef {
   id: string;
   name: string;
   description: string;
+  icon?: string;
+  category?: string;
   enabled?: boolean;
+  requiresWallet?: boolean;
 }
 
 export interface CreateAgentPayload {
   name: string;
-  emoji: string;
-  description: string;
+  emoji?: string;
+  description?: string;
   interests?: string[];
   topicsToWatch?: string[];
-  personaTemplate: string;
-  humorStyle: HumorStyle;
+  personalContext?: string;
+  socialHandles?: SocialHandles;
+  enabledSkills?: string[];
+  personaTemplate?: string;
+  humorStyle?: HumorStyle;
 }
 
+// PATCH /:id — partial update
+export interface UpdateAgentPayload {
+  name?: string;
+  emoji?: string;
+  description?: string;
+  status?: 'active' | 'paused';
+  enabledSkills?: string[];
+  autoApproveThreshold?: number;
+  interests?: string[];
+  topicsToWatch?: string[];
+  socialHandles?: SocialHandles;
+  personalContext?: string;
+  humorStyle?: HumorStyle;
+  premiumModel?: PremiumModel;
+}
+
+// PUT /:id/settings — settings-only update (same optional fields)
 export interface UpdateAgentSettingsPayload {
   name?: string;
   emoji?: string;
@@ -66,31 +91,33 @@ export interface UpdateAgentSettingsPayload {
   enabledSkills?: string[];
   personalContext?: string;
   humorStyle?: HumorStyle;
-  model?: ModelTier;
+  premiumModel?: PremiumModel;
 }
 
 export interface Knowledge {
   id: string;
   type: 'text' | 'url';
   content: string;
+  title?: string;
   createdAt?: string;
 }
 
 export interface Memory {
   id: string;
-  /** The `fact` field is what the API uses (maps to content in UI) */
   fact?: string;
   pinned?: boolean;
+  category?: string;
   createdAt?: string;
 }
 
 export interface SoulDocument {
-  /** The `soul` field is what the API uses for get/set */
   soul: string;
+  updatedAt?: string;
+  isDefault?: boolean;
 }
 
 export interface Conversation {
-  id: string;
+  id: number | string;
   title?: string;
   createdAt?: string;
   updatedAt?: string;
@@ -114,13 +141,13 @@ export interface AgentTask {
 
 export interface TelegramStatus {
   connected: boolean;
-  username?: string;
-  botName?: string;
+  botUsername?: string;
+  notificationLevel?: TelegramNotificationLevel;
 }
 
-export type TelegramNotificationLevel = 'all' | 'mentions' | 'none';
+// Per API docs: "all" | "important" | "none"
+export type TelegramNotificationLevel = 'all' | 'important' | 'none';
 
 export interface TelegramSettingsPayload {
   notificationLevel: TelegramNotificationLevel;
-  greeting?: string;
 }

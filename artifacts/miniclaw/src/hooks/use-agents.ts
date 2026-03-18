@@ -5,6 +5,7 @@ import type {
   PersonaTemplate,
   SkillDef,
   CreateAgentPayload,
+  UpdateAgentPayload,
   UpdateAgentSettingsPayload,
   Knowledge,
   Memory,
@@ -61,6 +62,23 @@ export function useCreateAgent() {
   });
 }
 
+// PATCH /:id — general agent update (name, status, premiumModel, etc.)
+export function useUpdateAgent() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: UpdateAgentPayload }) =>
+      apiFetch<Agent>(`/api/selfclaw/v1/hosted-agents/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data)
+      }),
+    onSuccess: (_, variables) => {
+      qc.invalidateQueries({ queryKey: ['agents'] });
+      qc.invalidateQueries({ queryKey: ['agents', variables.id] });
+    }
+  });
+}
+
+// PUT /:id/settings — settings-focused update
 export function useUpdateAgentSettings() {
   const qc = useQueryClient();
   return useMutation({
@@ -79,6 +97,7 @@ export function useUpdateAgentSettings() {
 export function useDeleteAgent() {
   const qc = useQueryClient();
   return useMutation({
+    // DELETE soft-deletes by setting status to "paused"
     mutationFn: (id: string) =>
       apiFetch<void>(`/api/selfclaw/v1/hosted-agents/${id}`, { method: 'DELETE' }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['agents'] })
@@ -120,7 +139,7 @@ export function useKnowledge(agentId: string | undefined) {
 export function useAddKnowledge() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ agentId, data }: { agentId: string; data: { type: 'text' | 'url'; content: string } }) =>
+    mutationFn: ({ agentId, data }: { agentId: string; data: { type: 'text' | 'url'; content: string; title?: string } }) =>
       apiFetch<Knowledge>(`/api/selfclaw/v1/hosted-agents/${agentId}/knowledge`, {
         method: 'POST',
         body: JSON.stringify(data)
@@ -151,7 +170,7 @@ export function useMemories(agentId: string | undefined) {
 export function useUpdateMemory() {
   const qc = useQueryClient();
   return useMutation({
-    // API field for memory text is `fact`; `pinned` stays as-is
+    // Body: { fact?: string; pinned?: boolean }
     mutationFn: ({ agentId, id, data }: { agentId: string; id: string; data: { fact?: string; pinned?: boolean } }) =>
       apiFetch<Memory>(`/api/selfclaw/v1/hosted-agents/${agentId}/memories/${id}`, {
         method: 'PATCH',
@@ -183,7 +202,7 @@ export function useSoul(agentId: string | undefined) {
 export function useUpdateSoul() {
   const qc = useQueryClient();
   return useMutation({
-    // API field is `soul` not `document`
+    // Body: { soul: string } — min 10, max 5000 chars
     mutationFn: ({ agentId, soul }: { agentId: string; soul: string }) =>
       apiFetch<SoulDocument>(`/api/selfclaw/v1/hosted-agents/${agentId}/soul`, {
         method: 'PUT',
@@ -203,13 +222,13 @@ export function useConversations(agentId: string | undefined) {
   });
 }
 
-export function useMessages(agentId: string | undefined, conversationId: string | undefined) {
+export function useMessages(agentId: string | undefined, conversationId: string | number | undefined) {
   return useQuery({
     queryKey: ['messages', agentId, conversationId],
     queryFn: () => apiFetch<ChatMessage[]>(
       `/api/selfclaw/v1/hosted-agents/${agentId}/messages?conversationId=${conversationId}`
     ),
-    enabled: !!agentId && !!conversationId
+    enabled: !!agentId && conversationId != null
   });
 }
 
@@ -252,6 +271,7 @@ export function useTelegramStatus(agentId: string | undefined) {
 export function useUpdateTelegramSettings() {
   const qc = useQueryClient();
   return useMutation({
+    // Body: { notificationLevel: "all" | "important" | "none" }
     mutationFn: ({ agentId, data }: { agentId: string; data: TelegramSettingsPayload }) =>
       apiFetch<void>(`/api/selfclaw/v1/hosted-agents/${agentId}/telegram/settings`, {
         method: 'PATCH',
