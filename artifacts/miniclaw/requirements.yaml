@@ -1,0 +1,12 @@
+packages:
+  "framer-motion": "Smooth page transitions and micro-interactions essential for a premium mobile app feel"
+  "date-fns": "For formatting chat timestamps and task dates elegantly"
+  "emoji-picker-react": "Needed for the Create Agent flow to let users select an avatar emoji"
+  "clsx": "Utility for constructing className strings conditionally"
+  "tailwind-merge": "Utility for merging tailwind classes safely"
+  "zustand": "Lightweight state management for the custom view-based router and auth state"
+
+notes:
+  - "The app relies entirely on external API https://selfclaw.ai"
+  - "Using a custom state-based view router via Zustand to strictly keep navigation within the MiniApp wrapper without URL changes"
+  - "Assuming SSE (Server-Sent Events) format for the chat streaming endpoint"
