@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { useConnect, useConnectors, useAccount, useDisconnect } from 'wagmi';
+import { useEffect } from 'react';
+import { useConnect, useConnectors, useDisconnect, useConnection } from 'wagmi';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { apiFetch, apiEvents } from '@/lib/api-client';
 import { useAuthStore, useRouter } from '@/lib/store';
@@ -7,59 +7,48 @@ import type { AuthStatus } from '@/types';
 
 /**
  * Auto-connect to the injected MiniPay wallet on page load.
- * Per MiniPay docs: never show a "Connect" button — connect automatically.
+ * Copied verbatim from https://docs.minipay.xyz/getting-started/quick-start.html
+ * Must be called from the root layout, not from a child view.
  */
 export function useAutoConnect() {
   const connectors = useConnectors();
-  const { connect, isPending, error } = useConnect();
-  const [hasAttempted, setHasAttempted] = useState(false);
+  const { connect } = useConnect();
 
   useEffect(() => {
-    if (hasAttempted || connectors.length === 0) return;
-    setHasAttempted(true);
-    connect({ connector: connectors[0] });
-  }, [connectors, connect, hasAttempted]);
-
-  return { isPending, error, hasAttempted };
+    if (connectors.length > 0) {
+      connect({ connector: connectors[0] });
+    }
+  }, [connectors, connect]);
 }
 
 /**
- * After Wagmi gives us a wallet address, exchange it for a
- * SelfClaw server-side session (establishes cookie auth).
+ * Watch Wagmi's connection state. When a wallet address is available,
+ * store it in auth state and navigate home.
+ * This replaces the invented SelfClaw session endpoints entirely.
  */
-export function useEstablishSession() {
+export function useWalletSync() {
+  const { address, isConnected } = useConnection();
   const { setAuth } = useAuthStore();
   const resetRoute = useRouter(s => s.reset);
+  const { isAuthenticated } = useAuthStore();
 
-  return useMutation({
-    mutationFn: async (address: string) => {
-      const { token } = await apiFetch<{ token: string }>(
-        '/api/auth/self/wallet/minipay-token',
-        { method: 'POST' }
-      );
-      await apiFetch<void>('/api/auth/self/wallet/minipay-connect', {
-        method: 'POST',
-        body: JSON.stringify({ address, token }),
-      });
-      return address;
-    },
-    onSuccess: (address: string) => {
+  useEffect(() => {
+    if (isConnected && address && !isAuthenticated) {
       setAuth(address);
       resetRoute('home');
-    },
-  });
+    }
+  }, [isConnected, address, isAuthenticated, setAuth, resetRoute]);
 }
 
 /**
- * On mount, check whether an existing SelfClaw session is still valid.
- * If yes → go straight to home. If no → stay on 'connecting' screen
- * so the Wagmi auto-connect + session flow can run.
+ * On mount, check whether an existing SelfClaw session is valid.
+ * Errors (CORS, network) are caught silently — if the check fails we
+ * simply stay on the connect screen and let Wagmi handle it.
  */
 export function useAuthSync() {
   const { setAuth, logout } = useAuthStore();
   const resetRoute = useRouter(s => s.reset);
 
-  // Redirect on 401 from any API call
   useEffect(() => {
     const handleUnauthorized = () => {
       logout();
@@ -69,16 +58,20 @@ export function useAuthSync() {
     return () => apiEvents.removeEventListener('unauthorized', handleUnauthorized);
   }, [logout, resetRoute]);
 
-  // Check for an existing session on mount
   useQuery({
     queryKey: ['auth-status'],
     queryFn: async () => {
-      const res = await apiFetch<AuthStatus>('/api/auth/status');
-      if (res.loggedIn && res.user?.address) {
-        setAuth(res.user.address);
-        resetRoute('home');
+      try {
+        const res = await apiFetch<AuthStatus>('/api/auth/status');
+        if (res.loggedIn && res.user?.address) {
+          setAuth(res.user.address);
+          resetRoute('home');
+        }
+        return res;
+      } catch {
+        // Network/CORS errors are expected outside MiniPay's domain — ignore
+        return null;
       }
-      return res;
     },
     retry: false,
     refetchOnWindowFocus: false,

@@ -1,57 +1,32 @@
-import { useEffect } from 'react';
-import { useAccount } from 'wagmi';
-import { useAutoConnect, useEstablishSession } from '@/hooks/use-auth';
+import { useConnection, useConnect } from 'wagmi';
 import { motion } from 'framer-motion';
 import { Sparkles, AlertTriangle, Loader2 } from 'lucide-react';
 
 /**
- * ConnectView — shown while the app establishes a wallet session.
+ * ConnectView — shown while auto-connecting to the MiniPay wallet.
  *
- * Per MiniPay docs, connection is AUTOMATIC on page load.
- * There is no "Connect" button. The flow is:
- *   1. Wagmi auto-connects to the injected MiniPay wallet
- *   2. Once we have an address, exchange it for a SelfClaw cookie session
- *   3. On success the auth store routes us to 'home'
- *
- * If window.ethereum is missing the user is not in MiniPay — show a message.
+ * Per MiniPay docs, there is NO connect button. Wagmi auto-connects
+ * on mount (via useAutoConnect in ViewManager). This screen simply shows
+ * progress and handles the "not in MiniPay" case.
  */
 export function ConnectView() {
-  const { address, isConnected, isConnecting } = useAccount();
-  const { error: wagmiError, hasAttempted } = useAutoConnect();
-  const session = useEstablishSession();
+  // useConnection is wagmi v3's hook for reading connection state
+  const { address, isConnected, isConnecting } = useConnection();
+  const { error: connectError } = useConnect();
 
-  // "Provider not found" means window.ethereum is absent — user is outside MiniPay
+  // "Provider not found" = window.ethereum absent = not inside MiniPay
   const isNoProvider =
-    !!wagmiError &&
-    (wagmiError.message?.toLowerCase().includes('provider not found') ||
-      wagmiError.message?.toLowerCase().includes('no provider') ||
-      wagmiError.message?.toLowerCase().includes('window.ethereum'));
-  const noProvider = isNoProvider || (hasAttempted && !isConnecting && !isConnected && !address && !wagmiError);
-  const walletError = wagmiError && !isNoProvider ? wagmiError : null;
-  const sessionError = session.isError;
+    !!connectError &&
+    connectError.message?.toLowerCase().includes('provider not found');
 
-  // Once Wagmi gives us an address, establish the SelfClaw session
-  useEffect(() => {
-    if (address && isConnected && !session.isPending && !session.isSuccess && !session.isError) {
-      session.mutate(address);
-    }
-  }, [address, isConnected]);
-
-  // Derive status message
-  let statusLine = 'Connecting to your wallet…';
-  if (address && isConnected && (session.isPending || session.isIdle)) {
-    statusLine = 'Setting up your session…';
-  }
-
-  const hasError = !!walletError || !!sessionError || noProvider;
+  const showSpinner = !isNoProvider && (isConnecting || (!isConnected && !connectError));
+  const showError = !!connectError && !isNoProvider;
 
   return (
     <div className="flex flex-col items-center justify-center h-full p-8 bg-gradient-to-b from-background via-background to-secondary/20 relative overflow-hidden">
-      {/* Decorative blobs */}
       <div className="absolute -top-32 -right-32 w-72 h-72 bg-primary/8 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute -bottom-32 -left-32 w-72 h-72 bg-accent/5 rounded-full blur-3xl pointer-events-none" />
 
-      {/* Logo */}
       <motion.div
         initial={{ scale: 0.75, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
@@ -64,7 +39,6 @@ export function ConnectView() {
         </div>
       </motion.div>
 
-      {/* Heading */}
       <motion.div
         initial={{ y: 24, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
@@ -77,7 +51,7 @@ export function ConnectView() {
         </p>
 
         {/* Not in MiniPay */}
-        {noProvider && (
+        {isNoProvider && (
           <motion.div
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
@@ -93,37 +67,23 @@ export function ConnectView() {
           </motion.div>
         )}
 
-        {/* Wallet error */}
-        {walletError && (
+        {/* Connection error (not a missing provider) */}
+        {showError && (
           <motion.div
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             className="bg-destructive/10 border border-destructive/20 rounded-2xl p-3.5 mb-5 text-left"
           >
             <p className="text-xs text-destructive leading-relaxed">
-              Wallet error:{' '}
-              {walletError instanceof Error ? walletError.message : 'Connection failed. Unlock MiniPay and try again.'}
+              {connectError instanceof Error
+                ? connectError.message
+                : 'Connection failed. Unlock MiniPay and reload.'}
             </p>
           </motion.div>
         )}
 
-        {/* Session error */}
-        {sessionError && (
-          <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-destructive/10 border border-destructive/20 rounded-2xl p-3.5 mb-5 text-left"
-          >
-            <p className="text-xs text-destructive leading-relaxed">
-              {session.error instanceof Error
-                ? session.error.message
-                : 'Failed to establish session. Please reload the page.'}
-            </p>
-          </motion.div>
-        )}
-
-        {/* Loading spinner — shown while connecting */}
-        {!hasError && (
+        {/* Connecting spinner */}
+        {showSpinner && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -131,12 +91,13 @@ export function ConnectView() {
             className="flex flex-col items-center gap-3"
           >
             <Loader2 className="w-7 h-7 text-primary animate-spin" />
-            <p className="text-sm text-muted-foreground">{statusLine}</p>
+            <p className="text-sm text-muted-foreground">
+              {address ? 'Setting up…' : 'Connecting to wallet…'}
+            </p>
           </motion.div>
         )}
 
-        {/* Not in MiniPay — link */}
-        {noProvider && (
+        {isNoProvider && (
           <p className="text-xs text-muted-foreground mt-6">
             Need MiniPay?{' '}
             <a
