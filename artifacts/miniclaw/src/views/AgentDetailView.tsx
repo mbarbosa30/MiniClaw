@@ -71,10 +71,11 @@ function NavButton({ icon, label, active, onClick }: { icon: React.ReactNode; la
 
 // --- CHAT TAB ---
 function ChatTab({ agent }: { agent: Agent }) {
-  const { data: conversations } = useConversations(agent.id);
+  const { data: conversations, refetch: refetchConversations } = useConversations(agent.id);
   const [activeConversationId, setActiveConversationId] = useState<string | undefined>();
   const [showConversations, setShowConversations] = useState(false);
   const { data: history } = useMessages(agent.id, activeConversationId);
+  const [historyLoaded, setHistoryLoaded] = useState(false);
 
   const [messages, setMessages] = useState<ChatMessage[]>([
     { role: 'assistant', content: `Hi! I'm ${agent.name} ${agent.emoji}. How can I help you today?` }
@@ -83,12 +84,20 @@ function ChatTab({ agent }: { agent: Agent }) {
   const [isStreaming, setIsStreaming] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
 
-  // Load message history when switching to a past conversation
+  // Auto-select the most recent conversation when list loads
   useEffect(() => {
-    if (history && history.length > 0) {
-      setMessages(history);
+    if (conversations && conversations.length > 0 && !activeConversationId) {
+      setActiveConversationId(String(conversations[0].id));
     }
-  }, [history]);
+  }, [conversations, activeConversationId]);
+
+  // Load message history when a conversation is selected
+  useEffect(() => {
+    if (history && history.length > 0 && !historyLoaded) {
+      setMessages(history);
+      setHistoryLoaded(true);
+    }
+  }, [history, historyLoaded]);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -96,12 +105,15 @@ function ChatTab({ agent }: { agent: Agent }) {
 
   const startNewConversation = () => {
     setActiveConversationId(undefined);
+    setHistoryLoaded(false);
     setMessages([{ role: 'assistant', content: `New conversation with ${agent.name}. How can I help?` }]);
     setShowConversations(false);
   };
 
   const selectConversation = (conv: Conversation) => {
     setActiveConversationId(String(conv.id));
+    setHistoryLoaded(false);
+    setMessages([]);
     setShowConversations(false);
   };
 
@@ -154,7 +166,10 @@ function ChatTab({ agent }: { agent: Agent }) {
             // Per API docs: final event is {"done": true, "conversationId": 123}
             if (parsed.done) {
               if (parsed.conversationId != null && !activeConversationId) {
-                setActiveConversationId(String(parsed.conversationId));
+                const newId = String(parsed.conversationId);
+                setActiveConversationId(newId);
+                // Refresh conversation list so the new thread appears
+                refetchConversations();
               }
               continue;
             }

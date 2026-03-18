@@ -7,7 +7,7 @@ import { useLogout } from '@/hooks/use-auth';
 import { motion } from 'framer-motion';
 
 export function HomeView() {
-  const { data: agents, isLoading } = useAgents();
+  const { data: agents, isLoading, isError, refetch } = useAgents();
   const address = useAuthStore(s => s.address);
   const push = useRouter(s => s.push);
   const logout = useLogout();
@@ -38,6 +38,13 @@ export function HomeView() {
             {[1, 2, 3].map(i => (
               <div key={i} className="h-24 bg-black/5 rounded-3xl animate-pulse"></div>
             ))}
+          </div>
+        ) : isError ? (
+          <div className="flex flex-col items-center justify-center h-64 text-center mt-12 gap-3">
+            <div className="w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center text-2xl">⚠️</div>
+            <h3 className="font-semibold text-base">Couldn't load agents</h3>
+            <p className="text-sm text-muted-foreground">Check your connection and try again.</p>
+            <Button variant="secondary" onClick={() => refetch()} className="mt-1">Retry</Button>
           </div>
         ) : agents?.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-64 text-center mt-12">

@@ -363,9 +363,14 @@ export function TelegramView() {
   const qc = useQueryClient();
 
   const [botToken, setBotToken] = useState('');
-  const [notificationLevel, setNotificationLevel] = useState<TelegramNotificationLevel>(
-    (status?.notificationLevel) ?? 'all'
-  );
+  const [notificationLevel, setNotificationLevel] = useState<TelegramNotificationLevel>('all');
+
+  // Sync notificationLevel from server once status loads
+  useEffect(() => {
+    if (status?.notificationLevel) {
+      setNotificationLevel(status.notificationLevel);
+    }
+  }, [status?.notificationLevel]);
 
   const connect = useMutation({
     mutationFn: () => apiFetch<void>(`/api/selfclaw/v1/hosted-agents/${agentId}/telegram/connect`, {
