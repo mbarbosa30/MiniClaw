@@ -1,8 +1,9 @@
-import { useEffect } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { WagmiProvider } from "wagmi";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
+import { wagmiConfig } from "@/lib/wagmi";
 import { useAuthSync } from "@/hooks/use-auth";
 import { useRouter } from "@/lib/store";
 
@@ -42,14 +43,16 @@ function ViewManager() {
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <main className="mobile-app-container">
-          <ViewManager />
-        </main>
-        <Toaster />
-      </TooltipProvider>
-    </QueryClientProvider>
+    <WagmiProvider config={wagmiConfig}>
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <main className="mobile-app-container">
+            <ViewManager />
+          </main>
+          <Toaster />
+        </TooltipProvider>
+      </QueryClientProvider>
+    </WagmiProvider>
   );
 }
 

@@ -1,11 +1,49 @@
-import { useConnectWallet, detectMiniPay } from '@/hooks/use-auth';
-import { Button } from '@/components/ui';
+import { useEffect } from 'react';
+import { useAccount } from 'wagmi';
+import { useAutoConnect, useEstablishSession } from '@/hooks/use-auth';
 import { motion } from 'framer-motion';
-import { Sparkles, AlertTriangle } from 'lucide-react';
+import { Sparkles, AlertTriangle, Loader2 } from 'lucide-react';
 
+/**
+ * ConnectView — shown while the app establishes a wallet session.
+ *
+ * Per MiniPay docs, connection is AUTOMATIC on page load.
+ * There is no "Connect" button. The flow is:
+ *   1. Wagmi auto-connects to the injected MiniPay wallet
+ *   2. Once we have an address, exchange it for a SelfClaw cookie session
+ *   3. On success the auth store routes us to 'home'
+ *
+ * If window.ethereum is missing the user is not in MiniPay — show a message.
+ */
 export function ConnectView() {
-  const connect = useConnectWallet();
-  const isMiniPay = detectMiniPay();
+  const { address, isConnected, isConnecting } = useAccount();
+  const { error: wagmiError, hasAttempted } = useAutoConnect();
+  const session = useEstablishSession();
+
+  // "Provider not found" means window.ethereum is absent — user is outside MiniPay
+  const isNoProvider =
+    !!wagmiError &&
+    (wagmiError.message?.toLowerCase().includes('provider not found') ||
+      wagmiError.message?.toLowerCase().includes('no provider') ||
+      wagmiError.message?.toLowerCase().includes('window.ethereum'));
+  const noProvider = isNoProvider || (hasAttempted && !isConnecting && !isConnected && !address && !wagmiError);
+  const walletError = wagmiError && !isNoProvider ? wagmiError : null;
+  const sessionError = session.isError;
+
+  // Once Wagmi gives us an address, establish the SelfClaw session
+  useEffect(() => {
+    if (address && isConnected && !session.isPending && !session.isSuccess && !session.isError) {
+      session.mutate(address);
+    }
+  }, [address, isConnected]);
+
+  // Derive status message
+  let statusLine = 'Connecting to your wallet…';
+  if (address && isConnected && (session.isPending || session.isIdle)) {
+    statusLine = 'Setting up your session…';
+  }
+
+  const hasError = !!walletError || !!sessionError || noProvider;
 
   return (
     <div className="flex flex-col items-center justify-center h-full p-8 bg-gradient-to-b from-background via-background to-secondary/20 relative overflow-hidden">
@@ -38,53 +76,69 @@ export function ConnectView() {
           Your personal AI agents, living right in your wallet.
         </p>
 
-        {/* Non-MiniPay warning */}
-        {!isMiniPay && (
+        {/* Not in MiniPay */}
+        {noProvider && (
           <motion.div
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
             className="flex items-start gap-2.5 bg-amber-50 border border-amber-200 rounded-2xl p-3.5 mb-5 text-left"
           >
             <AlertTriangle size={16} className="text-amber-600 mt-0.5 shrink-0" />
-            <p className="text-xs text-amber-800 leading-relaxed">
-              MiniClaw is designed to run inside MiniPay. Open this app from your MiniPay wallet to connect.
-            </p>
+            <div>
+              <p className="text-xs font-semibold text-amber-800 mb-0.5">Open in MiniPay</p>
+              <p className="text-xs text-amber-700 leading-relaxed">
+                MiniClaw runs inside MiniPay. Open this app from your MiniPay wallet to continue.
+              </p>
+            </div>
           </motion.div>
         )}
 
-        {/* Error message */}
-        {connect.isError && (
+        {/* Wallet error */}
+        {walletError && (
           <motion.div
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             className="bg-destructive/10 border border-destructive/20 rounded-2xl p-3.5 mb-5 text-left"
           >
             <p className="text-xs text-destructive leading-relaxed">
-              {connect.error instanceof Error ? connect.error.message : 'Connection failed. Please try again.'}
+              Wallet error:{' '}
+              {walletError instanceof Error ? walletError.message : 'Connection failed. Unlock MiniPay and try again.'}
             </p>
           </motion.div>
         )}
 
-        <Button
-          size="lg"
-          className="w-full flex gap-3 text-base"
-          onClick={() => connect.mutate()}
-          disabled={connect.isPending || !isMiniPay}
-        >
-          {connect.isPending ? (
-            <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-          ) : (
-            <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
-              <path d="M19 7h-3V6a4 4 0 0 0-8 0v1H5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2Zm-9-1a2 2 0 0 1 4 0v1h-4V6Zm10 13H4V9h16v10Z"/>
-            </svg>
-          )}
-          {connect.isPending ? 'Connecting...' : 'Connect with MiniPay'}
-        </Button>
+        {/* Session error */}
+        {sessionError && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-destructive/10 border border-destructive/20 rounded-2xl p-3.5 mb-5 text-left"
+          >
+            <p className="text-xs text-destructive leading-relaxed">
+              {session.error instanceof Error
+                ? session.error.message
+                : 'Failed to establish session. Please reload the page.'}
+            </p>
+          </motion.div>
+        )}
 
-        {!isMiniPay && (
-          <p className="text-xs text-muted-foreground mt-4">
-            Need MiniPay? Download it from{' '}
+        {/* Loading spinner — shown while connecting */}
+        {!hasError && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.3 }}
+            className="flex flex-col items-center gap-3"
+          >
+            <Loader2 className="w-7 h-7 text-primary animate-spin" />
+            <p className="text-sm text-muted-foreground">{statusLine}</p>
+          </motion.div>
+        )}
+
+        {/* Not in MiniPay — link */}
+        {noProvider && (
+          <p className="text-xs text-muted-foreground mt-6">
+            Need MiniPay?{' '}
             <a
               href="https://minipay.opera.com"
               target="_blank"

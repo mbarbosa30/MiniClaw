@@ -1,35 +1,65 @@
+import { useState, useEffect } from 'react';
+import { useConnect, useConnectors, useAccount, useDisconnect } from 'wagmi';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { apiFetch, apiEvents } from '@/lib/api-client';
 import { useAuthStore, useRouter } from '@/lib/store';
-import { useEffect } from 'react';
 import type { AuthStatus } from '@/types';
 
-declare global {
-  interface Window {
-    ethereum?: {
-      isMiniPay?: boolean;
-      isMinipay?: boolean;
-      request: (args: { method: string; params?: unknown[] }) => Promise<string[]>;
-    };
-  }
+/**
+ * Auto-connect to the injected MiniPay wallet on page load.
+ * Per MiniPay docs: never show a "Connect" button — connect automatically.
+ */
+export function useAutoConnect() {
+  const connectors = useConnectors();
+  const { connect, isPending, error } = useConnect();
+  const [hasAttempted, setHasAttempted] = useState(false);
+
+  useEffect(() => {
+    if (hasAttempted || connectors.length === 0) return;
+    setHasAttempted(true);
+    connect({ connector: connectors[0] });
+  }, [connectors, connect, hasAttempted]);
+
+  return { isPending, error, hasAttempted };
 }
 
 /**
- * Detect whether the app is running inside a MiniPay-compatible wallet browser.
- * Checks window.ethereum flags and user-agent string.
+ * After Wagmi gives us a wallet address, exchange it for a
+ * SelfClaw server-side session (establishes cookie auth).
  */
-export function detectMiniPay(): boolean {
-  if (typeof window === 'undefined') return false;
-  if (window.ethereum?.isMiniPay || window.ethereum?.isMinipay) return true;
-  if (typeof navigator !== 'undefined' && /MiniPay/i.test(navigator.userAgent)) return true;
-  return false;
+export function useEstablishSession() {
+  const { setAuth } = useAuthStore();
+  const resetRoute = useRouter(s => s.reset);
+
+  return useMutation({
+    mutationFn: async (address: string) => {
+      const { token } = await apiFetch<{ token: string }>(
+        '/api/auth/self/wallet/minipay-token',
+        { method: 'POST' }
+      );
+      await apiFetch<void>('/api/auth/self/wallet/minipay-connect', {
+        method: 'POST',
+        body: JSON.stringify({ address, token }),
+      });
+      return address;
+    },
+    onSuccess: (address: string) => {
+      setAuth(address);
+      resetRoute('home');
+    },
+  });
 }
 
+/**
+ * On mount, check whether an existing SelfClaw session is still valid.
+ * If yes → go straight to home. If no → stay on 'connecting' screen
+ * so the Wagmi auto-connect + session flow can run.
+ */
 export function useAuthSync() {
   const { setAuth, logout } = useAuthStore();
   const resetRoute = useRouter(s => s.reset);
 
-  // Listen for 401s from any API call and redirect to connect
+  // Redirect on 401 from any API call
   useEffect(() => {
     const handleUnauthorized = () => {
       logout();
@@ -39,7 +69,7 @@ export function useAuthSync() {
     return () => apiEvents.removeEventListener('unauthorized', handleUnauthorized);
   }, [logout, resetRoute]);
 
-  // Check existing session on mount
+  // Check for an existing session on mount
   useQuery({
     queryKey: ['auth-status'],
     queryFn: async () => {
@@ -47,70 +77,28 @@ export function useAuthSync() {
       if (res.loggedIn && res.user?.address) {
         setAuth(res.user.address);
         resetRoute('home');
-      } else {
-        setAuth(null);
-        resetRoute('connect');
       }
       return res;
     },
     retry: false,
-    // Don't re-run on focus/reconnect — only on mount
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
-  });
-}
-
-export function useConnectWallet() {
-  const { setAuth } = useAuthStore();
-  const resetRoute = useRouter(s => s.reset);
-
-  return useMutation({
-    mutationFn: async () => {
-      // Strictly require a MiniPay-compatible provider
-      if (!window.ethereum) {
-        throw new Error('No wallet provider found. Please open this app inside MiniPay.');
-      }
-
-      // Request accounts from the injected wallet (MiniPay)
-      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-      if (!accounts || accounts.length === 0) {
-        throw new Error('No accounts returned from wallet. Please unlock your wallet and try again.');
-      }
-      const address = accounts[0];
-
-      // Get one-time token from SelfClaw
-      const { token } = await apiFetch<{ token: string }>(
-        '/api/auth/self/wallet/minipay-token',
-        { method: 'POST' }
-      );
-
-      // Connect with address + token → establishes session cookie
-      await apiFetch<void>('/api/auth/self/wallet/minipay-connect', {
-        method: 'POST',
-        body: JSON.stringify({ address, token })
-      });
-
-      return address;
-    },
-    onSuccess: (address: string) => {
-      setAuth(address);
-      resetRoute('home');
-    }
   });
 }
 
 export function useLogout() {
   const { logout } = useAuthStore();
   const resetRoute = useRouter(s => s.reset);
+  const { disconnect } = useDisconnect();
 
   return useMutation({
     mutationFn: async () => {
-      // Best-effort server-side logout
       await apiFetch<void>('/api/auth/logout', { method: 'POST' }).catch(() => {});
     },
     onSettled: () => {
+      disconnect();
       logout();
       resetRoute('connect');
-    }
+    },
   });
 }
