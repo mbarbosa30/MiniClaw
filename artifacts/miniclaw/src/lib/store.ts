@@ -15,17 +15,22 @@ export type ViewName =
   | 'tasks'
   | 'telegram';
 
+export interface ViewParams {
+  id?: string;
+  [key: string]: string | undefined;
+}
+
 interface ViewState {
   name: ViewName;
-  params?: any;
+  params?: ViewParams;
 }
 
 interface RouterStore {
   history: ViewState[];
   currentView: ViewState;
-  push: (name: ViewName, params?: any) => void;
+  push: (name: ViewName, params?: ViewParams) => void;
   pop: () => void;
-  reset: (name: ViewName) => void; // Clear history and go to view
+  reset: (name: ViewName) => void;
 }
 
 export const useRouter = create<RouterStore>((set) => ({
