@@ -1,0 +1,111 @@
+MiniClaw MiniApp for MiniPay — Build Prompt
+Overview
+Build a lightweight, mobile-first MiniClaw miniapp designed to run inside MiniPay (Celo's mobile wallet). The app is a standalone frontend project that connects to the SelfClaw API (https://selfclaw.ai) to provide the full MiniClaw AI assistant experience — creating, chatting with, configuring, and managing personal AI agents.
+
+The miniapp should feel native to MiniPay: fast, minimal, and wallet-first.
+
+Tech Stack
+Frontend: React or vanilla HTML/JS — keep it lightweight
+Styling: Light, clean, elegant. Think modern fintech / consumer app — soft colors, rounded corners, generous whitespace. Not the SelfClaw brutalist aesthetic — this should feel approachable and friendly.
+No heavy frameworks — loads inside MiniPay's embedded browser; keep bundle size small
+Use ethers.js v6 or viem for wallet interactions
+Design Direction
+Light and elegant — clean whites/light grays, subtle shadows, soft accent color
+Simple and clear — no visual clutter, easy to scan, obvious actions
+Mobile-native — touch-friendly, smooth transitions, bottom-anchored inputs
+NOT the SelfClaw look — no brutalist borders, no monospace everywhere, no dark-first palette. This is its own product with its own lighter identity.
+The designer has creative freedom on colors, typography, and layout — just keep it simple, readable, and polished.
+Authentication
+MiniPay provides window.ethereum with isMiniPay: true. Auth flow:
+
+Detect MiniPay: Check window.ethereum.isMiniPay || window.ethereum.isMinipay or user-agent containing "MiniPay"
+Request accounts: window.ethereum.request({ method: 'eth_requestAccounts' }) → get wallet address
+Authenticate with SelfClaw API:
+POST /api/auth/self/wallet/minipay-token → get a one-time token
+POST /api/auth/self/wallet/minipay-connect with { address, token } → establishes session
+Session: Use cookies (credentials: 'include' on all fetch calls). The wallet address IS the user identity — no email, no password.
+SelfClaw API Reference
+Base URL: https://selfclaw.ai Auth: Session cookie (set after MiniPay connect flow). All requests use credentials: 'include'.
+
+Auth Endpoints
+Method	Endpoint	Description
+POST	/api/auth/self/wallet/minipay-token	Get a one-time auth token
+POST	/api/auth/self/wallet/minipay-connect	Connect wallet. Body: { address, token }
+GET	/api/auth/status	Check current session. Returns { loggedIn, user }
+Agent Management
+Method	Endpoint	Description
+GET	/api/selfclaw/v1/hosted-agents	List user's agents
+GET	/api/selfclaw/v1/hosted-agents/:id	Get single agent details
+POST	/api/selfclaw/v1/hosted-agents	Create agent. Body: { name, emoji, description, interests, topicsToWatch, personaTemplate, humorStyle }
+PATCH	/api/selfclaw/v1/hosted-agents/:id	Update agent (status, name, emoji)
+DELETE	/api/selfclaw/v1/hosted-agents/:id	Delete an agent
+GET	/api/selfclaw/v1/hosted-agents/templates	Get persona templates
+GET	/api/selfclaw/v1/hosted-agents/skills	List available skills
+POST	/api/selfclaw/v1/hosted-agents/:id/skills/:skillId/enable	Enable a skill
+POST	/api/selfclaw/v1/hosted-agents/:id/skills/:skillId/disable	Disable a skill
+Chat
+Method	Endpoint	Description
+POST	/api/selfclaw/v1/hosted-agents/:id/chat	Send message, get streaming response. Body: { message, conversationId? }
+GET	/api/selfclaw/v1/hosted-agents/:id/conversations	List conversations
+GET	/api/selfclaw/v1/hosted-agents/:id/messages?conversationId=X	Get messages for a conversation
+Memory & Knowledge
+Method	Endpoint	Description
+GET	/api/selfclaw/v1/hosted-agents/:id/memories	List agent memories
+PATCH	/api/selfclaw/v1/hosted-agents/:id/memories/:memoryId	Edit/pin a memory
+DELETE	/api/selfclaw/v1/hosted-agents/:id/memories/:memoryId	Delete a memory
+POST	/api/selfclaw/v1/hosted-agents/:id/knowledge	Upload knowledge (text/URLs)
+GET	/api/selfclaw/v1/hosted-agents/:id/knowledge	List knowledge entries
+DELETE	/api/selfclaw/v1/hosted-agents/:id/knowledge/:knowledgeId	Delete a knowledge entry
+Settings
+Method	Endpoint	Description
+GET	/api/selfclaw/v1/hosted-agents/:id/settings	Get agent settings
+PUT	/api/selfclaw/v1/hosted-agents/:id/settings	Update settings. Fields: name, emoji, description, interests, topicsToWatch, socialHandles, enabledSkills, personalContext, humorStyle, premiumModel
+Soul & Identity
+Method	Endpoint	Description
+GET	/api/selfclaw/v1/hosted-agents/:id/soul	Get agent's soul document
+PUT	/api/selfclaw/v1/hosted-agents/:id/soul	Update soul document
+GET	/api/selfclaw/v1/hosted-agents/:id/awareness	Get agent's awareness/context state
+Tasks (Agent Autonomous Actions)
+Method	Endpoint	Description
+GET	/api/selfclaw/v1/hosted-agents/:id/tasks	List agent tasks
+GET	/api/selfclaw/v1/hosted-agents/:id/tasks/pending	List pending tasks needing approval
+POST	/api/selfclaw/v1/hosted-agents/:id/tasks/:taskId/approve	Approve a pending task
+POST	/api/selfclaw/v1/hosted-agents/:id/tasks/:taskId/reject	Reject a pending task
+Telegram Integration
+Method	Endpoint	Description
+POST	/api/selfclaw/v1/hosted-agents/:id/telegram/connect	Connect Telegram bot
+DELETE	/api/selfclaw/v1/hosted-agents/:id/telegram/disconnect	Disconnect Telegram bot
+PATCH	/api/selfclaw/v1/hosted-agents/:id/telegram/settings	Update Telegram settings
+GET	/api/selfclaw/v1/hosted-agents/:id/telegram/status	Get Telegram connection status
+Features (Full MiniClaw Parity)
+The miniapp should support all of these — the specific UI/UX is up to the designer:
+
+Wallet connect — one-tap connection using MiniPay's injected wallet
+Agent list — see all your MiniClaws, their status, tap to chat
+Create agent — pick a persona template, name it, set emoji, description, humor style, choose skills, add knowledge, deploy
+Chat — real-time streaming conversation with your agent, conversation history
+Memory management — browse, pin, edit, delete memories the agent has formed
+Knowledge upload — add text or URLs to teach the agent specific topics (up to 20 entries), view and delete existing entries
+Skill management — toggle skills on/off (Wallet Monitor, Price Watcher, Economics Tracker, News Radar, Research Assistant, Smart Advisor, Content Helper, Reputation Monitor)
+Agent settings — edit name, emoji, description, interests, topics, humor style, model tier, social handles
+Persona templates — 6 options: General Assistant, Research Analyst, DeFi Trader, Community Manager, Personal Coach, Support Agent
+Soul document — view and edit the agent's evolving identity document
+Task approvals — view pending autonomous tasks, approve or reject them
+Telegram connection — connect/disconnect Telegram bot, configure settings
+Delete agent — ability to remove an agent entirely
+MiniPay-Specific Requirements
+Mobile-only viewport, no desktop layout needed (max ~480px)
+maximum-scale=1.0, user-scalable=no
+Use 100dvh for full-height screens
+All navigation stays within the miniapp (hash-based routing or view switching)
+Keep initial JS bundle small — lazy-load non-critical screens
+Graceful error/offline states
+All API calls to https://selfclaw.ai with credentials: 'include'
+Server-Side Changes Needed
+See the companion document miniclaw-miniapp-api-plan.md for the full list of existing endpoints, CORS gaps, and new endpoints that may be needed.
+
+Deliverables
+A standalone miniapp project with all features above
+A list of any new SelfClaw API endpoints needed (with request/response shapes)
+Instructions for registering the miniapp URL with MiniPay's directory
+The app should work immediately when loaded inside MiniPay's embedded browser
