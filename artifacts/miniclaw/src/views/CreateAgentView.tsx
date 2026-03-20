@@ -58,7 +58,6 @@ export function CreateAgentView() {
   const [knowledgeEntries, setKnowledgeEntries] = useState<KnowledgeEntry[]>([]);
   const [knowledgeTitle, setKnowledgeTitle] = useState('');
   const [knowledgeContent, setKnowledgeContent] = useState('');
-  const [postCreateErrors, setPostCreateErrors] = useState<string[]>([]);
 
   const toggleSkill = (skillId: string) => {
     setSelectedSkills(prev => {
@@ -81,8 +80,6 @@ export function CreateAgentView() {
   };
 
   const handleCreate = async () => {
-    setPostCreateErrors([]);
-
     const result = await create.mutateAsync({
       name: formData.name,
       description: formData.description,
@@ -97,7 +94,7 @@ export function CreateAgentView() {
       try {
         await toggleSkillMutation.mutateAsync({ agentId: newAgent.id, skillId, enable: true });
       } catch {
-        errors.push(`Failed to enable skill: ${skillId}`);
+        errors.push(`skill:${skillId}`);
       }
     }
 
@@ -105,11 +102,9 @@ export function CreateAgentView() {
       try {
         await addKnowledge.mutateAsync({ agentId: newAgent.id, data: entry });
       } catch {
-        errors.push(`Failed to add knowledge: "${entry.title}"`);
+        errors.push(`knowledge:"${entry.title}"`);
       }
     }
-
-    if (errors.length > 0) setPostCreateErrors(errors);
 
     pop();
     push('agent-detail', { id: String(newAgent.id) });
@@ -392,15 +387,6 @@ export function CreateAgentView() {
                   <p style={{ fontSize: 11, color: '#f87171' }}>
                     {create.error instanceof Error ? create.error.message : 'Failed to create agent. Please try again.'}
                   </p>
-                </div>
-              )}
-
-              {postCreateErrors.length > 0 && (
-                <div style={{ border: `1px solid ${t.divider}`, borderRadius: 12, padding: '12px 14px' }}>
-                  <p style={{ fontSize: 11, fontWeight: 600, color: t.text, marginBottom: 4 }}>Agent created, but some extras failed:</p>
-                  {postCreateErrors.map((e, i) => (
-                    <p key={i} style={{ fontSize: 11, color: t.label }}>• {e}</p>
-                  ))}
                 </div>
               )}
 
