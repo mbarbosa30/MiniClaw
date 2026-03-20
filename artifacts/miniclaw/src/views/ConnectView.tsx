@@ -102,7 +102,7 @@ export function ConnectView() {
       >
         {resolved ? (
           <>
-            <p style={{ fontSize: 13, color: t.label, lineHeight: 1.6, whiteSpace: 'pre-line' }}>
+            <p style={{ fontSize: 12, color: t.label, lineHeight: 1.7, whiteSpace: 'pre-line', fontFamily: 'ui-monospace, Menlo, monospace', letterSpacing: '0.01em' }}>
               {resolved.text}
             </p>
             {resolved.canRetry && (
@@ -112,31 +112,34 @@ export function ConnectView() {
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: 6,
-                  fontSize: 13,
-                  fontWeight: 600,
+                  fontSize: 11,
+                  fontWeight: 700,
                   color: t.text,
                   background: 'none',
                   border: 'none',
                   cursor: 'pointer',
                   padding: 0,
+                  fontFamily: 'ui-monospace, Menlo, monospace',
+                  letterSpacing: '0.05em',
+                  textTransform: 'uppercase',
                 }}
                 onClick={() => window.location.reload()}
               >
-                <RefreshCw size={13} />
-                Retry
+                <RefreshCw size={12} />
+                retry
               </button>
             )}
           </>
         ) : !timedOut ? (
           <>
             <Loader2 size={18} color={t.faint} style={{ animation: 'spin 1s linear infinite' }} />
-            <p style={{ fontSize: 13, color: t.label }}>Connecting wallet…</p>
+            <p style={{ fontSize: 12, color: t.label, fontFamily: 'ui-monospace, Menlo, monospace', letterSpacing: '0.02em' }}>connecting wallet…</p>
           </>
         ) : (
           <>
-            <p style={{ fontSize: 13, color: t.label, lineHeight: 1.6 }}>
-              Couldn't connect to your wallet.
-              <br />Open this app inside MiniPay and try again.
+            <p style={{ fontSize: 12, color: t.label, lineHeight: 1.7, fontFamily: 'ui-monospace, Menlo, monospace', letterSpacing: '0.01em' }}>
+              couldn't connect to wallet.
+              <br />open inside minipay and try again.
             </p>
             <button
               style={{
@@ -144,18 +147,21 @@ export function ConnectView() {
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: 6,
-                fontSize: 13,
-                fontWeight: 600,
+                fontSize: 11,
+                fontWeight: 700,
                 color: t.text,
                 background: 'none',
                 border: 'none',
                 cursor: 'pointer',
                 padding: 0,
+                fontFamily: 'ui-monospace, Menlo, monospace',
+                letterSpacing: '0.05em',
+                textTransform: 'uppercase',
               }}
               onClick={() => window.location.reload()}
             >
-              <RefreshCw size={13} />
-              Retry
+              <RefreshCw size={12} />
+              retry
             </button>
           </>
         )}

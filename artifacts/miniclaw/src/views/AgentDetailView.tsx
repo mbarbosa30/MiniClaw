@@ -90,6 +90,18 @@ function NavButton({ icon, label, active, onClick, t }: { icon: React.ReactNode;
   );
 }
 
+type LocalMessage = ChatMessage & { _ts?: number };
+
+function fmtTime(ts?: number, iso?: string): string {
+  try {
+    const d = iso ? new Date(iso) : ts ? new Date(ts) : null;
+    if (!d || isNaN(d.getTime())) return '';
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+  } catch {
+    return '';
+  }
+}
+
 // --- CHAT TAB ---
 function ChatTab({ agent }: { agent: Agent }) {
   const t = useTheme();
@@ -99,8 +111,8 @@ function ChatTab({ agent }: { agent: Agent }) {
   const { data: history } = useMessages(agent.id, activeConversationId);
   const [historyLoaded, setHistoryLoaded] = useState(false);
 
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    { role: 'assistant', content: `Hi! I'm ${agent.name}. How can I help you today?` }
+  const [messages, setMessages] = useState<LocalMessage[]>([
+    { role: 'assistant', content: `Hi! I'm ${agent.name}. How can I help you today?`, _ts: Date.now() }
   ]);
   const [input, setInput] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
@@ -126,7 +138,7 @@ function ChatTab({ agent }: { agent: Agent }) {
   const startNewConversation = () => {
     setActiveConversationId(undefined);
     setHistoryLoaded(false);
-    setMessages([{ role: 'assistant', content: `New conversation with ${agent.name}. How can I help?` }]);
+    setMessages([{ role: 'assistant', content: `New conversation with ${agent.name}. How can I help?`, _ts: Date.now() }]);
     setShowConversations(false);
   };
 
@@ -141,10 +153,11 @@ function ChatTab({ agent }: { agent: Agent }) {
     if (!input.trim() || isStreaming) return;
     const userMsg = input.trim();
     setInput('');
+    const now = Date.now();
     setMessages(prev => [
       ...prev,
-      { role: 'user', content: userMsg },
-      { role: 'assistant', content: '' }
+      { role: 'user', content: userMsg, _ts: now },
+      { role: 'assistant', content: '', _ts: undefined }
     ]);
     setIsStreaming(true);
 
@@ -189,13 +202,21 @@ function ChatTab({ agent }: { agent: Agent }) {
                 setActiveConversationId(String(parsed.conversationId));
                 refetchConversations();
               }
+              setMessages(prev => {
+                const msgs = [...prev];
+                const last = msgs[msgs.length - 1];
+                if (last && last.role === 'assistant' && !last._ts) {
+                  msgs[msgs.length - 1] = { ...last, _ts: Date.now() };
+                }
+                return msgs;
+              });
               continue;
             }
 
             if (parsed.type === 'error') {
               setMessages(prev => [
                 ...prev.slice(0, -1),
-                { role: 'system', content: parsed.message ?? 'The agent encountered an error.' }
+                { role: 'system', content: parsed.message ?? 'The agent encountered an error.', _ts: Date.now() }
               ]);
               continue;
             }
@@ -320,65 +341,83 @@ function ChatTab({ agent }: { agent: Agent }) {
         style={{ flex: 1, overflowY: 'auto', padding: '16px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}
         onClick={() => setShowConversations(false)}
       >
-        {messages.map((m, i) => (
-          <div key={i} style={{ display: 'flex', justifyContent: m.role === 'user' ? 'flex-end' : 'flex-start' }}>
-            {m.role === 'assistant' && (
-              <div style={{
-                width: 28, height: 28,
-                borderRadius: '50%',
-                background: t.surface,
-                border: `1px solid ${t.divider}`,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: t.label,
-                marginRight: 8,
-                marginTop: 2,
-                flexShrink: 0,
-                alignSelf: 'flex-start',
-              }}>
-                <Bot size={14} />
+        {messages.map((m, i) => {
+          const timestamp = fmtTime(m._ts, m.createdAt);
+          const isLastStreaming = m.content === '' && m.role === 'assistant' && isStreaming && i === messages.length - 1;
+          return (
+            <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: m.role === 'user' ? 'flex-end' : 'flex-start', gap: 3 }}>
+              <div style={{ display: 'flex', justifyContent: m.role === 'user' ? 'flex-end' : 'flex-start' }}>
+                {m.role === 'assistant' && (
+                  <div style={{
+                    width: 28, height: 28,
+                    borderRadius: '50%',
+                    background: t.surface,
+                    border: `1px solid ${t.divider}`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: t.label,
+                    marginRight: 8,
+                    marginTop: 2,
+                    flexShrink: 0,
+                    alignSelf: 'flex-start',
+                  }}>
+                    <Bot size={14} />
+                  </div>
+                )}
+                <div style={{
+                  maxWidth: '80%',
+                  borderRadius: m.role === 'user' ? '18px 18px 4px 18px' : '4px 18px 18px 18px',
+                  padding: '10px 14px',
+                  fontSize: 14,
+                  lineHeight: 1.6,
+                  background: m.role === 'user'
+                    ? t.text
+                    : m.role === 'system'
+                    ? 'rgba(248,113,113,0.08)'
+                    : t.surface,
+                  color: m.role === 'user'
+                    ? t.bg
+                    : m.role === 'system'
+                    ? '#f87171'
+                    : t.text,
+                  border: m.role === 'system'
+                    ? '1px solid rgba(248,113,113,0.2)'
+                    : m.role === 'assistant'
+                    ? `1px solid ${t.divider}`
+                    : 'none',
+                }}>
+                  {isLastStreaming ? (
+                    <span style={{ display: 'flex', gap: 4, alignItems: 'center', height: 20 }}>
+                      {[0, 1, 2].map((j) => (
+                        <span key={j} style={{
+                          width: 5, height: 5,
+                          borderRadius: '50%',
+                          background: t.faint,
+                          animation: `bounce 1.2s ease-in-out ${j * 0.15}s infinite`,
+                        }} />
+                      ))}
+                    </span>
+                  ) : (
+                    <span style={{ whiteSpace: 'pre-wrap' }}>{m.content}</span>
+                  )}
+                </div>
               </div>
-            )}
-            <div style={{
-              maxWidth: '80%',
-              borderRadius: m.role === 'user' ? '18px 18px 4px 18px' : '4px 18px 18px 18px',
-              padding: '10px 14px',
-              fontSize: 14,
-              lineHeight: 1.6,
-              background: m.role === 'user'
-                ? t.text
-                : m.role === 'system'
-                ? 'rgba(248,113,113,0.08)'
-                : t.surface,
-              color: m.role === 'user'
-                ? t.bg
-                : m.role === 'system'
-                ? '#f87171'
-                : t.text,
-              border: m.role === 'system'
-                ? '1px solid rgba(248,113,113,0.2)'
-                : m.role === 'assistant'
-                ? `1px solid ${t.divider}`
-                : 'none',
-            }}>
-              {m.content === '' && m.role === 'assistant' && isStreaming && i === messages.length - 1 ? (
-                <span style={{ display: 'flex', gap: 4, alignItems: 'center', height: 20 }}>
-                  {[0, 1, 2].map((j) => (
-                    <span key={j} style={{
-                      width: 5, height: 5,
-                      borderRadius: '50%',
-                      background: t.faint,
-                      animation: `bounce 1.2s ease-in-out ${j * 0.15}s infinite`,
-                    }} />
-                  ))}
+              {timestamp && !isLastStreaming && (
+                <span style={{
+                  fontSize: 9,
+                  fontFamily: 'ui-monospace, Menlo, monospace',
+                  letterSpacing: '0.04em',
+                  color: t.faint,
+                  paddingLeft: m.role === 'assistant' ? 40 : 0,
+                  paddingRight: m.role === 'user' ? 2 : 0,
+                }}>
+                  {timestamp}
                 </span>
-              ) : (
-                <span style={{ whiteSpace: 'pre-wrap' }}>{m.content}</span>
               )}
             </div>
-          </div>
-        ))}
+          );
+        })}
         <div ref={endRef} />
       </div>
 
