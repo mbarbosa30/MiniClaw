@@ -1,0 +1,47 @@
+Here's my analysis of what the current miniclaw API covers and what backend work would be needed for these two features:
+
+What Already Works (No API Changes Needed)
+Task #17 (Onboarding + Persona Setup):
+
+Agent creation with persona template: POST /v1/hosted-agents already accepts personaTemplate, enabledSkills, interests, topicsToWatch, humorStyle
+Soul update: PUT /v1/hosted-agents/:id/soul exists
+Settings update: PATCH /v1/hosted-agents/:id covers interests, topics, personalContext
+Knowledge entries: POST /v1/hosted-agents/:id/knowledge exists for saving profile form answers
+Skill enable/disable: individual endpoints exist
+Templates list: GET /v1/hosted-agents/templates exists
+Task #18 (Daily Brief, Growth Dashboard, Chat UX):
+
+Chat with SSE streaming: POST /v1/hosted-agents/:id/chat works
+Polling fallback: ?poll=true + GET /v1/hosted-agents/:id/chat/:messageId/result exists
+Quota data: returned via X-Quota-* headers on chat responses and via GET /v1/hosted-agents/:id/awareness
+Agent list: GET /v1/hosted-agents/summary exists
+Tasks list & approve/reject: endpoints exist
+Activity log: GET /v1/hosted-agents/:id/activity exists
+What's Missing — API Gaps
+For Task #17:
+
+The 7 new persona templates don't exist yet. The current PERSONA_TEMPLATES array has general/research/trading/etc. You'd need the 7 Global South personas (AI Hustle Builder, VibeCoder, etc.) added to the backend templates list with their soul documents, default skills, interests, and topics. This was actually done in Task #117 already — let me verify exactly which ones landed.
+
+"Hustle Mode" toggle. There's no dedicated field or endpoint for this. Two options: (a) store it as a flag in the agent's metadata JSONB and use the existing PATCH endpoint, or (b) implement it purely client-side — when toggled on, the frontend appends the growth plan instruction to the soul via PUT /soul and removes it when toggled off. Option (b) needs zero backend work.
+
+"Reset to defaults" for soul. No dedicated endpoint, but the frontend can call GET /v1/hosted-agents/templates to get the original soul template, then PUT /v1/hosted-agents/:id/soul with it. Zero backend needed.
+
+For Task #18:
+
+Daily Brief endpoint is missing. Currently there's no single endpoint that returns "here's the most interesting thing your agent found recently." The frontend would need to stitch together GET /tasks/pending + GET /activity to build a brief, or you'd want a new dedicated endpoint like GET /v1/hosted-agents/:id/daily-brief that returns a pre-composed summary. Without it, the frontend has to make 2-3 calls per agent on every home screen load.
+
+Growth/impact summary endpoint is missing. There's no endpoint that returns "tasks approved this month by category." The existing GET /tasks returns raw task rows, so the frontend could do client-side aggregation, but that means fetching potentially hundreds of tasks. A new GET /v1/hosted-agents/:id/growth-summary endpoint returning pre-aggregated stats would be much cleaner.
+
+Quick-reply chip suggestions. No endpoint for this. Two options: (a) define chips statically per persona in the frontend (zero backend), or (b) add a field to the templates/agent response that includes suggested prompts. Option (a) is simpler and probably sufficient.
+
+Auto-approve low-risk tasks. The current task model has taskType and requiresApproval fields, but there's no risk-level classification. Either (a) the backend tags tasks with a risk level on creation so the frontend can auto-approve "low" ones, or (b) the frontend infers risk from the task type string (e.g., "reminder" = low-risk, "payment" = high-risk). Option (b) works without backend changes but is fragile.
+
+Summary — What I'd Recommend Building on the Backend
+Gap	Effort	Recommendation
+Verify Global South persona templates exist	Quick check	Already done in Task #117 — just confirm the 7 are there
+Daily Brief endpoint	Small	New GET /v1/hosted-agents/daily-brief across all agents — returns most recent notable task/activity per agent
+Growth summary endpoint	Small	New GET /v1/hosted-agents/:id/growth-summary?months=1 — returns aggregated task counts by category
+Hustle Mode	Tiny	Store in metadata JSONB, no schema change needed
+Quick-reply chips	None	Define per-persona in frontend
+Task risk classification	Tiny	Add a riskLevel field to task creation logic so skills tag tasks as "low"/"medium"/"high"
+The Daily Brief and Growth Summary are the only two that would meaningfully improve the frontend experience vs. doing it all client-side. Everything else can be handled with existing endpoints.

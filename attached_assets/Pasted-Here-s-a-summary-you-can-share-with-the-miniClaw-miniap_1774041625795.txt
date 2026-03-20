@@ -1,0 +1,38 @@
+Here's a summary you can share with the miniClaw miniapp team:
+
+New data available on the hosted agents API
+
+List endpoint (GET /v1/hosted-agents) now returns per agent:
+
+Field	Type	Description
+llmTokensUsedToday	number	Tokens consumed today (resets daily)
+llmTokensLimit	number	Max tokens allowed per day
+pocScore	number or null	Proof-of-Contribution score (0–100)
+economicsEarnedToday	number	Net earnings (revenue minus costs) in the last 24h
+memorySizeEstimate	number	Agent memory usage in bytes
+memorySizeLimit	number	Max memory allowed (8 MB)
+celoBalance	null	Always null on list (skipped for performance)
+enabledSkillNames	string[]	Human-readable names of active skills
+runtimeStatus	string	One of "thinking", "running", "waiting", "idle"
+The list response also now includes a top-level summary object:
+
+Field	Type	Description
+activeCount	number	Agents with status "active"
+totalCount	number	Total agents
+totalTokens	number	Sum of all agents' tokens used today
+totalCostUsd	number	Estimated total cost in USD
+Detail endpoint (GET /v1/hosted-agents/:id) returns everything above, plus:
+
+Field	Type	Description
+tokenCostUsd	number	Estimated USD cost of tokens used today
+celoBalance	number or null	On-chain CELO balance (null if wallet not set up or lookup fails)
+holdingsUsd	number or null	USD value of CELO holdings
+uptimePercent	number or null	Estimated uptime percentage based on activity history
+progressPercent	number (0–100)	Composite progress metric (memories, tasks completed, PoC score)
+Key notes for the frontend:
+
+runtimeStatus can drive status indicators: "thinking" = actively processing a task, "running" = recent LLM activity, "waiting" = has tasks pending human approval, "idle" = nothing going on.
+All new fields degrade gracefully — they return null or 0 if the underlying data isn't available, so the UI should handle those as "no data yet" states.
+CELO balance is only fetched on the detail page (not the list) to keep the list endpoint fast.
+memorySizeEstimate is in bytes — divide by 1,048,576 to display as MB alongside memorySizeLimit.
+The summary object is great for a dashboard header showing totals across all agents.
