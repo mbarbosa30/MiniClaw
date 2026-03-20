@@ -22,8 +22,11 @@ import type {
 
 export type { Agent, PersonaTemplate, SkillDef };
 
-// Convenience: coerce string | number IDs to string for URL interpolation
+// Normalize ID to string for URL interpolation
 const sid = (id: string | number) => String(id);
+
+// Normalize ID to string for React Query cache keys — avoids ['agents', '1'] vs ['agents', 1] misses
+const qid = (id: string | number | undefined) => (id != null ? String(id) : id);
 
 // --- AGENT CRUD ---
 
@@ -32,7 +35,7 @@ export function useAgents() {
     queryKey: ['agents'],
     queryFn: async () => {
       // The live API returns { agents: [] } despite docs showing a plain array.
-      // This was verified empirically — keep the unwrap.
+      // This was verified empirically — keep the unwrap but tolerate both shapes.
       const raw = await apiFetch<{ agents: Agent[] } | Agent[]>('/api/selfclaw/v1/hosted-agents');
       return Array.isArray(raw) ? raw : (raw as { agents: Agent[] }).agents;
     },
@@ -41,7 +44,7 @@ export function useAgents() {
 
 export function useAgent(id: string | number | undefined) {
   return useQuery({
-    queryKey: ['agents', id],
+    queryKey: ['agents', qid(id)],
     queryFn: () => apiFetch<Agent>(`/api/selfclaw/v1/hosted-agents/${sid(id!)}`),
     enabled: id != null && id !== '',
   });
@@ -85,7 +88,7 @@ export function useUpdateAgent() {
       }),
     onSuccess: (_, variables) => {
       qc.invalidateQueries({ queryKey: ['agents'] });
-      qc.invalidateQueries({ queryKey: ['agents', variables.id] });
+      qc.invalidateQueries({ queryKey: ['agents', qid(variables.id)] });
     },
   });
 }
@@ -101,8 +104,8 @@ export function useUpdateAgentSettings() {
       }),
     onSuccess: (_, variables) => {
       qc.invalidateQueries({ queryKey: ['agents'] });
-      qc.invalidateQueries({ queryKey: ['agents', variables.id] });
-      qc.invalidateQueries({ queryKey: ['agent-settings', variables.id] });
+      qc.invalidateQueries({ queryKey: ['agents', qid(variables.id)] });
+      qc.invalidateQueries({ queryKey: ['agent-settings', qid(variables.id)] });
     },
   });
 }
@@ -110,7 +113,7 @@ export function useUpdateAgentSettings() {
 // GET /:id/settings
 export function useAgentSettings(id: string | number | undefined) {
   return useQuery({
-    queryKey: ['agent-settings', id],
+    queryKey: ['agent-settings', qid(id)],
     queryFn: () => apiFetch<AgentSettings>(`/api/selfclaw/v1/hosted-agents/${sid(id!)}/settings`),
     enabled: id != null && id !== '',
   });
@@ -129,7 +132,7 @@ export function useDeleteAgent() {
 
 export function useAgentSkills(agentId: string | number | undefined) {
   return useQuery({
-    queryKey: ['skills', agentId],
+    queryKey: ['skills', qid(agentId)],
     queryFn: () => apiFetch<SkillDef[]>(`/api/selfclaw/v1/hosted-agents/${sid(agentId!)}/skills`),
     enabled: agentId != null && agentId !== '',
   });
@@ -145,8 +148,8 @@ export function useToggleSkill() {
       ),
     onSuccess: (_, variables) => {
       // enabledSkills lives on the agent object, so invalidate both caches
-      qc.invalidateQueries({ queryKey: ['skills', variables.agentId] });
-      qc.invalidateQueries({ queryKey: ['agents', variables.agentId] });
+      qc.invalidateQueries({ queryKey: ['skills', qid(variables.agentId)] });
+      qc.invalidateQueries({ queryKey: ['agents', qid(variables.agentId)] });
     },
   });
 }
@@ -155,7 +158,7 @@ export function useToggleSkill() {
 
 export function useKnowledge(agentId: string | number | undefined) {
   return useQuery({
-    queryKey: ['knowledge', agentId],
+    queryKey: ['knowledge', qid(agentId)],
     queryFn: () => apiFetch<Knowledge[]>(`/api/selfclaw/v1/hosted-agents/${sid(agentId!)}/knowledge`),
     enabled: agentId != null && agentId !== '',
   });
@@ -170,20 +173,28 @@ export function useAddKnowledge() {
         method: 'POST',
         body: JSON.stringify(data),
       }),
-    onSuccess: (_, variables) => qc.invalidateQueries({ queryKey: ['knowledge', variables.agentId] }),
+    onSuccess: (_, variables) => qc.invalidateQueries({ queryKey: ['knowledge', qid(variables.agentId)] }),
   });
 }
 
-// PATCH /:id/knowledge/:knowledgeId — re-embeds content
+// PATCH /:id/knowledge/:knowledgeId — re-embeds content on save
 export function useUpdateKnowledge() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ agentId, knowledgeId, data }: { agentId: string | number; knowledgeId: string; data: UpdateKnowledgePayload }) =>
+    mutationFn: ({
+      agentId,
+      knowledgeId,
+      data,
+    }: {
+      agentId: string | number;
+      knowledgeId: string;
+      data: UpdateKnowledgePayload;
+    }) =>
       apiFetch<Knowledge>(`/api/selfclaw/v1/hosted-agents/${sid(agentId)}/knowledge/${knowledgeId}`, {
         method: 'PATCH',
         body: JSON.stringify(data),
       }),
-    onSuccess: (_, variables) => qc.invalidateQueries({ queryKey: ['knowledge', variables.agentId] }),
+    onSuccess: (_, variables) => qc.invalidateQueries({ queryKey: ['knowledge', qid(variables.agentId)] }),
   });
 }
 
@@ -192,7 +203,7 @@ export function useDeleteKnowledge() {
   return useMutation({
     mutationFn: ({ agentId, id }: { agentId: string | number; id: string }) =>
       apiFetch<void>(`/api/selfclaw/v1/hosted-agents/${sid(agentId)}/knowledge/${id}`, { method: 'DELETE' }),
-    onSuccess: (_, variables) => qc.invalidateQueries({ queryKey: ['knowledge', variables.agentId] }),
+    onSuccess: (_, variables) => qc.invalidateQueries({ queryKey: ['knowledge', qid(variables.agentId)] }),
   });
 }
 
@@ -200,7 +211,7 @@ export function useDeleteKnowledge() {
 
 export function useMemories(agentId: string | number | undefined) {
   return useQuery({
-    queryKey: ['memories', agentId],
+    queryKey: ['memories', qid(agentId)],
     queryFn: () => apiFetch<Memory[]>(`/api/selfclaw/v1/hosted-agents/${sid(agentId!)}/memories`),
     enabled: agentId != null && agentId !== '',
   });
@@ -210,12 +221,20 @@ export function useMemories(agentId: string | number | undefined) {
 export function useUpdateMemory() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ agentId, id, data }: { agentId: string | number; id: string; data: { content?: string; category?: string } }) =>
+    mutationFn: ({
+      agentId,
+      id,
+      data,
+    }: {
+      agentId: string | number;
+      id: string;
+      data: { content?: string; category?: string };
+    }) =>
       apiFetch<Memory>(`/api/selfclaw/v1/hosted-agents/${sid(agentId)}/memories/${id}`, {
         method: 'PATCH',
         body: JSON.stringify(data),
       }),
-    onSuccess: (_, variables) => qc.invalidateQueries({ queryKey: ['memories', variables.agentId] }),
+    onSuccess: (_, variables) => qc.invalidateQueries({ queryKey: ['memories', qid(variables.agentId)] }),
   });
 }
 
@@ -224,7 +243,7 @@ export function useDeleteMemory() {
   return useMutation({
     mutationFn: ({ agentId, id }: { agentId: string | number; id: string }) =>
       apiFetch<void>(`/api/selfclaw/v1/hosted-agents/${sid(agentId)}/memories/${id}`, { method: 'DELETE' }),
-    onSuccess: (_, variables) => qc.invalidateQueries({ queryKey: ['memories', variables.agentId] }),
+    onSuccess: (_, variables) => qc.invalidateQueries({ queryKey: ['memories', qid(variables.agentId)] }),
   });
 }
 
@@ -232,7 +251,7 @@ export function useDeleteMemory() {
 
 export function useSoul(agentId: string | number | undefined) {
   return useQuery({
-    queryKey: ['soul', agentId],
+    queryKey: ['soul', qid(agentId)],
     queryFn: () => apiFetch<SoulDocument>(`/api/selfclaw/v1/hosted-agents/${sid(agentId!)}/soul`),
     enabled: agentId != null && agentId !== '',
   });
@@ -246,7 +265,7 @@ export function useUpdateSoul() {
         method: 'PUT',
         body: JSON.stringify({ soul }),
       }),
-    onSuccess: (_, variables) => qc.invalidateQueries({ queryKey: ['soul', variables.agentId] }),
+    onSuccess: (_, variables) => qc.invalidateQueries({ queryKey: ['soul', qid(variables.agentId)] }),
   });
 }
 
@@ -254,7 +273,7 @@ export function useUpdateSoul() {
 
 export function useConversations(agentId: string | number | undefined) {
   return useQuery({
-    queryKey: ['conversations', agentId],
+    queryKey: ['conversations', qid(agentId)],
     queryFn: () => apiFetch<Conversation[]>(`/api/selfclaw/v1/hosted-agents/${sid(agentId!)}/conversations`),
     enabled: agentId != null && agentId !== '',
   });
@@ -263,7 +282,7 @@ export function useConversations(agentId: string | number | undefined) {
 // Per API docs: GET /:id/messages?conversationId=X
 export function useMessages(agentId: string | number | undefined, conversationId: string | number | undefined) {
   return useQuery({
-    queryKey: ['messages', agentId, conversationId],
+    queryKey: ['messages', qid(agentId), conversationId],
     queryFn: () =>
       apiFetch<ChatMessage[]>(
         `/api/selfclaw/v1/hosted-agents/${sid(agentId!)}/messages?conversationId=${conversationId}`
@@ -276,7 +295,7 @@ export function useMessages(agentId: string | number | undefined, conversationId
 
 export function useTasks(agentId: string | number | undefined, status: 'pending' | 'all' = 'pending') {
   return useQuery({
-    queryKey: ['tasks', agentId, status],
+    queryKey: ['tasks', qid(agentId), status],
     queryFn: () =>
       apiFetch<AgentTask[]>(
         `/api/selfclaw/v1/hosted-agents/${sid(agentId!)}/tasks${status === 'pending' ? '/pending' : ''}`
@@ -289,11 +308,21 @@ export function useTasks(agentId: string | number | undefined, status: 'pending'
 export function useResolveTask() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ agentId, taskId, action }: { agentId: string | number; taskId: string; action: 'approve' | 'reject' }) =>
-      apiFetch<void>(`/api/selfclaw/v1/hosted-agents/${sid(agentId)}/tasks/${taskId}/${action}`, { method: 'POST' }),
+    mutationFn: ({
+      agentId,
+      taskId,
+      action,
+    }: {
+      agentId: string | number;
+      taskId: string;
+      action: 'approve' | 'reject';
+    }) =>
+      apiFetch<void>(`/api/selfclaw/v1/hosted-agents/${sid(agentId)}/tasks/${taskId}/${action}`, {
+        method: 'POST',
+      }),
     onSuccess: (_, variables) => {
-      qc.invalidateQueries({ queryKey: ['tasks', variables.agentId, 'pending'] });
-      qc.invalidateQueries({ queryKey: ['tasks', variables.agentId, 'all'] });
+      qc.invalidateQueries({ queryKey: ['tasks', qid(variables.agentId), 'pending'] });
+      qc.invalidateQueries({ queryKey: ['tasks', qid(variables.agentId), 'all'] });
     },
   });
 }
@@ -302,7 +331,7 @@ export function useResolveTask() {
 
 export function useTelegramStatus(agentId: string | number | undefined) {
   return useQuery({
-    queryKey: ['telegram-status', agentId],
+    queryKey: ['telegram-status', qid(agentId)],
     queryFn: () =>
       apiFetch<TelegramStatus>(`/api/selfclaw/v1/hosted-agents/${sid(agentId!)}/telegram/status`),
     enabled: agentId != null && agentId !== '',
@@ -317,6 +346,7 @@ export function useUpdateTelegramSettings() {
         method: 'PATCH',
         body: JSON.stringify(data),
       }),
-    onSuccess: (_, variables) => qc.invalidateQueries({ queryKey: ['telegram-status', variables.agentId] }),
+    onSuccess: (_, variables) =>
+      qc.invalidateQueries({ queryKey: ['telegram-status', qid(variables.agentId)] }),
   });
 }
