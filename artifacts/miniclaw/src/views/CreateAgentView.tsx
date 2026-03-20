@@ -108,7 +108,7 @@ export function CreateAgentView() {
     if (errors.length > 0) setPostCreateErrors(errors);
 
     pop();
-    push('agent-detail', { id: newAgent.id });
+    push('agent-detail', { id: String(newAgent.id) });
   };
 
   return (
