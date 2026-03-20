@@ -347,12 +347,14 @@ export function useMessages(agentId: string | number | undefined, conversationId
 // --- TASKS ---
 
 export function useTasks(agentId: string | number | undefined, status: 'pending' | 'all' = 'pending', options?: { refetchInterval?: number }) {
-  return useQuery({
+  return useQuery<AgentTask[]>({
     queryKey: ['tasks', qid(agentId), status],
-    queryFn: () =>
-      apiFetch<AgentTask[]>(
+    queryFn: async () => {
+      const raw = await apiFetch<AgentTask[] | { tasks: AgentTask[] }>(
         `/api/selfclaw/v1/hosted-agents/${sid(agentId!)}/tasks${status === 'pending' ? '/pending' : ''}`
-      ),
+      );
+      return Array.isArray(raw) ? raw : (raw?.tasks ?? []);
+    },
     enabled: agentId != null && agentId !== '',
     refetchInterval: options?.refetchInterval,
   });
