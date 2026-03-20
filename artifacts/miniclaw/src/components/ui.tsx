@@ -97,42 +97,45 @@ export const Card = ({ className, children, ...props }: HTMLMotionProps<"div">) 
   );
 };
 
-export const Switch = ({ checked, onChange }: { checked: boolean; onChange: (c: boolean) => void }) => (
-  <button
-    type="button"
-    role="switch"
-    aria-checked={checked}
-    onClick={() => onChange(!checked)}
-    style={{
-      position: 'relative',
-      display: 'inline-flex',
-      height: 24,
-      width: 44,
-      flexShrink: 0,
-      cursor: 'pointer',
-      alignItems: 'center',
-      borderRadius: 9999,
-      border: 'none',
-      transition: 'background 0.2s',
-      background: checked ? '#0a0a0a' : '#d1d5db',
-      outline: 'none',
-    }}
-  >
-    <span
+export const Switch = ({ checked, onChange }: { checked: boolean; onChange: (c: boolean) => void }) => {
+  const t = useTheme();
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      onClick={() => onChange(!checked)}
       style={{
-        display: 'inline-block',
-        height: 18,
-        width: 18,
+        position: 'relative',
+        display: 'inline-flex',
+        height: 24,
+        width: 44,
+        flexShrink: 0,
+        cursor: 'pointer',
+        alignItems: 'center',
         borderRadius: 9999,
-        background: '#fff',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
-        transform: checked ? 'translateX(22px)' : 'translateX(3px)',
-        transition: 'transform 0.2s',
-        pointerEvents: 'none',
+        border: 'none',
+        transition: 'background 0.2s',
+        background: checked ? t.text : t.surface,
+        outline: 'none',
       }}
-    />
-  </button>
-);
+    >
+      <span
+        style={{
+          display: 'inline-block',
+          height: 18,
+          width: 18,
+          borderRadius: 9999,
+          background: t.bg,
+          boxShadow: '0 1px 3px rgba(0,0,0,0.25)',
+          transform: checked ? 'translateX(22px)' : 'translateX(3px)',
+          transition: 'transform 0.2s',
+          pointerEvents: 'none',
+        }}
+      />
+    </button>
+  );
+};
 
 export const ScreenHeader = ({ title, onBack, rightAction }: { title: string; onBack?: () => void; rightAction?: React.ReactNode }) => {
   const t = useTheme();

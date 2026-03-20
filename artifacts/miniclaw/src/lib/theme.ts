@@ -27,12 +27,12 @@ export const LIGHT: Theme = {
 export const DARK: Theme = {
   bg: '#0f0f0f',
   text: '#e2e2e2',
-  textDim: '#2e2e2e',
-  label: '#4a4a4a',
-  faint: '#383838',
-  divider: '#1c1c1c',
-  surface: '#1c1c1c',
-  navBorder: '#1a1a1a',
+  textDim: '#3a3a3a',
+  label: '#707070',
+  faint: '#555555',
+  divider: '#222222',
+  surface: '#1a1a1a',
+  navBorder: '#1e1e1e',
   dark: true,
 };
 

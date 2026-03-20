@@ -259,18 +259,19 @@ function ChatTab({ agent }: { agent: Agent }) {
             borderRadius: 8,
             background: t.surface,
             border: 'none',
-            fontSize: 11,
+            fontSize: 12,
             color: t.label,
             cursor: 'pointer',
-            fontFamily: 'ui-monospace, Menlo, monospace',
-            letterSpacing: '0.02em',
             overflow: 'hidden',
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap',
+            letterSpacing: '-0.01em',
           }}
           onClick={() => setShowConversations(!showConversations)}
         >
-          {activeConversationId ? `conv-${activeConversationId.slice(-6)}` : 'new-conversation'}
+          {conversations && conversations.length > 0
+            ? (conversations.find(c => String(c.id) === activeConversationId)?.title || (activeConversationId ? 'Conversation' : 'New conversation'))
+            : 'New conversation'}
         </button>
         <button
           style={{
@@ -437,7 +438,7 @@ function ChatTab({ agent }: { agent: Agent }) {
             onChange={e => setInput(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
             placeholder="Message…"
-            className="no-scrollbar"
+            className="no-scrollbar placeholder:opacity-40"
             style={{
               flex: 1,
               maxHeight: 120,
