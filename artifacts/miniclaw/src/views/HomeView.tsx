@@ -29,8 +29,9 @@ function AgentRow({
   const color = STATE_COLOR[state];
   const isIdle = state === 'idle' || state === 'pending';
 
+  const liveActivity = agent.stats?.currentActivity?.trim() || null;
   const activity =
-    agent.stats?.currentActivity ??
+    liveActivity ??
     (agent.description ? agent.description.slice(0, 52) + (agent.description.length > 52 ? '…' : '') : null);
 
   const statSegments: string[] = [];
