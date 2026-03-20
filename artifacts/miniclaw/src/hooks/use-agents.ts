@@ -53,14 +53,20 @@ export function useAgent(id: string | number | undefined) {
 export function useTemplates() {
   return useQuery({
     queryKey: ['agent-templates'],
-    queryFn: () => apiFetch<PersonaTemplate[]>('/api/selfclaw/v1/hosted-agents/templates'),
+    queryFn: async () => {
+      const raw = await apiFetch<{ templates: PersonaTemplate[] } | PersonaTemplate[]>('/api/selfclaw/v1/hosted-agents/templates');
+      return Array.isArray(raw) ? raw : (raw as { templates: PersonaTemplate[] }).templates ?? [];
+    },
   });
 }
 
 export function useSkillDefs() {
   return useQuery({
     queryKey: ['skill-defs'],
-    queryFn: () => apiFetch<SkillDef[]>('/api/selfclaw/v1/hosted-agents/skills'),
+    queryFn: async () => {
+      const raw = await apiFetch<{ skills: SkillDef[] } | SkillDef[]>('/api/selfclaw/v1/hosted-agents/skills');
+      return Array.isArray(raw) ? raw : (raw as { skills: SkillDef[] }).skills ?? [];
+    },
   });
 }
 
