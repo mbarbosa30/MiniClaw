@@ -3,9 +3,9 @@ import { useAgent, useDeleteAgent, useUpdateAgent, useConversations, useMessages
 import { useRouter } from '@/lib/store';
 import { useTheme } from '@/lib/theme';
 import { ScreenHeader, Button, Input, Textarea } from '@/components/ui';
-import { Settings, MessageSquare, Menu, Send, Trash2, Plus, Bot, Brain, BookOpen, Zap, ScrollText, CircleCheck } from 'lucide-react';
+import { Settings, MessageSquare, MoreHorizontal, Send, Trash2, Plus, Bot, Brain, BookOpen, Zap, ScrollText, CircleCheck } from 'lucide-react';
 import { apiFetchStream } from '@/lib/api-client';
-import type { Agent, HumorStyle, PremiumModel, ChatMessage, Conversation } from '@/types';
+import type { Agent, HumorStyle, PremiumModel, ChatMessage } from '@/types';
 
 export function AgentDetailView() {
   const t = useTheme();
@@ -15,6 +15,7 @@ export function AgentDetailView() {
   const id: string = currentView.params?.id ?? '';
   const { data: agent, isLoading } = useAgent(id);
   const [tab, setTab] = useState<'chat' | 'settings' | 'more'>('chat');
+  const [newChatTrigger, setNewChatTrigger] = useState(0);
 
   if (isLoading) {
     return (
@@ -39,10 +40,21 @@ export function AgentDetailView() {
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: t.bg, transition: 'background 0.3s ease' }}>
-      <ScreenHeader title={agentName} onBack={pop} />
+      <ScreenHeader
+        title={agentName}
+        onBack={pop}
+        rightAction={tab === 'chat' ? (
+          <button
+            onClick={() => setNewChatTrigger(n => n + 1)}
+            style={{ padding: 8, marginRight: -8, background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: t.label }}
+          >
+            <Plus size={18} strokeWidth={1.5} />
+          </button>
+        ) : undefined}
+      />
 
       <div style={{ flex: 1, overflow: 'hidden' }}>
-        {tab === 'chat' && <ChatTab agent={agent} />}
+        {tab === 'chat' && <ChatTab agent={agent} agentName={agentName} newChatTrigger={newChatTrigger} />}
         {tab === 'settings' && <SettingsTab agent={agent} onDeleted={pop} />}
         {tab === 'more' && <MoreTab agentId={id} onNavigate={(path) => push(path as Parameters<typeof push>[0], { id })} />}
       </div>
@@ -51,43 +63,42 @@ export function AgentDetailView() {
       <div style={{
         display: 'flex',
         paddingBottom: 20,
-        paddingTop: 8,
+        paddingTop: 12,
         background: t.bg,
-        borderTop: `1px solid ${t.divider}`,
+        borderTop: `1px solid ${t.navBorder}`,
         flexShrink: 0,
-        transition: 'background 0.3s ease',
+        transition: 'background 0.3s ease, border-color 0.3s ease',
       }}>
-        <NavButton icon={<MessageSquare size={19} />} label="Chat" active={tab === 'chat'} onClick={() => setTab('chat')} t={t} />
-        <NavButton icon={<Settings size={19} />} label="Settings" active={tab === 'settings'} onClick={() => setTab('settings')} t={t} />
-        <NavButton icon={<Menu size={19} />} label="More" active={tab === 'more'} onClick={() => setTab('more')} t={t} />
+        <NavButton icon={MessageSquare} active={tab === 'chat'} onClick={() => setTab('chat')} />
+        <NavButton icon={Settings} active={tab === 'settings'} onClick={() => setTab('settings')} />
+        <NavButton icon={MoreHorizontal} active={tab === 'more'} onClick={() => setTab('more')} />
       </div>
     </div>
   );
 }
 
-function NavButton({ icon, label, active, onClick, t }: { icon: React.ReactNode; label: string; active: boolean; onClick: () => void; t: ReturnType<typeof useTheme> }) {
+function NavButton({ icon, active, onClick }: { icon: React.ElementType; active: boolean; onClick: () => void }) {
+  const t = useTheme();
+  const Icon = icon;
   return (
     <button
       onClick={onClick}
       style={{
         flex: 1,
         display: 'flex',
-        flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        gap: 2,
-        padding: '4px 0',
         background: 'none',
         border: 'none',
         cursor: 'pointer',
-        color: active ? t.text : t.faint,
+        padding: '8px 0',
       }}
     >
-      <div style={{ padding: 6 }}>{icon}</div>
-      <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.03em', color: active ? t.text : t.faint }}>
-        {label}
-      </span>
-      {active && <span style={{ width: 16, height: 1.5, background: t.text, borderRadius: 1, marginTop: 2 }} />}
+      <Icon
+        size={18}
+        strokeWidth={active ? 2.25 : 1.5}
+        color={active ? t.text : t.faint}
+      />
     </button>
   );
 }
@@ -105,16 +116,17 @@ function fmtTime(ts?: number, iso?: string): string {
 }
 
 // --- CHAT TAB ---
-function ChatTab({ agent }: { agent: Agent }) {
+function ChatTab({ agent, agentName, newChatTrigger }: { agent: Agent; agentName: string; newChatTrigger: number }) {
   const t = useTheme();
   const { data: conversations, refetch: refetchConversations } = useConversations(agent.id);
   const [activeConversationId, setActiveConversationId] = useState<string | undefined>();
-  const [showConversations, setShowConversations] = useState(false);
   const { data: history } = useMessages(agent.id, activeConversationId);
   const [historyLoaded, setHistoryLoaded] = useState(false);
 
+  const makeGreeting = (name: string) => `Hi! I'm ${name}. How can I help you today?`;
+
   const [messages, setMessages] = useState<LocalMessage[]>([
-    { role: 'assistant', content: `Hi! I'm ${agent.name}. How can I help you today?`, _ts: Date.now() }
+    { role: 'assistant', content: makeGreeting(agentName), _ts: Date.now() }
   ]);
   const [input, setInput] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
@@ -137,19 +149,12 @@ function ChatTab({ agent }: { agent: Agent }) {
     endRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const startNewConversation = () => {
+  useEffect(() => {
+    if (newChatTrigger === 0) return;
     setActiveConversationId(undefined);
     setHistoryLoaded(false);
-    setMessages([{ role: 'assistant', content: `New conversation with ${agent.name}. How can I help?`, _ts: Date.now() }]);
-    setShowConversations(false);
-  };
-
-  const selectConversation = (conv: Conversation) => {
-    setActiveConversationId(String(conv.id));
-    setHistoryLoaded(false);
-    setMessages([]);
-    setShowConversations(false);
-  };
+    setMessages([{ role: 'assistant', content: makeGreeting(agentName), _ts: Date.now() }]);
+  }, [newChatTrigger]);
 
   const handleSend = async () => {
     if (!input.trim() || isStreaming) return;
@@ -250,99 +255,11 @@ function ChatTab({ agent }: { agent: Agent }) {
   };
 
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: t.bg, position: 'relative' }}>
-      {/* Conversation selector bar */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: t.bg, borderBottom: `1px solid ${t.divider}`, flexShrink: 0 }}>
-        <button
-          style={{
-            flex: 1,
-            textAlign: 'left',
-            padding: '6px 12px',
-            borderRadius: 8,
-            background: t.surface,
-            border: 'none',
-            fontSize: 12,
-            color: t.label,
-            cursor: 'pointer',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-            letterSpacing: '-0.01em',
-          }}
-          onClick={() => setShowConversations(!showConversations)}
-        >
-          {conversations && conversations.length > 0
-            ? (conversations.find(c => String(c.id) === activeConversationId)?.title || (activeConversationId ? 'Conversation' : 'New conversation'))
-            : 'New conversation'}
-        </button>
-        <button
-          style={{
-            padding: 8,
-            borderRadius: 8,
-            background: t.surface,
-            border: 'none',
-            color: t.text,
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-          }}
-          onClick={startNewConversation}
-          title="New conversation"
-        >
-          <Plus size={14} />
-        </button>
-      </div>
-
-      {/* Conversation list dropdown */}
-      {showConversations && conversations && conversations.length > 0 && (
-        <div style={{
-          position: 'absolute',
-          top: 52,
-          left: 12,
-          right: 12,
-          zIndex: 50,
-          background: t.bg,
-          borderRadius: 12,
-          border: `1px solid ${t.divider}`,
-          overflow: 'hidden',
-        }}>
-          <div className="no-scrollbar" style={{ padding: 6, maxHeight: 192, overflowY: 'auto' }}>
-            {conversations.map((conv) => (
-              <button
-                key={conv.id}
-                style={{
-                  width: '100%',
-                  textAlign: 'left',
-                  padding: '10px 12px',
-                  borderRadius: 8,
-                  background: activeConversationId === String(conv.id) ? t.surface : 'transparent',
-                  border: 'none',
-                  cursor: 'pointer',
-                  fontSize: 12,
-                  fontFamily: 'ui-monospace, Menlo, monospace',
-                  color: t.text,
-                }}
-                onClick={() => selectConversation(conv)}
-              >
-                <p style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {conv.title || `conv-${String(conv.id).slice(-6)}`}
-                </p>
-                {conv.updatedAt && (
-                  <p style={{ fontSize: 10, color: t.faint, marginTop: 2 }}>
-                    {new Date(conv.updatedAt).toLocaleDateString()}
-                  </p>
-                )}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: t.bg }}>
       {/* Messages */}
       <div
         className="no-scrollbar"
         style={{ flex: 1, overflowY: 'auto', padding: '16px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}
-        onClick={() => setShowConversations(false)}
       >
         {messages.map((m, i) => {
           const timestamp = fmtTime(m._ts, m.createdAt);
