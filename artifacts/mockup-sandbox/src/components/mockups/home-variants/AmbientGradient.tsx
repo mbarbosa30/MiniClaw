@@ -3,11 +3,11 @@ import { Plus, LogOut } from 'lucide-react';
 
 const MOCK_WALLET = '0x71C7…3Fa9';
 
-const ACCENT_COLORS: Record<number, { strip: string; glow: string }> = {
-  0: { strip: '#6366f1', glow: 'rgba(99,102,241,0.15)' },
-  1: { strip: '#8b5cf6', glow: 'rgba(139,92,246,0.15)' },
-  2: { strip: '#14b8a6', glow: 'rgba(20,184,166,0.15)' },
-  3: { strip: '#f59e0b', glow: 'rgba(245,158,11,0.15)' },
+const ACCENT_COLORS: Record<number, { strip: string; bg: string }> = {
+  0: { strip: '#6366f1', bg: 'rgba(99,102,241,0.10)' },
+  1: { strip: '#8b5cf6', bg: 'rgba(139,92,246,0.10)' },
+  2: { strip: '#14b8a6', bg: 'rgba(20,184,166,0.10)' },
+  3: { strip: '#f59e0b', bg: 'rgba(245,158,11,0.10)' },
 };
 
 const MOCK_AGENTS = [
@@ -20,15 +20,15 @@ function PulsingDot({ active }: { active: boolean }) {
   if (!active) {
     return (
       <span
-        className="w-2 h-2 rounded-full shrink-0"
+        className="w-2 h-2 rounded-full shrink-0 block"
         style={{ background: '#D4D4D4' }}
       />
     );
   }
   return (
     <motion.span
-      className="w-2 h-2 rounded-full shrink-0"
-      style={{ background: '#10b981', display: 'block' }}
+      className="w-2 h-2 rounded-full shrink-0 block"
+      style={{ background: '#10b981' }}
       animate={{ scale: [1, 1.35, 1] }}
       transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
     />
@@ -61,22 +61,20 @@ export function AmbientGradient() {
                 border: '1px solid rgba(150,145,190,0.14)',
               }}
             >
-              <span
-                className="w-1.5 h-1.5 rounded-full"
-                style={{ background: '#10b981' }}
-              />
-              <span
-                className="text-[11px] font-medium"
-                style={{ color: '#6B6B80' }}
-              >
+              <span className="w-1.5 h-1.5 rounded-full" style={{ background: '#10b981' }} />
+              <span className="text-[11px] font-medium" style={{ color: '#6B6B80' }}>
                 {MOCK_WALLET}
               </span>
             </span>
           </div>
         </div>
         <button
-          className="p-2 rounded-xl transition-colors"
-          style={{ color: '#9CA3AF', background: 'rgba(255,255,255,0.6)', border: '1px solid rgba(0,0,0,0.06)' }}
+          className="p-2 rounded-xl"
+          style={{
+            color: '#9CA3AF',
+            background: 'rgba(255,255,255,0.6)',
+            border: '1px solid rgba(0,0,0,0.06)',
+          }}
         >
           <LogOut size={16} />
         </button>
@@ -110,21 +108,19 @@ export function AmbientGradient() {
                 boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
               }}
             >
-              <div className="flex items-center gap-3.5">
-                {/* Left accent strip */}
+              <div className="flex items-stretch">
+                {/* 3px left accent strip */}
                 <div
-                  className="self-stretch w-[3px] rounded-l-xl shrink-0"
+                  className="w-[3px] shrink-0"
                   style={{ background: accent.strip }}
                 />
 
-                {/* Content */}
-                <div className="flex items-center gap-3 py-4 pr-4 flex-1 min-w-0">
-                  {/* Avatar */}
+                {/* Card content */}
+                <div className="flex items-center gap-3 px-3.5 py-4 flex-1 min-w-0">
+                  {/* Avatar with tinted bg */}
                   <div
                     className="w-11 h-11 rounded-xl flex items-center justify-center text-xl shrink-0"
-                    style={{
-                      background: accent.glow,
-                    }}
+                    style={{ background: accent.bg }}
                   >
                     {agent.emoji}
                   </div>
@@ -141,7 +137,6 @@ export function AmbientGradient() {
                     </p>
                   </div>
 
-                  {/* Pulsing status */}
                   <PulsingDot active={agent.status === 'active'} />
                 </div>
               </div>
@@ -150,15 +145,14 @@ export function AmbientGradient() {
         })}
       </div>
 
-      {/* Ghost create button anchored to bottom */}
+      {/* Ghost create button — transparent fill, indigo border only */}
       <div className="absolute bottom-8 left-5 right-5 z-20">
         <button
-          className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl text-[15px] font-semibold transition-colors"
+          className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl text-[15px] font-semibold"
           style={{
             border: '1.5px solid #6366f1',
             color: '#6366f1',
-            background: 'rgba(255,255,255,0.8)',
-            backdropFilter: 'blur(8px)',
+            background: 'transparent',
           }}
         >
           <Plus size={18} />

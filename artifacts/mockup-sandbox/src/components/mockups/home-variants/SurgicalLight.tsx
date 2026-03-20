@@ -1,7 +1,6 @@
 import { LogOut } from 'lucide-react';
 
-const MOCK_WALLET = '0x71C7656EC7ab88b098defB751B7401B5f6d8976F';
-const SHORT_WALLET = '0x71C7…976F';
+const MOCK_WALLET = '0x71C7…976F';
 
 const MOCK_AGENTS = [
   { id: '1', emoji: '🧠', name: 'Research Owl', status: 'active', description: 'Deep-dives topics on demand' },
@@ -15,12 +14,12 @@ export function SurgicalLight() {
       className="flex flex-col h-screen overflow-hidden bg-white select-none"
       style={{ width: 390 }}
     >
-      {/* Header */}
+      {/* Header — no divider */}
       <div className="flex items-start justify-between px-6 pt-12 pb-6">
         <div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-baseline gap-3">
             <h1
-              className="text-[22px] font-bold tracking-tight text-black leading-none"
+              className="text-[22px] font-bold text-black leading-none"
               style={{ letterSpacing: '-0.02em' }}
             >
               MiniClaw
@@ -45,7 +44,7 @@ export function SurgicalLight() {
               letterSpacing: '0.02em',
             }}
           >
-            {SHORT_WALLET}
+            {MOCK_WALLET}
           </p>
         </div>
         <button className="p-1.5" style={{ color: '#D4D4D4' }}>
@@ -53,11 +52,8 @@ export function SurgicalLight() {
         </button>
       </div>
 
-      {/* Divider */}
-      <div style={{ height: 1, background: '#F5F5F5', marginLeft: 24, marginRight: 24 }} />
-
-      {/* Agents section */}
-      <div className="flex-1 overflow-y-auto px-6 pt-6 pb-24 no-scrollbar">
+      {/* Agents section — no dividers, no containers */}
+      <div className="flex-1 overflow-y-auto px-6 pb-24 no-scrollbar">
         <p
           className="mb-5 text-[10px] font-medium"
           style={{
@@ -70,18 +66,23 @@ export function SurgicalLight() {
         </p>
 
         <div className="space-y-0">
-          {MOCK_AGENTS.map((agent, i) => (
+          {MOCK_AGENTS.map((agent) => (
             <button
               key={agent.id}
-              className="w-full text-left py-5 flex items-start gap-3 group"
-              style={{
-                borderBottom: i < MOCK_AGENTS.length - 1 ? '1px solid #F5F5F5' : 'none',
-              }}
+              className="w-full text-left py-5 flex items-start gap-3"
             >
-              {/* Emoji square */}
+              {/* 20px rounded square for emoji */}
               <span
-                className="text-base leading-none mt-0.5 w-5 text-center shrink-0"
-                style={{ fontSize: 16 }}
+                className="flex items-center justify-center shrink-0"
+                style={{
+                  width: 20,
+                  height: 20,
+                  borderRadius: 5,
+                  background: '#F5F5F5',
+                  fontSize: 13,
+                  lineHeight: 1,
+                  marginTop: 2,
+                }}
               >
                 {agent.emoji}
               </span>
@@ -99,7 +100,7 @@ export function SurgicalLight() {
                 </p>
               </div>
 
-              {/* Status: typographic only */}
+              {/* Status: typographic ALL-CAPS, no dot */}
               <span
                 className="text-[10px] font-medium mt-1 shrink-0"
                 style={{
