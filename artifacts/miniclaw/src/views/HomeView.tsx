@@ -90,7 +90,7 @@ function DailyBriefCard({
       </div>
 
       <p style={{ fontSize: 13, fontWeight: 300, lineHeight: 1.55, color: t.text, paddingRight: 20, marginBottom: 12 }}>
-        {item.finding}
+        {item.highlight?.summary}
       </p>
 
       <button
@@ -132,17 +132,19 @@ function useAgentBrief(agent: Agent | null) {
     ? (mostRecentActivity.summary || mostRecentActivity.description || mostRecentActivity.content || null)
     : null;
 
-  const finding = taskFinding || activityFinding;
-  if (!finding) return null;
+  const summary = taskFinding || activityFinding;
+  if (!summary) return null;
 
   return {
     agentId: agent.id,
     agentName: agent.name,
-    finding,
-    type: (taskFinding ? 'task' : 'activity') as 'task' | 'activity',
-    taskId: mostRecentTask?.id,
-    activityId: mostRecentActivity?.id,
-    createdAt: mostRecentTask?.createdAt || mostRecentActivity?.createdAt,
+    highlight: {
+      type: taskFinding ? 'pending_task' : 'activity',
+      source: mostRecentTask?.skillId ?? mostRecentActivity?.type ?? '',
+      summary,
+      id: mostRecentTask?.id,
+      createdAt: mostRecentTask?.createdAt ?? (mostRecentActivity?.timestamp ?? mostRecentActivity?.createdAt),
+    },
   } as import('@/types').DailyBriefItem;
 }
 
@@ -397,7 +399,7 @@ export function HomeView() {
     if (briefItem) {
       push('agent-detail', {
         id: String(briefItem.agentId),
-        briefContext: briefItem.finding,
+        briefContext: briefItem.highlight?.summary,
       });
     }
   };

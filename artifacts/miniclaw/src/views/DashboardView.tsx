@@ -243,12 +243,12 @@ function AgentCard({ agent, i }: { agent: Agent; i: number }) {
           }}>
             Recent
           </span>
-          {recentItems.map((item) => {
+          {recentItems.map((item, idx) => {
             const text = item.summary || item.description || item.content || item.type;
-            const ts = relativeTime(item.createdAt);
+            const ts = relativeTime(item.timestamp ?? item.createdAt);
             return (
               <div
-                key={item.id}
+                key={item.id != null ? String(item.id) : `${item.type}-${idx}`}
                 style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8, marginBottom: 5 }}
               >
                 <span style={{

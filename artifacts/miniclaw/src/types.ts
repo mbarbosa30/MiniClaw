@@ -207,6 +207,8 @@ export interface ChatMessage {
 
 export interface AgentTask {
   id: string;
+  hostedAgentId?: string;
+  skillId?: string;
   title?: string;
   description?: string;
   action?: string;
@@ -214,34 +216,44 @@ export interface AgentTask {
   taskType?: string;
   riskLevel?: 'low' | 'medium' | 'high' | string;
   category?: string;
+  payload?: Record<string, unknown>;
   createdAt?: string;
 }
 
 export interface ActivityItem {
-  id: string | number;
+  id?: string | number;
   type: string;
+  skill?: string;
   description?: string;
   summary?: string;
   content?: string;
+  timestamp?: string;
   createdAt?: string;
   agentId?: string | number;
+}
+
+export interface DailyBriefHighlight {
+  type: string;
+  source: string;
+  summary: string;
+  id?: string;
+  createdAt?: string;
 }
 
 export interface DailyBriefItem {
   agentId: string | number;
   agentName: string;
-  finding: string;
-  type: 'task' | 'activity';
-  taskId?: string;
-  activityId?: string | number;
-  createdAt?: string;
+  agentEmoji?: string;
+  pendingTaskCount?: number;
+  highlight?: DailyBriefHighlight;
 }
 
 export interface GrowthSummary {
   month: string;
   totalApproved: number;
-  byCategory: Record<string, number>;
-  motivationalSummary?: string;
+  breakdown: Record<string, number>;
+  activeDays: number;
+  streak: number;
 }
 
 export interface QuotaInfo {
@@ -258,11 +270,23 @@ export interface AgentAwareness {
   phase: 'curious' | 'developing' | 'confident' | string;
   label: string;
   progress: number;
+  phaseDetails?: {
+    description: string;
+    behavior: string;
+    economyAwareness: boolean;
+  };
+  toolsAvailable?: string[];
   onChain: {
     wallet: boolean;
     token: boolean;
     identity: boolean;
     allComplete: boolean;
+  };
+  quota?: {
+    tokensUsed: number;
+    tokensRemaining: number;
+    tokensLimit: number;
+    resetAt: string;
   };
 }
 

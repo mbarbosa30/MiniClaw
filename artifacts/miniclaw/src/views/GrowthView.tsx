@@ -2,9 +2,9 @@ import { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { useTheme } from '@/lib/theme';
 import { useRouter } from '@/lib/store';
-import { useAgents, useTasks } from '@/hooks/use-agents';
+import { useAgents, useGrowthSummary } from '@/hooks/use-agents';
 import { ScreenHeader } from '@/components/ui';
-import type { AgentTask } from '@/types';
+import type { GrowthSummary } from '@/types';
 
 // --- Helpers ---
 
@@ -18,34 +18,13 @@ const CATEGORY_LABELS: Record<string, string> = {
   research: 'Research',
   alert: 'Alerts',
   analysis: 'Analysis',
+  digest: 'Digests',
+  'wallet-action': 'Wallet Actions',
+  informational: 'Informational',
 };
 
 function getCategoryLabel(cat: string): string {
   return CATEGORY_LABELS[cat] ?? (cat.charAt(0).toUpperCase() + cat.slice(1));
-}
-
-function getThisMonth(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-}
-
-function isThisMonth(dateStr?: string): boolean {
-  if (!dateStr) return false;
-  return dateStr.startsWith(getThisMonth());
-}
-
-function aggregateTasks(tasks: AgentTask[]): { total: number; cats: Record<string, number> } {
-  if (!Array.isArray(tasks)) return { total: 0, cats: {} };
-  let total = 0;
-  const cats: Record<string, number> = {};
-  for (const task of tasks) {
-    if (!isThisMonth(task.createdAt)) continue;
-    if (task.status !== 'approved' && task.status !== 'completed') continue;
-    total++;
-    const cat = task.category || task.taskType || 'other';
-    cats[cat] = (cats[cat] ?? 0) + 1;
-  }
-  return { total, cats };
 }
 
 // --- Category bar ---
@@ -77,20 +56,20 @@ function CategoryBar({ label, count, maxCount, index }: { label: string; count: 
   );
 }
 
-// --- Single agent task fetcher - renders null, accumulates data via callback ---
+// --- Per-agent growth fetcher — renders null, reports data up via callback ---
 
-function AgentTaskFetcher({
+function AgentGrowthFetcher({
   agentId,
   onData,
 }: {
   agentId: string | number;
-  onData: (id: string | number, tasks: AgentTask[]) => void;
+  onData: (id: string | number, data: GrowthSummary | undefined) => void;
 }) {
-  const { data: tasks } = useTasks(agentId, 'all');
+  const { data } = useGrowthSummary(agentId);
 
   useEffect(() => {
-    if (tasks !== undefined) onData(agentId, Array.isArray(tasks) ? tasks : []);
-  }, [tasks]);
+    onData(agentId, data);
+  }, [data]);
 
   return null;
 }
@@ -103,31 +82,39 @@ export function GrowthView() {
   const { data, isLoading } = useAgents();
   const agents = data?.agents ?? [];
 
-  const [tasksByAgent, setTasksByAgent] = useState<Record<string, AgentTask[]>>({});
+  const [summaryByAgent, setSummaryByAgent] = useState<Record<string, GrowthSummary>>({});
 
-  const handleAgentData = (id: string | number, tasks: AgentTask[]) => {
-    setTasksByAgent(prev => {
+  const handleData = (id: string | number, summary: GrowthSummary | undefined) => {
+    if (!summary) return;
+    setSummaryByAgent(prev => {
       const key = String(id);
-      if (prev[key] === tasks) return prev;
-      return { ...prev, [key]: tasks };
+      if (prev[key] === summary) return prev;
+      return { ...prev, [key]: summary };
     });
   };
 
-  const { combinedTotal, sortedCategories } = useMemo(() => {
+  const { combinedTotal, sortedCategories, maxStreak, totalActiveDays } = useMemo(() => {
     let total = 0;
     const cats: Record<string, number> = {};
-    for (const tasks of Object.values(tasksByAgent)) {
-      const agg = aggregateTasks(tasks);
-      total += agg.total;
-      for (const [cat, count] of Object.entries(agg.cats)) {
+    let maxStreak = 0;
+    let totalActiveDays = 0;
+
+    for (const s of Object.values(summaryByAgent)) {
+      total += s.totalApproved ?? 0;
+      if ((s.streak ?? 0) > maxStreak) maxStreak = s.streak ?? 0;
+      totalActiveDays += s.activeDays ?? 0;
+      for (const [cat, count] of Object.entries(s.breakdown ?? {})) {
         cats[cat] = (cats[cat] ?? 0) + count;
       }
     }
+
     const sorted = Object.entries(cats).sort(([, a], [, b]) => b - a);
-    return { combinedTotal: total, sortedCategories: sorted };
-  }, [tasksByAgent]);
+    return { combinedTotal: total, sortedCategories: sorted, maxStreak, totalActiveDays };
+  }, [summaryByAgent]);
 
   const maxCount = sortedCategories[0]?.[1] ?? 1;
+
+  const streakColor = maxStreak >= 7 ? '#22c55e' : maxStreak > 0 ? '#f59e0b' : t.faint;
 
   const motivational = combinedTotal === 0
     ? 'No completed actions yet this month — your Claw is warming up.'
@@ -143,7 +130,7 @@ export function GrowthView() {
 
         {/* Invisible data fetchers for each agent */}
         {agents.map(agent => (
-          <AgentTaskFetcher key={agent.id} agentId={agent.id} onData={handleAgentData} />
+          <AgentGrowthFetcher key={agent.id} agentId={agent.id} onData={handleData} />
         ))}
 
         {/* Hero number */}
@@ -169,10 +156,35 @@ export function GrowthView() {
             color: t.faint,
             letterSpacing: '0.08em',
             textTransform: 'uppercase',
-            marginBottom: 16,
+            marginBottom: 8,
           }}>
             Actions approved this month
           </p>
+
+          {/* Streak + active days */}
+          {!isLoading && (maxStreak > 0 || totalActiveDays > 0) && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 16 }}>
+              <p style={{
+                fontFamily: 'ui-monospace, Menlo, monospace',
+                fontSize: 9,
+                color: streakColor,
+                letterSpacing: '0.08em',
+                textTransform: 'uppercase',
+              }}>
+                {maxStreak}-day streak
+              </p>
+              <p style={{
+                fontFamily: 'ui-monospace, Menlo, monospace',
+                fontSize: 9,
+                color: t.faint,
+                letterSpacing: '0.08em',
+                textTransform: 'uppercase',
+              }}>
+                {totalActiveDays} active {totalActiveDays === 1 ? 'day' : 'days'}
+              </p>
+            </div>
+          )}
+
           <p style={{ fontSize: 13, fontWeight: 300, color: t.label, lineHeight: 1.55 }}>
             {motivational}
           </p>

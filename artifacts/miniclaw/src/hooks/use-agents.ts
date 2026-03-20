@@ -20,6 +20,7 @@ import type {
   ChatMessage,
   AgentTask,
   ActivityItem,
+  GrowthSummary,
   TelegramStatus,
   TelegramSettingsPayload,
 } from '@/types';
@@ -414,13 +415,29 @@ export function useActivity(agentId: string | number | undefined) {
   return useQuery({
     queryKey: ['activity', qid(agentId)],
     queryFn: () =>
-      apiFetch<ActivityItem[] | { items: ActivityItem[] }>(
+      apiFetch<ActivityItem[] | { activity: ActivityItem[] } | { items: ActivityItem[] }>(
         `/api/selfclaw/v1/hosted-agents/${sid(agentId!)}/activity`
       ).then(raw => {
         if (Array.isArray(raw)) return raw;
-        return (raw as { items: ActivityItem[] }).items ?? [];
+        // API returns { activity: [...] }; tolerate legacy { items: [...] } shape too
+        const envelope = raw as Record<string, ActivityItem[]>;
+        return envelope.activity ?? envelope.items ?? [];
       }),
     enabled: agentId != null && agentId !== '',
+  });
+}
+
+// --- GROWTH SUMMARY ---
+
+export function useGrowthSummary(agentId: string | number | undefined) {
+  return useQuery<GrowthSummary>({
+    queryKey: ['growth-summary', qid(agentId)],
+    queryFn: () =>
+      apiFetch<GrowthSummary>(
+        `/api/selfclaw/v1/hosted-agents/${sid(agentId!)}/growth-summary`
+      ),
+    enabled: agentId != null && agentId !== '',
+    staleTime: 60_000,
   });
 }
 
