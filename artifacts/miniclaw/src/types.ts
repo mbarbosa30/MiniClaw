@@ -47,14 +47,14 @@ export interface Agent {
   stats?: AgentStats;
 
   // Runtime metrics — returned by both list and detail endpoints
-  runtimeStatus?: AgentRuntimeStatus;
+  runtimeStatus?: AgentRuntimeStatus | null;
   llmTokensUsedToday?: number | null;
   llmTokensLimit?: number | null;
   pocScore?: number | null;
   economicsEarnedToday?: number | null;
   memorySizeEstimate?: number | null;
   memorySizeLimit?: number | null;
-  enabledSkillNames?: string[];
+  enabledSkillNames?: string[] | null;
 
   // Detail-only fields — only populated on GET /v1/hosted-agents/:id
   tokenCostUsd?: number | null;
