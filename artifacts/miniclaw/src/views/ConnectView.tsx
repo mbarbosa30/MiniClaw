@@ -1,43 +1,33 @@
-import { useConnection, useConnect } from 'wagmi';
+import { useAccount } from 'wagmi';
 import { motion } from 'framer-motion';
-import { AlertTriangle, Loader2, RotateCcw } from 'lucide-react';
+import { AlertCircle, Loader2, Wallet } from 'lucide-react';
+import { useMiniPayAuth } from '@/hooks/use-auth';
 import { useAuthStore } from '@/lib/store';
-
-const SESSION_MESSAGES: Record<string, string> = {
-  signing: 'Sign the request in your wallet…',
-  verifying: 'Verifying your signature…',
-  error: 'Signature failed. Tap to retry.',
-};
+import { formatAddress } from '@/lib/utils';
+import { Button } from '@/components/ui';
 
 export function ConnectView() {
-  const { address, isConnected, isConnecting } = useConnection();
-  const { error: connectError } = useConnect();
-  const { sessionStatus, setSessionStatus } = useAuthStore();
+  const { address: wagmiAddress } = useAccount();
+  const storeAddress = useAuthStore(s => s.address);
+  const displayAddress = wagmiAddress || storeAddress;
 
-  const isNoProvider =
-    !!connectError &&
-    connectError.message?.toLowerCase().includes('provider not found');
+  const auth = useMiniPayAuth();
 
-  const showSpinner =
-    !isNoProvider &&
-    sessionStatus !== 'error' &&
-    (isConnecting || (!isConnected && !connectError) || isConnected);
-
-  const showConnectError = !!connectError && !isNoProvider;
-
-  const handleRetry = () => {
-    setSessionStatus('idle');
-    window.location.reload();
-  };
+  const isSignRejected =
+    auth.isError &&
+    auth.error instanceof Error &&
+    (auth.error.message.toLowerCase().includes('rejected') ||
+      auth.error.message.toLowerCase().includes('denied') ||
+      auth.error.message.toLowerCase().includes('cancelled'));
 
   return (
-    <div className="flex flex-col items-center justify-center h-full px-8 py-12 bg-background">
-      {/* Logo mark */}
+    <div className="flex flex-col items-center justify-center h-full px-6 py-12 bg-background">
+      {/* Logo */}
       <motion.div
         initial={{ scale: 0.80, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ type: 'spring', bounce: 0.35, duration: 0.55 }}
-        className="w-20 h-20 bg-white rounded-[1.5rem] border border-neutral-150 shadow-[0_4px_20px_rgba(0,0,0,0.08)] flex items-center justify-center mb-7 select-none"
+        className="w-20 h-20 bg-white rounded-[1.5rem] border border-neutral-150 shadow-[0_4px_20px_rgba(0,0,0,0.08)] flex items-center justify-center mb-6 select-none"
       >
         <span className="text-4xl">🦀</span>
       </motion.div>
@@ -46,96 +36,63 @@ export function ConnectView() {
         initial={{ y: 20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ delay: 0.10, duration: 0.45 }}
-        className="text-center w-full max-w-xs"
+        className="w-full max-w-xs"
       >
-        <h1 className="text-[32px] font-bold text-foreground mb-2 tracking-tight">MiniClaw</h1>
-        <p className="text-[15px] text-muted-foreground mb-10 leading-relaxed">
-          Your personal AI agents, right in your wallet.
-        </p>
-
-        {/* Not in MiniPay */}
-        {isNoProvider && (
-          <motion.div
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="flex items-start gap-2.5 bg-amber-50 border border-amber-200 rounded-xl p-3.5 mb-5 text-left"
-          >
-            <AlertTriangle size={15} className="text-amber-600 mt-0.5 shrink-0" />
-            <div>
-              <p className="text-xs font-semibold text-amber-800 mb-0.5">Open in MiniPay</p>
-              <p className="text-xs text-amber-700 leading-relaxed">
-                MiniClaw runs inside MiniPay. Open this app from your MiniPay wallet to continue.
-              </p>
-            </div>
-          </motion.div>
-        )}
-
-        {/* Connection error */}
-        {showConnectError && (
-          <motion.div
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-destructive/8 border border-destructive/15 rounded-xl p-3.5 mb-5 text-left"
-          >
-            <p className="text-xs text-destructive leading-relaxed">
-              {connectError instanceof Error
-                ? connectError.message
-                : 'Connection failed. Unlock MiniPay and reload.'}
-            </p>
-          </motion.div>
-        )}
-
-        {/* Session signing error */}
-        {sessionStatus === 'error' && (
-          <motion.div
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="flex flex-col items-center gap-3 mb-5"
-          >
-            <div className="bg-destructive/8 border border-destructive/15 rounded-xl p-3.5 w-full text-left">
-              <p className="text-xs text-destructive leading-relaxed">
-                Could not sign in. The wallet request may have been rejected or timed out.
-              </p>
-            </div>
-            <button
-              onClick={handleRetry}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-semibold border border-primary/80 active:scale-95 transition-all"
-            >
-              <RotateCcw size={14} />
-              Try Again
-            </button>
-          </motion.div>
-        )}
-
-        {/* Spinner */}
-        {showSpinner && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.3 }}
-            className="flex flex-col items-center gap-2.5"
-          >
-            <Loader2 className="w-6 h-6 text-primary animate-spin" />
-            <p className="text-sm text-muted-foreground">
-              {SESSION_MESSAGES[sessionStatus] ??
-                (address ? 'Setting up your account…' : 'Connecting to wallet…')}
-            </p>
-          </motion.div>
-        )}
-
-        {isNoProvider && (
-          <p className="text-xs text-muted-foreground mt-8">
-            Need MiniPay?{' '}
-            <a
-              href="https://minipay.opera.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-primary underline underline-offset-2"
-            >
-              minipay.opera.com
-            </a>
+        <div className="text-center mb-8">
+          <h1 className="text-[32px] font-bold text-foreground mb-2 tracking-tight">MiniClaw</h1>
+          <p className="text-[15px] text-muted-foreground leading-relaxed">
+            Your personal AI agents, right in your wallet.
           </p>
+        </div>
+
+        {/* Wallet address badge */}
+        {displayAddress && (
+          <div className="flex items-center justify-center gap-1.5 mb-6">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+            <span className="text-[13px] text-muted-foreground font-medium">
+              {formatAddress(displayAddress)}
+            </span>
+          </div>
         )}
+
+        {/* Connect card */}
+        <div className="bg-white rounded-2xl border border-neutral-100 shadow-[0_1px_4px_rgba(0,0,0,0.06)] p-5 space-y-4">
+
+          {/* Error state */}
+          {auth.isError && (
+            <motion.div
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex items-start gap-2 bg-destructive/8 border border-destructive/15 rounded-lg px-3 py-2.5"
+            >
+              <AlertCircle size={13} className="text-destructive mt-0.5 shrink-0" />
+              <p className="text-xs text-destructive leading-relaxed">
+                {isSignRejected
+                  ? 'Signature cancelled. Tap Connect to try again.'
+                  : auth.error instanceof Error
+                    ? auth.error.message
+                    : 'Connection failed. Please try again.'}
+              </p>
+            </motion.div>
+          )}
+
+          <Button
+            className="w-full flex gap-2"
+            onClick={() => auth.mutate()}
+            disabled={auth.isPending}
+          >
+            {auth.isPending ? (
+              <><Loader2 size={15} className="animate-spin" /> Connecting…</>
+            ) : (
+              <><Wallet size={15} /> Connect with MiniPay</>
+            )}
+          </Button>
+
+          <p className="text-center text-[11px] text-muted-foreground leading-relaxed">
+            Sign a message to verify your wallet.
+            <br />No gas fees required.
+          </p>
+        </div>
       </motion.div>
     </div>
   );

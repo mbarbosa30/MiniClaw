@@ -1,21 +1,27 @@
-// The external API base URL
 export const BASE_URL = 'https://selfclaw.ai';
 
-// Event target to trigger global auth state changes
+// Platform key — set as VITE_SELFCLAW_KEY env var (identifies MiniClaw app to SelfClaw)
+const PLATFORM_KEY = import.meta.env.VITE_SELFCLAW_KEY as string | undefined;
+
 export const apiEvents = new EventTarget();
 
 export async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
   const url = `${BASE_URL}${path}`;
-  
+
   const headers = new Headers(options?.headers);
+
   if (!headers.has('Content-Type') && !(options?.body instanceof FormData)) {
     headers.set('Content-Type', 'application/json');
+  }
+
+  if (PLATFORM_KEY) {
+    headers.set('Authorization', `Bearer ${PLATFORM_KEY}`);
   }
 
   const response = await fetch(url, {
     ...options,
     headers,
-    credentials: 'include', // CRITICAL for cookie-based auth
+    credentials: 'include', // required for cookie-based sessions
   });
 
   if (response.status === 401) {
@@ -34,7 +40,6 @@ export async function apiFetch<T>(path: string, options?: RequestInit): Promise<
     throw new Error(errorMessage);
   }
 
-  // Handle empty responses
   if (response.status === 204) {
     return {} as T;
   }
