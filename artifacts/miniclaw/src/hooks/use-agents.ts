@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '@/lib/api-client';
 import type {
   Agent,
-  AgentActivity,
+  AgentStats,
   AgentSettings,
   PersonaTemplate,
   SkillDef,
@@ -47,8 +47,18 @@ export function useAgent(id: string | number | undefined) {
   return useQuery({
     queryKey: ['agents', qid(id)],
     queryFn: async () => {
-      const raw = await apiFetch<Agent | { agent: Agent }>(`/api/selfclaw/v1/hosted-agents/${sid(id!)}`);
-      return ('agent' in raw && raw.agent && typeof raw.agent === 'object') ? raw.agent : raw as Agent;
+      const raw = await apiFetch<Agent | { agent: Agent; stats?: AgentStats; recentTasks?: Agent['recentTasks'] }>(
+        `/api/selfclaw/v1/hosted-agents/${sid(id!)}`
+      );
+      // Normalize: API may return { agent, stats, recentTasks } or a plain Agent object
+      if ('agent' in raw && raw.agent && typeof raw.agent === 'object') {
+        const agent = raw.agent as Agent;
+        const envelope = raw as { agent: Agent; stats?: AgentStats; recentTasks?: Agent['recentTasks'] };
+        if (envelope.stats) agent.stats = envelope.stats;
+        if (envelope.recentTasks && !agent.recentTasks) agent.recentTasks = envelope.recentTasks;
+        return agent;
+      }
+      return raw as Agent;
     },
     enabled: id != null && id !== '',
   });
@@ -335,37 +345,6 @@ export function useResolveTask() {
       qc.invalidateQueries({ queryKey: ['tasks', qid(variables.agentId), 'pending'] });
       qc.invalidateQueries({ queryKey: ['tasks', qid(variables.agentId), 'all'] });
     },
-  });
-}
-
-// --- ACTIVITY ---
-
-// GET /:id/activity — shape is uncertain; normalize to AgentActivity | null
-export function useActivity(agentId: string | number | undefined, options?: { refetchInterval?: number }) {
-  return useQuery({
-    queryKey: ['activity', qid(agentId)],
-    queryFn: async (): Promise<AgentActivity | null> => {
-      try {
-        const raw = await apiFetch<unknown>(`/api/selfclaw/v1/hosted-agents/${sid(agentId!)}/activity`);
-        if (!raw) return null;
-        // Shape: { description, timestamp } or { activity: string, ... } or array
-        if (Array.isArray(raw)) {
-          const first = raw[0] as Record<string, unknown>;
-          if (!first) return null;
-          const desc = (first.description ?? first.activity ?? first.title ?? first.action) as string | undefined;
-          return desc ? { description: String(desc), timestamp: first.timestamp as string | undefined } : null;
-        }
-        const obj = raw as Record<string, unknown>;
-        const desc = (obj.description ?? obj.activity ?? obj.title ?? obj.action) as string | undefined;
-        if (desc) return { description: String(desc), timestamp: obj.timestamp as string | undefined };
-        return null;
-      } catch {
-        return null;
-      }
-    },
-    enabled: agentId != null && agentId !== '',
-    refetchInterval: options?.refetchInterval,
-    retry: false,
   });
 }
 

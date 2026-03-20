@@ -8,6 +8,14 @@ export interface AuthMe {
   authMethod: string;
 }
 
+// GET /:id — stats bundle returned alongside the agent object
+export interface AgentStats {
+  totalActionsCount: number;
+  pendingTasksCount: number;
+  memoriesCount: number;
+  currentActivity: string | null;
+}
+
 export interface Agent {
   // API returns numeric IDs; typed as string | number for robustness
   id: string | number;
@@ -25,6 +33,7 @@ export interface Agent {
   publicKey?: string;
   createdAt?: string;
   recentTasks?: AgentTask[];
+  stats?: AgentStats;
 }
 
 // Per API docs: straight | dry-wit | playful | sarcastic | absurdist
@@ -186,8 +195,3 @@ export interface TelegramSettingsPayload {
   notificationLevel: TelegramNotificationLevel;
 }
 
-// GET /:id/activity — shape is uncertain; normalize in the hook
-export interface AgentActivity {
-  description: string;
-  timestamp?: string;
-}

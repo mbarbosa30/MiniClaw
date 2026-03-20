@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { useAgent, useActivity, useTasks, useConversations, useMessages } from '@/hooks/use-agents';
+import { useAgent, useConversations, useMessages } from '@/hooks/use-agents';
 import { useRouter } from '@/lib/store';
 import { useTheme } from '@/lib/theme';
 import { Button } from '@/components/ui';
@@ -21,28 +21,32 @@ function statusFallback(status: string): string {
   return 'paused';
 }
 
+const MONO = {
+  fontFamily: 'ui-monospace, Menlo, monospace',
+  fontSize: 9,
+  fontWeight: 600,
+  letterSpacing: '0.07em',
+} as const;
+
 function AgentHeader({
   agent,
-  agentId,
   onBack,
   onOptions,
   onPending,
 }: {
   agent: Agent;
-  agentId: string;
   onBack: () => void;
   onOptions: () => void;
   onPending: () => void;
 }) {
   const t = useTheme();
-  const { data: activity } = useActivity(agentId, { refetchInterval: 60_000 });
-  const { data: pendingTasks } = useTasks(agentId, 'pending', { refetchInterval: 60_000 });
-
-  const pendingCount = pendingTasks?.length ?? 0;
+  const stats = agent.stats;
+  const pendingCount = stats?.pendingTasksCount ?? 0;
+  const totalActions = stats?.totalActionsCount ?? 0;
   const dotColor = statusDotColor(agent.status);
 
   const subtitleText: string = (() => {
-    if (activity?.description) return activity.description;
+    if (stats?.currentActivity) return stats.currentActivity;
     const firstTask = agent.recentTasks?.[0]?.title;
     if (firstTask) return firstTask;
     return statusFallback(agent.status);
@@ -81,8 +85,13 @@ function AgentHeader({
           </span>
         </div>
 
-        {/* Right side: pending badge + options */}
+        {/* Right side: actions count + pending badge + options */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+          {totalActions > 0 && (
+            <span style={{ ...MONO, color: t.faint }}>
+              {totalActions} actions
+            </span>
+          )}
           {pendingCount > 0 && (
             <button
               onClick={onPending}
@@ -92,10 +101,7 @@ function AgentHeader({
                 border: `1px solid ${t.divider}`,
                 borderRadius: 4,
                 cursor: 'pointer',
-                fontSize: 9,
-                fontFamily: 'ui-monospace, Menlo, monospace',
-                fontWeight: 600,
-                letterSpacing: '0.07em',
+                ...MONO,
                 color: t.label,
                 lineHeight: 1.4,
               }}
@@ -167,7 +173,6 @@ export function AgentDetailView() {
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: t.bg, transition: 'background 0.3s ease' }}>
       <AgentHeader
         agent={agent}
-        agentId={id}
         onBack={pop}
         onOptions={() => push('agent-options', { id })}
         onPending={() => push('tasks', { id })}
