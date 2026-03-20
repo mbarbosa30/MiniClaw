@@ -219,7 +219,7 @@ function AgentRow({
             fontWeight: 300,
             letterSpacing: '-0.025em',
             lineHeight: 1,
-            color: isIdle ? t.textDim : t.text,
+            color: isIdle ? t.faint : t.text,
             minWidth: 0,
             overflow: 'hidden',
             textOverflow: 'ellipsis',
@@ -521,7 +521,7 @@ export function HomeView() {
             fontSize: 27,
             fontWeight: 300,
             letterSpacing: '-0.025em',
-            color: t.textDim,
+            color: t.faint,
             lineHeight: 1,
           }}>
             New agent
