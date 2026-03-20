@@ -3,7 +3,7 @@ import { useAgent, useDeleteAgent, useUpdateAgent, useConversations, useMessages
 import { useRouter } from '@/lib/store';
 import { ScreenHeader, Button, Input, Textarea, Card, Switch } from '@/components/ui';
 import { Settings, MessageSquare, Menu, Send, Trash2, Plus } from 'lucide-react';
-import { BASE_URL } from '@/lib/api-client';
+import { apiFetchStream } from '@/lib/api-client';
 import type { Agent, HumorStyle, PremiumModel, ChatMessage, Conversation } from '@/types';
 
 export function AgentDetailView() {
@@ -131,11 +131,9 @@ function ChatTab({ agent }: { agent: Agent }) {
       const body: { message: string; conversationId?: string } = { message: userMsg };
       if (activeConversationId) body.conversationId = activeConversationId;
 
-      const res = await fetch(`${BASE_URL}/api/selfclaw/v1/hosted-agents/${agent.id}/chat`, {
+      const res = await apiFetchStream(`/api/selfclaw/v1/hosted-agents/${agent.id}/chat`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(body)
+        body: JSON.stringify(body),
       });
 
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -259,10 +257,10 @@ function ChatTab({ agent }: { agent: Agent }) {
             )}
             <div className={`max-w-[80%] rounded-2xl px-3.5 py-2.5 text-[14.5px] leading-relaxed ${
               m.role === 'user'
-                ? 'bg-primary text-primary-foreground rounded-tr-md shadow-sm'
+                ? 'bg-foreground text-background rounded-tr-sm'
                 : m.role === 'system'
                 ? 'bg-destructive/8 text-destructive text-sm px-3 py-2 rounded-xl border border-destructive/15'
-                : 'bg-white border border-neutral-100 rounded-tl-md shadow-[0_1px_3px_rgba(0,0,0,0.06)]'
+                : 'bg-white border border-neutral-100 rounded-tl-sm'
             }`}>
               {m.content === '' && m.role === 'assistant' && isStreaming && i === messages.length - 1 ? (
                 <span className="flex gap-1 items-center h-5">
@@ -520,25 +518,25 @@ function MoreTab({ agentId, onNavigate }: { agentId: string; onNavigate: (path: 
   ];
 
   return (
-    <div className="h-full overflow-y-auto px-4 py-4 space-y-2 no-scrollbar pb-20">
-      {menu.map(item => (
-        <button
-          key={item.id}
-          className="w-full text-left bg-white rounded-xl px-4 py-3.5 flex items-center gap-3.5 border border-neutral-100 shadow-[0_1px_3px_rgba(0,0,0,0.05)] active:scale-[0.98] transition-all"
-          onClick={() => onNavigate(item.id)}
-        >
-          <div className="w-10 h-10 bg-neutral-100 rounded-lg flex items-center justify-center text-xl shrink-0">
-            {item.icon}
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="font-semibold text-[14px] tracking-tight">{item.label}</p>
-            <p className="text-xs text-muted-foreground mt-0.5">{item.desc}</p>
-          </div>
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" className="text-neutral-300 shrink-0">
-            <path d="m9 18 6-6-6-6" />
-          </svg>
-        </button>
-      ))}
+    <div className="h-full overflow-y-auto no-scrollbar pb-20">
+      <div className="divide-y divide-neutral-100">
+        {menu.map(item => (
+          <button
+            key={item.id}
+            className="w-full text-left px-5 py-4 flex items-center gap-3.5 active:bg-neutral-50 transition-colors"
+            onClick={() => onNavigate(item.id)}
+          >
+            <span className="text-xl w-7 text-center shrink-0">{item.icon}</span>
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-[14px] tracking-tight">{item.label}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">{item.desc}</p>
+            </div>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" className="text-neutral-300 shrink-0">
+              <path d="m9 18 6-6-6-6" />
+            </svg>
+          </button>
+        ))}
+      </div>
     </div>
   );
 }

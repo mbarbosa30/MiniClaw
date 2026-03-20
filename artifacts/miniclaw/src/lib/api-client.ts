@@ -11,6 +11,40 @@ export function setWalletAddress(addr: string | null) {
   _walletAddress = addr;
 }
 
+/**
+ * Raw fetch for SSE streaming — includes all auth headers but returns the Response directly.
+ * Use this instead of raw `fetch` for chat streaming so auth headers are always present.
+ */
+export async function apiFetchStream(path: string, options?: RequestInit): Promise<Response> {
+  const url = `${BASE_URL}${path}`;
+
+  const headers = new Headers(options?.headers);
+
+  if (!headers.has('Content-Type') && !(options?.body instanceof FormData)) {
+    headers.set('Content-Type', 'application/json');
+  }
+
+  if (PLATFORM_KEY) {
+    headers.set('Authorization', `Bearer ${PLATFORM_KEY}`);
+  }
+
+  if (_walletAddress) {
+    headers.set('X-Wallet-Address', _walletAddress);
+  }
+
+  const response = await fetch(url, {
+    ...options,
+    headers,
+  });
+
+  if (response.status === 401) {
+    apiEvents.dispatchEvent(new Event('unauthorized'));
+    throw new Error('Unauthorized');
+  }
+
+  return response;
+}
+
 export async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
   const url = `${BASE_URL}${path}`;
 

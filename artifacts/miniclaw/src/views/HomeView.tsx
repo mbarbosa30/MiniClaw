@@ -58,17 +58,17 @@ export function HomeView() {
             <p className="text-sm text-muted-foreground">Create your first AI agent to get started.</p>
           </div>
         ) : (
-          <div className="space-y-2">
+          <div className="divide-y divide-neutral-100 -mx-4">
             {agents?.map((agent, i) => (
               <motion.button
                 key={agent.id}
-                initial={{ opacity: 0, y: 12 }}
+                initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.04 }}
-                className="w-full flex items-center gap-3.5 p-3.5 bg-white rounded-2xl border border-neutral-100 shadow-[0_1px_4px_rgba(0,0,0,0.05)] active:scale-[0.985] transition-transform text-left"
+                className="w-full flex items-center gap-3.5 px-4 py-3.5 active:bg-neutral-50 transition-colors text-left"
                 onClick={() => push('agent-detail', { id: agent.id })}
               >
-                <div className="w-12 h-12 bg-neutral-100 rounded-xl flex items-center justify-center text-xl shrink-0">
+                <div className="w-11 h-11 bg-neutral-100 rounded-xl flex items-center justify-center text-xl shrink-0">
                   {agent.emoji || '🤖'}
                 </div>
                 <div className="flex-1 min-w-0">
@@ -89,7 +89,7 @@ export function HomeView() {
       <div className="absolute bottom-6 left-0 right-0 px-4 pointer-events-none">
         <Button
           size="lg"
-          className="w-full flex gap-2 pointer-events-auto shadow-[0_4px_16px_rgba(79,70,229,0.25)]"
+          className="w-full flex gap-2 pointer-events-auto"
           onClick={() => push('create')}
         >
           <Plus size={18} />
