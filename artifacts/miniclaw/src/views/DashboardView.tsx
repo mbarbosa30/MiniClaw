@@ -108,10 +108,15 @@ function AgentCard({ agent, i }: { agent: Agent; i: number }) {
           </div>
           <span style={{
             fontFamily: 'ui-monospace, Menlo, monospace',
-            fontSize: 9,
+            fontSize: 8,
             color,
             letterSpacing: '0.07em',
             textTransform: 'uppercase',
+            background: `${color}1a`,
+            border: `1px solid ${color}40`,
+            borderRadius: 3,
+            padding: '2px 5px',
+            display: 'inline-block',
           }}>
             {STATE_LABEL[state]}
           </span>
@@ -186,7 +191,7 @@ function AgentCard({ agent, i }: { agent: Agent; i: number }) {
       )}
 
       {/* PROGRESS */}
-      {agent.progressPercent != null && (
+      {agent.progressPercent != null && agent.progressPercent > 0 && (
         <MetricRow
           label="Progress"
           value={`${agent.progressPercent}%`}
