@@ -3,7 +3,7 @@ import { useAgent, useDeleteAgent, useUpdateAgent, useConversations, useMessages
 import { useRouter } from '@/lib/store';
 import { useTheme } from '@/lib/theme';
 import { ScreenHeader, Button, Input, Textarea } from '@/components/ui';
-import { Settings, MessageSquare, MoreHorizontal, Send, Trash2, Plus, Bot, Brain, BookOpen, Zap, ScrollText, CircleCheck } from 'lucide-react';
+import { Settings, MessageSquare, MoreHorizontal, Send, Trash2, Plus, Brain, BookOpen, Zap, ScrollText, CircleCheck } from 'lucide-react';
 import { apiFetchStream } from '@/lib/api-client';
 import type { Agent, HumorStyle, PremiumModel, ChatMessage } from '@/types';
 
@@ -259,82 +259,52 @@ function ChatTab({ agent, agentName, newChatTrigger }: { agent: Agent; agentName
       {/* Messages */}
       <div
         className="no-scrollbar"
-        style={{ flex: 1, overflowY: 'auto', padding: '16px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}
+        style={{ flex: 1, overflowY: 'auto', padding: '24px 32px 8px', display: 'flex', flexDirection: 'column', gap: 28 }}
       >
         {messages.map((m, i) => {
           const timestamp = fmtTime(m._ts, m.createdAt);
           const isLastStreaming = m.content === '' && m.role === 'assistant' && isStreaming && i === messages.length - 1;
+          const roleLabel = m.role === 'user' ? 'you' : m.role === 'system' ? 'error' : agentName.toLowerCase();
           return (
-            <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: m.role === 'user' ? 'flex-end' : 'flex-start', gap: 3 }}>
-              <div style={{ display: 'flex', justifyContent: m.role === 'user' ? 'flex-end' : 'flex-start' }}>
-                {m.role === 'assistant' && (
-                  <div style={{
-                    width: 28, height: 28,
-                    borderRadius: '50%',
-                    background: t.surface,
-                    border: `1px solid ${t.divider}`,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: t.label,
-                    marginRight: 8,
-                    marginTop: 2,
-                    flexShrink: 0,
-                    alignSelf: 'flex-start',
-                  }}>
-                    <Bot size={14} />
-                  </div>
-                )}
-                <div style={{
-                  maxWidth: '80%',
-                  borderRadius: m.role === 'user' ? '18px 18px 4px 18px' : '4px 18px 18px 18px',
-                  padding: '10px 14px',
-                  fontSize: 14,
-                  lineHeight: 1.6,
-                  background: m.role === 'user'
-                    ? t.text
-                    : m.role === 'system'
-                    ? 'rgba(248,113,113,0.08)'
-                    : t.surface,
-                  color: m.role === 'user'
-                    ? t.bg
-                    : m.role === 'system'
-                    ? '#f87171'
-                    : t.text,
-                  border: m.role === 'system'
-                    ? '1px solid rgba(248,113,113,0.2)'
-                    : m.role === 'assistant'
-                    ? `1px solid ${t.divider}`
-                    : 'none',
-                }}>
-                  {isLastStreaming ? (
-                    <span style={{ display: 'flex', gap: 4, alignItems: 'center', height: 20 }}>
-                      {[0, 1, 2].map((j) => (
-                        <span key={j} style={{
-                          width: 5, height: 5,
-                          borderRadius: '50%',
-                          background: t.faint,
-                          animation: `bounce 1.2s ease-in-out ${j * 0.15}s infinite`,
-                        }} />
-                      ))}
-                    </span>
-                  ) : (
-                    <span style={{ whiteSpace: 'pre-wrap' }}>{m.content}</span>
-                  )}
-                </div>
-              </div>
-              {timestamp && !isLastStreaming && (
+            <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {/* Role + timestamp row */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
                 <span style={{
                   fontSize: 9,
                   fontFamily: 'ui-monospace, Menlo, monospace',
-                  letterSpacing: '0.04em',
-                  color: t.faint,
-                  paddingLeft: m.role === 'assistant' ? 40 : 0,
-                  paddingRight: m.role === 'user' ? 2 : 0,
+                  fontWeight: 600,
+                  letterSpacing: '0.09em',
+                  textTransform: 'uppercase',
+                  color: m.role === 'system' ? '#f87171' : t.faint,
                 }}>
-                  {timestamp}
+                  {roleLabel}
                 </span>
-              )}
+                {timestamp && (
+                  <span style={{
+                    fontSize: 9,
+                    fontFamily: 'ui-monospace, Menlo, monospace',
+                    letterSpacing: '0.04em',
+                    color: t.faint,
+                    opacity: 0.6,
+                  }}>
+                    {timestamp}
+                  </span>
+                )}
+              </div>
+              {/* Message text */}
+              <p style={{
+                fontSize: 14,
+                fontWeight: 300,
+                lineHeight: 1.7,
+                color: m.role === 'system' ? '#f87171' : t.text,
+                margin: 0,
+                whiteSpace: 'pre-wrap',
+                fontFamily: m.role === 'system' ? 'ui-monospace, Menlo, monospace' : 'inherit',
+              }}>
+                {isLastStreaming
+                  ? <span style={{ borderRight: `1px solid ${t.label}`, animation: 'blink 1s step-end infinite', paddingRight: 1 }}>&nbsp;</span>
+                  : m.content}
+              </p>
             </div>
           );
         })}
@@ -342,61 +312,56 @@ function ChatTab({ agent, agentName, newChatTrigger }: { agent: Agent; agentName
       </div>
 
       {/* Input */}
-      <div style={{ padding: '8px 12px 12px', background: t.bg, borderTop: `1px solid ${t.divider}`, flexShrink: 0 }}>
-        <div style={{
-          display: 'flex',
-          alignItems: 'flex-end',
-          gap: 8,
-          background: t.surface,
-          borderRadius: 14,
-          border: `1px solid ${t.divider}`,
-          padding: '4px 4px 4px 12px',
-        }}>
+      <div style={{ flexShrink: 0, borderTop: `1px solid ${t.divider}`, padding: '12px 32px 20px' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 16 }}>
           <textarea
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
             placeholder="Message…"
-            className="no-scrollbar placeholder:opacity-40"
+            className="no-scrollbar"
             style={{
               flex: 1,
               maxHeight: 120,
-              minHeight: 40,
+              minHeight: 36,
               background: 'transparent',
               resize: 'none',
               outline: 'none',
               border: 'none',
-              padding: '8px 0',
+              padding: 0,
               fontSize: 14,
+              fontWeight: 300,
               color: t.text,
               fontFamily: 'inherit',
-              lineHeight: 1.5,
+              lineHeight: 1.6,
+              opacity: 1,
             }}
             rows={1}
           />
           <button
-            style={{
-              padding: '9px 10px',
-              borderRadius: 10,
-              background: input.trim() && !isStreaming ? t.text : t.divider,
-              color: input.trim() && !isStreaming ? t.bg : t.label,
-              border: 'none',
-              cursor: input.trim() && !isStreaming ? 'pointer' : 'not-allowed',
-              display: 'flex',
-              alignItems: 'center',
-              flexShrink: 0,
-              transition: 'all 0.15s',
-            }}
             onClick={handleSend}
             disabled={!input.trim() || isStreaming}
+            style={{
+              fontFamily: 'ui-monospace, Menlo, monospace',
+              fontSize: 14,
+              letterSpacing: '0.02em',
+              color: input.trim() && !isStreaming ? t.text : t.faint,
+              background: 'none',
+              border: 'none',
+              padding: '0 0 2px',
+              cursor: input.trim() && !isStreaming ? 'pointer' : 'default',
+              flexShrink: 0,
+              transition: 'color 0.15s',
+            }}
           >
-            <Send size={15} />
+            ↵
           </button>
         </div>
       </div>
 
       <style>{`
-        @keyframes bounce { 0%, 100% { transform: translateY(0); opacity: 0.4; } 50% { transform: translateY(-4px); opacity: 1; } }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+        textarea::placeholder { color: ${t.faint}; opacity: 1; }
       `}</style>
     </div>
   );
