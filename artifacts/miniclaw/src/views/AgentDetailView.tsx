@@ -14,111 +14,62 @@ function AgentHeader({ agent, onBack, onOptions }: { agent: Agent; onBack: () =>
   const color = STATE_COLOR[state];
   const isIdle = state === 'idle' || state === 'pending';
 
-  const skills = agent.enabledSkills?.length ?? 0;
-  const interests = agent.interests?.length ?? 0;
-  const model = agent.premiumModel && agent.premiumModel !== 'none' ? agent.premiumModel : 'std';
-  const snippet = agent.description ? agent.description.slice(0, 42) : STATE_LABEL[state];
-  const hasMore = agent.description && agent.description.length > 42;
-
   return (
     <div style={{
       flexShrink: 0,
       borderBottom: `1px solid ${t.divider}`,
       background: t.bg,
       transition: 'background 0.3s ease',
+      padding: '10px 32px 16px',
     }}>
-      {/* Top row: back + options — 32px horizontal padding, buttons offset to align with text */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: '10px 24px 0',
-      }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+        {/* Back button — optically aligned with text */}
         <button
           onClick={onBack}
-          style={{
-            padding: 8,
-            marginLeft: -8,
-            background: 'none',
-            border: 'none',
-            cursor: 'pointer',
-            color: t.label,
-            display: 'flex',
-            alignItems: 'center',
-          }}
+          style={{ padding: '4px 8px 4px 0', background: 'none', border: 'none', cursor: 'pointer', color: t.label, display: 'flex', alignItems: 'center', flexShrink: 0 }}
         >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="m15 18-6-6 6-6"/>
           </svg>
         </button>
-        <button
-          onClick={onOptions}
-          style={{
-            padding: 8,
-            marginRight: -8,
-            background: 'none',
-            border: 'none',
-            cursor: 'pointer',
-            color: t.label,
-            display: 'flex',
-            alignItems: 'center',
-          }}
-        >
-          <MoreHorizontal size={18} strokeWidth={1.5} />
-        </button>
-      </div>
 
-      {/* Content rows: name, status+indicator, metadata */}
-      <div style={{ padding: '6px 32px 18px' }}>
-        {/* Agent name row */}
-        <div style={{ marginBottom: 7 }}>
+        {/* Agent name + status */}
+        <div style={{ flex: 1 }}>
           <span style={{
+            display: 'block',
             fontSize: 27,
             fontWeight: 300,
             letterSpacing: '-0.025em',
             lineHeight: 1,
             color: isIdle ? t.textDim : t.text,
+            marginBottom: 7,
           }}>
             {agent.name || 'Agent'}
           </span>
-        </div>
-
-        {/* Status indicator + status label + description snippet */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 }}>
-          <span style={{ display: 'flex', alignItems: 'center', height: 12 }}>
-            <StateIndicator state={state} />
-          </span>
-          <span style={{
-            fontSize: 9,
-            fontWeight: 600,
-            fontFamily: 'ui-monospace, Menlo, monospace',
-            letterSpacing: '0.09em',
-            textTransform: 'uppercase',
-            color,
-          }}>
-            {STATE_LABEL[state]}
-          </span>
-          <span style={{ fontSize: 10, color: t.label, fontStyle: 'italic' }}>
-            {snippet}{hasMore ? '…' : ''}
-          </span>
-        </div>
-
-        {/* Metadata tags: model + skills count */}
-        <div style={{ display: 'flex', gap: 16 }}>
-          {[model, `${skills} skills`].map((v) => (
-            <span
-              key={v}
-              style={{
-                fontFamily: 'ui-monospace, Menlo, monospace',
-                fontSize: 9,
-                color: t.faint,
-                letterSpacing: '0.03em',
-              }}
-            >
-              {v}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+            <span style={{ display: 'flex', alignItems: 'center', height: 10 }}>
+              <StateIndicator state={state} />
             </span>
-          ))}
+            <span style={{
+              fontSize: 9,
+              fontFamily: 'ui-monospace, Menlo, monospace',
+              fontWeight: 600,
+              letterSpacing: '0.09em',
+              textTransform: 'uppercase',
+              color,
+            }}>
+              {STATE_LABEL[state]}
+            </span>
+          </div>
         </div>
+
+        {/* Options button */}
+        <button
+          onClick={onOptions}
+          style={{ padding: '4px 0 4px 8px', background: 'none', border: 'none', cursor: 'pointer', color: t.label, display: 'flex', alignItems: 'center', flexShrink: 0 }}
+        >
+          <MoreHorizontal size={18} strokeWidth={1.5} />
+        </button>
       </div>
     </div>
   );
