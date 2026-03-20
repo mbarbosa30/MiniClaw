@@ -1,8 +1,25 @@
 import { motion } from 'framer-motion';
 import { useTheme } from '@/lib/theme';
-import { useAgents } from '@/hooks/use-agents';
+import { useAgents, useActivity } from '@/hooks/use-agents';
 import { StateIndicator, agentVisualState, STATE_COLOR, STATE_LABEL } from '@/components/StateIndicator';
 import type { Agent, AgentListSummary } from '@/types';
+
+// ── Relative time ─────────────────────────────────────────────────────────────
+
+function relativeTime(iso?: string): string {
+  if (!iso) return '';
+  try {
+    const diff = Date.now() - new Date(iso).getTime();
+    const m = Math.floor(diff / 60_000);
+    if (m < 1) return 'just now';
+    if (m < 60) return `${m}m ago`;
+    const h = Math.floor(m / 60);
+    if (h < 24) return `${h}h ago`;
+    return `${Math.floor(h / 24)}d ago`;
+  } catch {
+    return '';
+  }
+}
 
 // ── Formatters ────────────────────────────────────────────────────────────────
 
@@ -89,6 +106,9 @@ function AgentCard({ agent, i }: { agent: Agent; i: number }) {
     : undefined;
 
   const skillNames = (agent.enabledSkillNames ?? []).filter(Boolean);
+
+  const { data: activityItems, isLoading: activityLoading } = useActivity(agent.id);
+  const recentItems = (activityItems ?? []).slice(0, 2);
 
   return (
     <motion.div
@@ -198,6 +218,64 @@ function AgentCard({ agent, i }: { agent: Agent; i: number }) {
           bar={agent.progressPercent / 100}
           barColor={t.text}
         />
+      )}
+
+      {/* RECENT ACTIVITY */}
+      {activityLoading && (
+        <div style={{ marginBottom: 14 }}>
+          <div style={{ height: 9, width: '18%', background: t.surface, borderRadius: 2, marginBottom: 8 }} />
+          <div style={{ height: 9, width: '78%', background: t.surface, borderRadius: 2, marginBottom: 5 }} />
+          <div style={{ height: 9, width: '62%', background: t.surface, borderRadius: 2 }} />
+        </div>
+      )}
+      {!activityLoading && recentItems.length > 0 && (
+        <div style={{ marginBottom: 14 }}>
+          <span style={{
+            fontFamily: 'ui-monospace, Menlo, monospace',
+            fontSize: 9,
+            color: t.faint,
+            letterSpacing: '0.07em',
+            textTransform: 'uppercase',
+            display: 'block',
+            marginBottom: 7,
+          }}>
+            Recent
+          </span>
+          {recentItems.map((item) => {
+            const text = item.summary || item.description || item.content || item.type;
+            const ts = relativeTime(item.createdAt);
+            return (
+              <div
+                key={item.id}
+                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8, marginBottom: 5 }}
+              >
+                <span style={{
+                  fontSize: 11,
+                  fontWeight: 300,
+                  color: t.label,
+                  flex: 1,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  lineHeight: 1.4,
+                }}>
+                  {text}
+                </span>
+                {ts && (
+                  <span style={{
+                    fontFamily: 'ui-monospace, Menlo, monospace',
+                    fontSize: 9,
+                    color: t.faint,
+                    letterSpacing: '0.02em',
+                    flexShrink: 0,
+                  }}>
+                    {ts}
+                  </span>
+                )}
+              </div>
+            );
+          })}
+        </div>
       )}
 
       <div style={{ height: 1, background: t.divider, marginTop: 4 }} />
