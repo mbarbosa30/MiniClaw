@@ -455,63 +455,219 @@ function DashboardTab() {
 
 /* ─── Settings tab ─── */
 
-function SettingsTab() {
+const MONO: React.CSSProperties = {
+  fontFamily: 'ui-monospace, Menlo, monospace',
+  fontSize: 10,
+  letterSpacing: '0.03em',
+};
+
+function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <div style={{ padding: '40px 32px 0' }}>
-      <p
-        style={{
-          fontFamily: 'ui-monospace, Menlo, monospace',
-          fontSize: 9,
-          color: '#bbb',
-          letterSpacing: '0.05em',
-          marginBottom: 40,
-        }}
-      >
-        {MOCK_WALLET}
-      </p>
-      {[
-        { label: 'Wallet', value: MOCK_WALLET, mono: true },
-        { label: 'Platform', value: 'selfclaw.ai', mono: false },
-        { label: 'Network', value: 'Celo Mainnet', mono: false },
-        { label: 'Session', value: 'MiniPay', mono: false },
-      ].map((row) => (
-        <div
-          key={row.label}
-          style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 17, paddingBottom: 17 }}
-        >
-          <span style={{ fontSize: 13, fontWeight: 400, color: '#bbb', letterSpacing: '-0.01em' }}>
-            {row.label}
-          </span>
-          <span
-            style={{
-              fontSize: row.mono ? 10 : 13,
-              fontWeight: 400,
-              color: '#0a0a0a',
-              letterSpacing: row.mono ? '0.02em' : '-0.01em',
-              fontFamily: row.mono ? 'ui-monospace, Menlo, monospace' : undefined,
-            }}
-          >
-            {row.value}
-          </span>
-        </div>
-      ))}
-      <div style={{ marginTop: 36 }}>
-        <button
-          style={{
-            fontSize: 13,
-            fontWeight: 400,
-            color: '#bbb',
-            textDecoration: 'underline',
-            textUnderlineOffset: 3,
-            background: 'none',
-            border: 'none',
-            padding: 0,
-            cursor: 'pointer',
-          }}
-        >
-          Sign out
-        </button>
-      </div>
+    <p style={{
+      fontSize: 9,
+      fontWeight: 600,
+      color: '#bbb',
+      letterSpacing: '0.10em',
+      textTransform: 'uppercase',
+      paddingTop: 28,
+      paddingBottom: 10,
+    }}>
+      {children}
+    </p>
+  );
+}
+
+function Row({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div style={{
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingTop: 13,
+      paddingBottom: 13,
+      borderBottom: '1px solid #f5f5f5',
+    }}>
+      <span style={{ fontSize: 12, color: '#aaa', letterSpacing: '-0.01em' }}>{label}</span>
+      {children}
+    </div>
+  );
+}
+
+function Val({ children, mono }: { children: React.ReactNode; mono?: boolean }) {
+  return (
+    <span style={{ fontSize: mono ? 10 : 12, color: '#0a0a0a', letterSpacing: mono ? '0.02em' : '-0.01em', ...(mono ? MONO : {}) }}>
+      {children}
+    </span>
+  );
+}
+
+function Toggle({ on, onToggle }: { on: boolean; onToggle: () => void }) {
+  return (
+    <button
+      onClick={onToggle}
+      style={{
+        fontFamily: 'ui-monospace, Menlo, monospace',
+        fontSize: 10,
+        letterSpacing: '0.06em',
+        color: on ? '#0a0a0a' : '#ccc',
+        background: 'none',
+        border: 'none',
+        padding: 0,
+        cursor: 'pointer',
+        fontWeight: on ? 600 : 400,
+      }}
+    >
+      {on ? 'on' : 'off'}
+    </button>
+  );
+}
+
+function Picker({ options, value, onChange }: { options: string[]; value: string; onChange: (v: string) => void }) {
+  const i = options.indexOf(value);
+  return (
+    <button
+      onClick={() => onChange(options[(i + 1) % options.length])}
+      style={{
+        fontFamily: 'ui-monospace, Menlo, monospace',
+        fontSize: 10,
+        color: '#0a0a0a',
+        letterSpacing: '0.02em',
+        background: 'none',
+        border: 'none',
+        padding: 0,
+        cursor: 'pointer',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 4,
+      }}
+    >
+      {value}
+      <span style={{ color: '#ccc', fontSize: 8 }}>▼</span>
+    </button>
+  );
+}
+
+function ActionRow({ label, color = '#bbb' }: { label: string; color?: string }) {
+  return (
+    <div style={{ paddingTop: 13, paddingBottom: 13, borderBottom: '1px solid #f5f5f5' }}>
+      <button style={{
+        fontSize: 12,
+        color,
+        textDecoration: 'underline',
+        textUnderlineOffset: 3,
+        background: 'none',
+        border: 'none',
+        padding: 0,
+        cursor: 'pointer',
+        letterSpacing: '-0.01em',
+      }}>
+        {label}
+      </button>
+    </div>
+  );
+}
+
+function SettingsTab() {
+  const [streaming, setStreaming] = useState(true);
+  const [pocTracking, setPocTracking] = useState(true);
+  const [autoMemory, setAutoMemory] = useState(false);
+  const [notifications, setNotifications] = useState(false);
+  const [model, setModel] = useState('gpt-4o');
+  const [format, setFormat] = useState('text');
+  const [network, setNetwork] = useState('Celo Mainnet');
+
+  return (
+    <div style={{ overflowY: 'auto', height: '100%', padding: '36px 32px 32px' }} className="no-scrollbar">
+
+      {/* — Account — */}
+      <SectionLabel>Account</SectionLabel>
+      <Row label="Wallet">
+        <Val mono>0x71C7…976F</Val>
+      </Row>
+      <Row label="Network">
+        <Picker options={['Celo Mainnet', 'Celo Alfajores']} value={network} onChange={setNetwork} />
+      </Row>
+      <Row label="Session">
+        <Val>MiniPay</Val>
+      </Row>
+
+      {/* — selfclaw API — */}
+      <SectionLabel>selfclaw API</SectionLabel>
+      <Row label="Platform">
+        <Val mono>selfclaw.ai</Val>
+      </Row>
+      <Row label="Key status">
+        <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+          <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#22c55e', display: 'inline-block' }} />
+          <Val>Active</Val>
+        </span>
+      </Row>
+      <Row label="Rate limit">
+        <Val mono>100 req / min</Val>
+      </Row>
+      <Row label="Streaming">
+        <Toggle on={streaming} onToggle={() => setStreaming(v => !v)} />
+      </Row>
+      <Row label="Response format">
+        <Picker options={['text', 'json', 'markdown']} value={format} onChange={setFormat} />
+      </Row>
+
+      {/* — Agent defaults — */}
+      <SectionLabel>Agent defaults</SectionLabel>
+      <Row label="Default model">
+        <Picker options={['gpt-4o', 'gpt-4o-mini', 'claude-3-5-sonnet', 'gemini-1.5-pro']} value={model} onChange={setModel} />
+      </Row>
+      <Row label="Temperature">
+        <Val mono>0.7</Val>
+      </Row>
+      <Row label="Max tokens">
+        <Val mono>4,096</Val>
+      </Row>
+      <Row label="Context window">
+        <Val mono>16k</Val>
+      </Row>
+      <Row label="Memory per agent">
+        <Val mono>8 MB</Val>
+      </Row>
+      <Row label="Auto-compress memory">
+        <Toggle on={autoMemory} onToggle={() => setAutoMemory(v => !v)} />
+      </Row>
+
+      {/* — PoC & Economics — */}
+      <SectionLabel>PoC & Economics</SectionLabel>
+      <Row label="Contribution tracking">
+        <Toggle on={pocTracking} onToggle={() => setPocTracking(v => !v)} />
+      </Row>
+      <Row label="PoC threshold">
+        <Val mono>50 pts</Val>
+      </Row>
+      <Row label="Earnings wallet">
+        <Val mono>0x71C7…976F</Val>
+      </Row>
+      <Row label="Holdings currency">
+        <Val>CELO</Val>
+      </Row>
+
+      {/* — Notifications — */}
+      <SectionLabel>Notifications</SectionLabel>
+      <Row label="Agent alerts">
+        <Toggle on={notifications} onToggle={() => setNotifications(v => !v)} />
+      </Row>
+      <Row label="Webhook URL">
+        <Val mono>—</Val>
+      </Row>
+
+      {/* — Data — */}
+      <SectionLabel>Data</SectionLabel>
+      <ActionRow label="Export conversation history" />
+      <ActionRow label="Export agent configs" />
+      <ActionRow label="Clear all agent memory" color="#f87171" />
+
+      {/* — Session — */}
+      <SectionLabel>Session</SectionLabel>
+      <ActionRow label="Sign out" />
+
+      <div style={{ height: 32 }} />
     </div>
   );
 }
