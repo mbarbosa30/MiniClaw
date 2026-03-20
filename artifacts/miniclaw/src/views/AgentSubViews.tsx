@@ -19,7 +19,7 @@ function SubScreenLayout({ title, children }: { title: string; children: React.R
   return (
     <div className="h-full flex flex-col bg-background">
       <ScreenHeader title={title} onBack={pop} />
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3 no-scrollbar pb-8">
+      <div className="flex-1 overflow-y-auto no-scrollbar pb-8">
         {children}
       </div>
     </div>
@@ -37,7 +37,7 @@ function LoadingState() {
 
 function EmptyState({ icon, title, description }: { icon: string; title: string; description: string }) {
   return (
-    <div className="flex flex-col items-center justify-center py-16 text-center gap-3">
+    <div className="flex flex-col items-center justify-center py-16 text-center gap-3 px-6">
       <div className="w-14 h-14 bg-neutral-100 rounded-full flex items-center justify-center text-2xl">{icon}</div>
       <h3 className="font-semibold text-[15px]">{title}</h3>
       <p className="text-sm text-muted-foreground max-w-[220px] leading-relaxed">{description}</p>
@@ -61,18 +61,20 @@ export function SkillsView() {
       {isLoading ? <LoadingState /> : !skills.length ? (
         <EmptyState icon="⚡" title="No skills available" description="Skills will appear here once the API returns them." />
       ) : (
-        skills.map(skill => (
-          <div key={skill.id} className="bg-white rounded-xl px-4 py-3.5 flex items-center justify-between border border-neutral-100 shadow-[0_1px_3px_rgba(0,0,0,0.05)]">
-            <div className="pr-4 flex-1">
-              <h4 className="font-semibold text-sm">{skill.name}</h4>
-              <p className="text-xs text-muted-foreground leading-relaxed mt-0.5">{skill.description}</p>
+        <div className="divide-y divide-neutral-100">
+          {skills.map(skill => (
+            <div key={skill.id} className="px-5 py-4 flex items-center justify-between">
+              <div className="pr-4 flex-1">
+                <h4 className="font-semibold text-sm">{skill.name}</h4>
+                <p className="text-xs text-muted-foreground leading-relaxed mt-0.5">{skill.description}</p>
+              </div>
+              <Switch
+                checked={skill.enabled}
+                onChange={(c) => toggle.mutate({ agentId, skillId: skill.id, enable: c })}
+              />
             </div>
-            <Switch
-              checked={skill.enabled}
-              onChange={(c) => toggle.mutate({ agentId, skillId: skill.id, enable: c })}
-            />
-          </div>
-        ))
+          ))}
+        </div>
       )}
     </SubScreenLayout>
   );
@@ -99,24 +101,15 @@ export function KnowledgeView() {
 
   return (
     <SubScreenLayout title="Knowledge Base">
-      {/* Add new */}
-      <div className="bg-white rounded-xl px-4 py-4 border border-primary/15 shadow-[0_1px_3px_rgba(0,0,0,0.05)] space-y-3">
+      {/* Add form */}
+      <div className="px-5 py-4 border-b border-neutral-100 space-y-3">
         <div>
           <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest mb-1.5 block">Title *</label>
-          <Input
-            placeholder="e.g. Company overview"
-            value={title}
-            onChange={e => setTitle(e.target.value)}
-          />
+          <Input placeholder="e.g. Company overview" value={title} onChange={e => setTitle(e.target.value)} />
         </div>
         <div>
           <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest mb-1.5 block">Content *</label>
-          <Textarea
-            rows={3}
-            placeholder="Paste text or paste a URL…"
-            value={content}
-            onChange={e => setContent(e.target.value)}
-          />
+          <Textarea rows={3} placeholder="Paste text or a URL…" value={content} onChange={e => setContent(e.target.value)} />
         </div>
         <Button
           className="w-full"
@@ -127,38 +120,37 @@ export function KnowledgeView() {
         </Button>
       </div>
 
-      {/* Saved entries */}
-      <div className="pt-1">
-        <div className="flex items-center justify-between mb-2.5 px-0.5">
-          <h3 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest">Saved Entries</h3>
-          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full border ${used >= 20 ? 'bg-destructive/8 text-destructive border-destructive/15' : 'bg-neutral-100 text-muted-foreground border-neutral-200'}`}>
-            {used}/20
-          </span>
-        </div>
-        {isLoading ? <LoadingState /> : !knowledge?.length ? (
-          <EmptyState icon="📚" title="No knowledge yet" description="Add entries to teach your agent about specific topics." />
-        ) : (
-          <div className="space-y-2">
-            {knowledge.map(k => (
-              <div key={k.id} className="bg-white rounded-xl px-4 py-3.5 flex items-start gap-3 border border-neutral-100 shadow-[0_1px_3px_rgba(0,0,0,0.05)]">
-                <div className="mt-0.5 text-muted-foreground/50 shrink-0">
-                  {k.content.startsWith('http') ? <LinkIcon size={14} /> : <FileText size={14} />}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold truncate">{k.title}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5 break-all leading-relaxed line-clamp-2">{k.content}</p>
-                </div>
-                <button
-                  className="text-muted-foreground/60 hover:text-destructive transition-colors p-1 -mr-1 shrink-0"
-                  onClick={() => remove.mutate({ agentId, id: k.id })}
-                >
-                  <Trash2 size={14} />
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
+      {/* Header row */}
+      <div className="flex items-center justify-between px-5 py-3 border-b border-neutral-100">
+        <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest">Saved Entries</span>
+        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full border ${used >= 20 ? 'bg-destructive/8 text-destructive border-destructive/15' : 'bg-neutral-100 text-muted-foreground border-neutral-200'}`}>
+          {used}/20
+        </span>
       </div>
+
+      {isLoading ? <LoadingState /> : !knowledge?.length ? (
+        <EmptyState icon="📚" title="No knowledge yet" description="Add entries to teach your agent about specific topics." />
+      ) : (
+        <div className="divide-y divide-neutral-100">
+          {knowledge.map(k => (
+            <div key={k.id} className="px-5 py-4 flex items-start gap-3">
+              <div className="mt-0.5 text-muted-foreground/40 shrink-0">
+                {k.content.startsWith('http') ? <LinkIcon size={13} /> : <FileText size={13} />}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold truncate">{k.title}</p>
+                <p className="text-xs text-muted-foreground mt-0.5 break-all leading-relaxed line-clamp-2">{k.content}</p>
+              </div>
+              <button
+                className="text-muted-foreground/40 hover:text-destructive transition-colors p-1 -mr-1 shrink-0"
+                onClick={() => remove.mutate({ agentId, id: k.id })}
+              >
+                <Trash2 size={13} />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
     </SubScreenLayout>
   );
 }
@@ -176,49 +168,35 @@ export function SoulView() {
 
   return (
     <SubScreenLayout title="Soul Document">
-      <div className="bg-neutral-50 rounded-xl px-4 py-3 border border-neutral-200">
-        <p className="text-xs text-muted-foreground leading-relaxed">
+      <div className="px-5 py-4 space-y-4">
+        <p className="text-xs text-muted-foreground leading-relaxed border border-neutral-100 rounded-xl px-3.5 py-3 bg-neutral-50">
           The Soul document defines your agent's core identity, tone, and behavior. Edit with care.
         </p>
+        {isLoading ? <LoadingState /> : (
+          <>
+            <Textarea
+              className="min-h-[320px] font-mono text-sm leading-relaxed"
+              value={soulText}
+              onChange={e => setSoulText(e.target.value)}
+              placeholder="System prompt and identity directives…"
+            />
+            {update.isError && (
+              <p className="text-xs text-destructive px-0.5">
+                {update.error instanceof Error ? update.error.message : 'Failed to save.'}
+              </p>
+            )}
+            {update.isSuccess && (
+              <p className="text-xs text-muted-foreground px-0.5">Soul document saved.</p>
+            )}
+            <Button className="w-full" onClick={() => update.mutate({ agentId, soul: soulText })} disabled={update.isPending}>
+              {update.isPending ? 'Saving…' : 'Save Soul Document'}
+            </Button>
+          </>
+        )}
       </div>
-      {isLoading ? <LoadingState /> : (
-        <>
-          <Textarea
-            className="min-h-[320px] font-mono text-sm leading-relaxed"
-            value={soulText}
-            onChange={e => setSoulText(e.target.value)}
-            placeholder="System prompt and identity directives…"
-          />
-          {update.isError && (
-            <p className="text-xs text-destructive px-0.5">
-              {update.error instanceof Error ? update.error.message : 'Failed to save.'}
-            </p>
-          )}
-          {update.isSuccess && (
-            <p className="text-xs text-emerald-700 px-0.5">Soul document saved.</p>
-          )}
-          <Button
-            className="w-full"
-            onClick={() => update.mutate({ agentId, soul: soulText })}
-            disabled={update.isPending}
-          >
-            {update.isPending ? 'Saving…' : 'Save Soul Document'}
-          </Button>
-        </>
-      )}
     </SubScreenLayout>
   );
 }
-
-// Category badge colors
-const CATEGORY_COLORS: Record<string, string> = {
-  identity:     'bg-violet-50 text-violet-700 border-violet-200',
-  preference:   'bg-blue-50 text-blue-700 border-blue-200',
-  context:      'bg-amber-50 text-amber-700 border-amber-200',
-  fact:         'bg-emerald-50 text-emerald-700 border-emerald-200',
-  emotion:      'bg-rose-50 text-rose-700 border-rose-200',
-  relationship: 'bg-orange-50 text-orange-700 border-orange-200',
-};
 
 // --- MEMORIES VIEW ---
 export function MemoriesView() {
@@ -246,53 +224,52 @@ export function MemoriesView() {
       {isLoading ? <LoadingState /> : !memories?.length ? (
         <EmptyState icon="🧠" title="No memories yet" description="Your agent forms memories as you chat over time." />
       ) : (
-        memories.map(memory => (
-          <div
-            key={memory.id}
-            className="bg-white rounded-xl px-4 py-3.5 border border-neutral-100 shadow-[0_1px_3px_rgba(0,0,0,0.05)]"
-          >
-            {editingId === memory.id ? (
-              <div className="space-y-2">
-                <Textarea
-                  value={editContent}
-                  onChange={e => setEditContent(e.target.value)}
-                  rows={3}
-                  className="text-sm"
-                  autoFocus
-                />
-                <div className="flex gap-2">
-                  <Button size="sm" className="flex-1" onClick={() => handleSaveEdit(memory.id)} disabled={updateMemory.isPending}>Save</Button>
-                  <Button size="sm" variant="ghost" onClick={() => setEditingId(null)}>Cancel</Button>
+        <div className="divide-y divide-neutral-100">
+          {memories.map(memory => (
+            <div key={memory.id} className="px-5 py-4">
+              {editingId === memory.id ? (
+                <div className="space-y-2">
+                  <Textarea
+                    value={editContent}
+                    onChange={e => setEditContent(e.target.value)}
+                    rows={3}
+                    className="text-sm"
+                    autoFocus
+                  />
+                  <div className="flex gap-2">
+                    <Button size="sm" className="flex-1" onClick={() => handleSaveEdit(memory.id)} disabled={updateMemory.isPending}>Save</Button>
+                    <Button size="sm" variant="ghost" onClick={() => setEditingId(null)}>Cancel</Button>
+                  </div>
                 </div>
-              </div>
-            ) : (
-              <>
-                <p className="text-sm leading-relaxed text-foreground/80 mb-3">
-                  {memory.content ?? JSON.stringify(memory)}
-                </p>
-                <div className="flex items-center gap-2">
-                  {memory.category && (
-                    <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full capitalize border ${CATEGORY_COLORS[memory.category] ?? 'bg-neutral-100 text-muted-foreground border-neutral-200'}`}>
-                      {memory.category}
-                    </span>
-                  )}
-                  <button
-                    className="text-xs text-muted-foreground hover:text-foreground transition-colors ml-auto"
-                    onClick={() => handleEdit(memory)}
-                  >
-                    Edit
-                  </button>
-                  <button
-                    className="text-muted-foreground/60 hover:text-destructive transition-colors p-0.5"
-                    onClick={() => deleteMemory.mutate({ agentId, id: memory.id })}
-                  >
-                    <Trash2 size={13} />
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
-        ))
+              ) : (
+                <>
+                  <p className="text-sm leading-relaxed text-foreground/80 mb-2.5">
+                    {memory.content ?? JSON.stringify(memory)}
+                  </p>
+                  <div className="flex items-center gap-2">
+                    {memory.category && (
+                      <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full capitalize border bg-neutral-100 text-muted-foreground border-neutral-200">
+                        {memory.category}
+                      </span>
+                    )}
+                    <button
+                      className="text-xs text-muted-foreground hover:text-foreground transition-colors ml-auto"
+                      onClick={() => handleEdit(memory)}
+                    >
+                      Edit
+                    </button>
+                    <button
+                      className="text-muted-foreground/40 hover:text-destructive transition-colors p-0.5"
+                      onClick={() => deleteMemory.mutate({ agentId, id: memory.id })}
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          ))}
+        </div>
       )}
     </SubScreenLayout>
   );
@@ -307,11 +284,12 @@ export function TasksView() {
 
   return (
     <SubScreenLayout title="Tasks">
-      <div className="flex gap-1 bg-neutral-100 p-1 rounded-xl">
+      {/* Tab switcher */}
+      <div className="flex border-b border-neutral-100">
         {(['pending', 'all'] as const).map(t => (
           <button
             key={t}
-            className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-all ${tab === t ? 'bg-white text-primary shadow-sm' : 'text-muted-foreground'}`}
+            className={`flex-1 py-3 text-sm font-semibold transition-colors border-b-2 -mb-px ${tab === t ? 'border-primary text-primary' : 'border-transparent text-muted-foreground'}`}
             onClick={() => setTab(t)}
           >
             {t === 'pending' ? 'Needs Review' : 'All Tasks'}
@@ -326,46 +304,43 @@ export function TasksView() {
           description={tab === 'pending' ? "No autonomous actions are waiting for your approval." : "Your agent hasn't started any tasks yet."}
         />
       ) : (
-        tasks.map(task => (
-          <div key={task.id} className="bg-white rounded-xl px-4 py-3.5 border border-neutral-100 shadow-[0_1px_3px_rgba(0,0,0,0.05)]">
-            <div className="flex items-start justify-between gap-2 mb-2">
-              <p className="text-sm font-semibold flex-1 leading-snug">
-                {task.title ?? task.description ?? task.action ?? 'Pending task'}
-              </p>
-              {task.status && (
-                <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border shrink-0 ${
-                  task.status === 'pending'  ? 'bg-amber-50 text-amber-700 border-amber-200' :
-                  task.status === 'approved' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
-                  task.status === 'rejected' ? 'bg-destructive/8 text-destructive border-destructive/20' :
-                  'bg-neutral-100 text-muted-foreground border-neutral-200'
-                }`}>
-                  {task.status}
-                </span>
+        <div className="divide-y divide-neutral-100">
+          {tasks.map(task => (
+            <div key={task.id} className="px-5 py-4">
+              <div className="flex items-start justify-between gap-2 mb-1.5">
+                <p className="text-sm font-semibold flex-1 leading-snug">
+                  {task.title ?? task.description ?? task.action ?? 'Pending task'}
+                </p>
+                {task.status && (
+                  <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full border bg-neutral-100 text-muted-foreground border-neutral-200 shrink-0">
+                    {task.status}
+                  </span>
+                )}
+              </div>
+              {task.description && task.title && (
+                <p className="text-xs text-muted-foreground leading-relaxed mb-3">{task.description}</p>
+              )}
+              {(task.status === 'pending' || tab === 'pending') && (
+                <div className="flex gap-2 mt-3">
+                  <button
+                    className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg bg-neutral-900 text-white text-sm font-semibold active:opacity-80 transition-opacity"
+                    onClick={() => resolve.mutate({ agentId, taskId: task.id, action: 'approve' })}
+                    disabled={resolve.isPending}
+                  >
+                    <Check size={14} /> Approve
+                  </button>
+                  <button
+                    className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg border border-neutral-200 text-muted-foreground text-sm font-semibold active:bg-neutral-50 transition-colors"
+                    onClick={() => resolve.mutate({ agentId, taskId: task.id, action: 'reject' })}
+                    disabled={resolve.isPending}
+                  >
+                    <X size={14} /> Reject
+                  </button>
+                </div>
               )}
             </div>
-            {task.description && task.title && (
-              <p className="text-xs text-muted-foreground leading-relaxed mb-3">{task.description}</p>
-            )}
-            {(task.status === 'pending' || tab === 'pending') && (
-              <div className="flex gap-2 mt-3">
-                <button
-                  className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg bg-emerald-50 text-emerald-700 text-sm font-semibold border border-emerald-200 hover:bg-emerald-100 active:scale-95 transition-all"
-                  onClick={() => resolve.mutate({ agentId, taskId: task.id, action: 'approve' })}
-                  disabled={resolve.isPending}
-                >
-                  <Check size={14} /> Approve
-                </button>
-                <button
-                  className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg bg-destructive/8 text-destructive text-sm font-semibold border border-destructive/20 hover:bg-destructive/12 active:scale-95 transition-all"
-                  onClick={() => resolve.mutate({ agentId, taskId: task.id, action: 'reject' })}
-                  disabled={resolve.isPending}
-                >
-                  <X size={14} /> Reject
-                </button>
-              </div>
-            )}
-          </div>
-        ))
+          ))}
+        </div>
       )}
     </SubScreenLayout>
   );
@@ -403,19 +378,17 @@ export function TelegramView() {
   return (
     <SubScreenLayout title="Telegram Bot">
       {isLoading ? <LoadingState /> : (
-        <>
-          {/* Status banner */}
-          <div className={`rounded-xl px-4 py-3.5 flex items-center gap-3 border ${status?.connected ? 'bg-emerald-50 border-emerald-200' : 'bg-neutral-50 border-neutral-200'}`}>
-            <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-xl ${status?.connected ? 'bg-emerald-100' : 'bg-neutral-100'}`}>
-              ✈️
-            </div>
+        <div className="px-5 py-4 space-y-4">
+          {/* Status row */}
+          <div className="flex items-center gap-3 py-3 border-b border-neutral-100">
+            <span className="text-xl">✈️</span>
             <div className="flex-1">
               <p className="font-semibold text-sm">{status?.connected ? 'Bot Connected' : 'Not Connected'}</p>
               {status?.connected && status.botUsername && (
-                <p className="text-xs text-muted-foreground mt-0.5">@{status.botUsername}</p>
+                <p className="text-xs text-muted-foreground">@{status.botUsername}</p>
               )}
               {!status?.connected && (
-                <p className="text-xs text-muted-foreground mt-0.5">Connect a Telegram bot to chat via Telegram</p>
+                <p className="text-xs text-muted-foreground">Connect a Telegram bot</p>
               )}
             </div>
             {status?.connected && <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />}
@@ -423,12 +396,9 @@ export function TelegramView() {
 
           {!status?.connected ? (
             <>
-              <div className="bg-white rounded-xl px-4 py-4 border border-neutral-100 shadow-[0_1px_3px_rgba(0,0,0,0.05)] space-y-4">
+              <div className="space-y-3">
                 <div>
-                  <h3 className="font-semibold text-sm mb-0.5">Connect Bot</h3>
-                  <p className="text-xs text-muted-foreground mb-3 leading-relaxed">
-                    Create a bot via @BotFather on Telegram, then paste the API token below.
-                  </p>
+                  <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest mb-1.5 block">Bot Token</label>
                   <Input
                     placeholder="1234567890:ABC…"
                     value={botToken}
@@ -451,7 +421,7 @@ export function TelegramView() {
                 </Button>
               </div>
 
-              <div className="bg-neutral-50 rounded-xl px-4 py-4 border border-neutral-200">
+              <div className="border border-neutral-100 rounded-xl px-4 py-3.5 bg-neutral-50">
                 <h4 className="font-semibold text-sm mb-2">How to create a bot</h4>
                 <ol className="text-xs text-muted-foreground space-y-1.5 list-decimal list-inside leading-relaxed">
                   <li>Open Telegram and search for <strong>@BotFather</strong></li>
@@ -462,42 +432,38 @@ export function TelegramView() {
               </div>
             </>
           ) : (
-            <div className="space-y-3">
-              <div className="bg-white rounded-xl px-4 py-4 border border-neutral-100 shadow-[0_1px_3px_rgba(0,0,0,0.05)] space-y-4">
-                <h3 className="font-semibold text-sm">Bot Settings</h3>
-
-                <div>
-                  <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest mb-2 block">Notification Level</label>
-                  <div className="flex gap-1.5">
-                    {(['all', 'important', 'none'] as TelegramNotificationLevel[]).map(level => (
-                      <button
-                        key={level}
-                        className={`flex-1 py-2 text-sm font-semibold rounded-lg capitalize transition-all border ${notificationLevel === level ? 'bg-primary text-primary-foreground border-primary/80 shadow-sm' : 'bg-white text-muted-foreground border-neutral-200 hover:border-neutral-300'}`}
-                        onClick={() => setNotificationLevel(level)}
-                      >
-                        {level}
-                      </button>
-                    ))}
-                  </div>
+            <div className="space-y-4">
+              <div>
+                <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest mb-2 block">Notification Level</label>
+                <div className="flex gap-1.5">
+                  {(['all', 'important', 'none'] as TelegramNotificationLevel[]).map(level => (
+                    <button
+                      key={level}
+                      className={`flex-1 py-2 text-sm font-semibold rounded-lg capitalize transition-all border ${notificationLevel === level ? 'bg-foreground text-background border-foreground' : 'bg-white text-muted-foreground border-neutral-200'}`}
+                      onClick={() => setNotificationLevel(level)}
+                    >
+                      {level}
+                    </button>
+                  ))}
                 </div>
-
-                {updateSettings.isError && (
-                  <p className="text-xs text-destructive">
-                    {updateSettings.error instanceof Error ? updateSettings.error.message : 'Failed to save settings.'}
-                  </p>
-                )}
-                {updateSettings.isSuccess && (
-                  <p className="text-xs text-emerald-700">Settings saved.</p>
-                )}
-
-                <Button
-                  className="w-full"
-                  onClick={() => updateSettings.mutate({ agentId, data: { notificationLevel } })}
-                  disabled={updateSettings.isPending}
-                >
-                  {updateSettings.isPending ? 'Saving…' : 'Save Settings'}
-                </Button>
               </div>
+
+              {updateSettings.isError && (
+                <p className="text-xs text-destructive">
+                  {updateSettings.error instanceof Error ? updateSettings.error.message : 'Failed to save settings.'}
+                </p>
+              )}
+              {updateSettings.isSuccess && (
+                <p className="text-xs text-muted-foreground">Settings saved.</p>
+              )}
+
+              <Button
+                className="w-full"
+                onClick={() => updateSettings.mutate({ agentId, data: { notificationLevel } })}
+                disabled={updateSettings.isPending}
+              >
+                {updateSettings.isPending ? 'Saving…' : 'Save Settings'}
+              </Button>
 
               <Button
                 variant="destructive"
@@ -509,7 +475,7 @@ export function TelegramView() {
               </Button>
             </div>
           )}
-        </>
+        </div>
       )}
     </SubScreenLayout>
   );

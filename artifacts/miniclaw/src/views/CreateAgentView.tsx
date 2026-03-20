@@ -160,7 +160,7 @@ export function CreateAgentView() {
                   ]).map(t => (
                     <button
                       key={t.id}
-                      className={`text-center p-4 rounded-xl border-2 transition-all bg-white active:scale-[0.97] ${formData.personaTemplate === t.id ? 'border-primary/60 bg-primary/4 shadow-sm' : 'border-neutral-200 shadow-[0_1px_3px_rgba(0,0,0,0.05)]'}`}
+                      className={`text-center p-4 rounded-xl border-2 transition-all bg-white active:scale-[0.97] ${formData.personaTemplate === t.id ? 'border-primary/50 bg-primary/4' : 'border-neutral-100'}`}
                       onClick={() => { setFormData(p => ({ ...p, personaTemplate: t.id })); setStep(2); }}
                     >
                       <div className="text-2xl mb-2">{t.emoji}</div>
@@ -232,7 +232,7 @@ export function CreateAgentView() {
                     <button
                       key={style}
                       type="button"
-                      className={`px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all border ${formData.humorStyle === style ? 'bg-primary text-primary-foreground border-primary/80 shadow-sm' : 'bg-white text-muted-foreground border-neutral-200 hover:border-neutral-300'}`}
+                      className={`px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all border ${formData.humorStyle === style ? 'bg-foreground text-background border-foreground' : 'bg-white text-muted-foreground border-neutral-200'}`}
                       onClick={() => setFormData(p => ({ ...p, humorStyle: style }))}
                     >
                       {HUMOR_LABELS[style]}
@@ -263,7 +263,7 @@ export function CreateAgentView() {
                   {[1,2,3,4].map(i => <div key={i} className="h-14 bg-neutral-100 rounded-xl animate-pulse" />)}
                 </div>
               ) : (
-                <div className="space-y-2">
+                <div className="border border-neutral-100 rounded-xl overflow-hidden divide-y divide-neutral-100">
                   {(skillDefs || [
                     { id: 'wallet-monitor',     name: 'Wallet Monitor',       description: 'Track wallet activity & balances' },
                     { id: 'price-watcher',      name: 'Price Watcher',        description: 'Monitor token prices in real time' },
@@ -274,7 +274,7 @@ export function CreateAgentView() {
                     { id: 'content-helper',     name: 'Content Helper',       description: 'Draft & schedule content' },
                     { id: 'reputation-monitor', name: 'Reputation Monitor',   description: 'Track on-chain reputation' },
                   ]).map(skill => (
-                    <div key={skill.id} className="bg-white rounded-xl px-4 py-3.5 flex items-center justify-between border border-neutral-100 shadow-[0_1px_3px_rgba(0,0,0,0.05)]">
+                    <div key={skill.id} className="bg-white px-4 py-3.5 flex items-center justify-between">
                       <div className="flex-1 pr-4">
                         <h4 className="font-semibold text-sm">{skill.name}</h4>
                         <p className="text-xs text-muted-foreground mt-0.5">{skill.description}</p>
@@ -306,7 +306,7 @@ export function CreateAgentView() {
               </div>
 
               {/* Add entry */}
-              <div className="bg-white rounded-xl px-4 py-4 border border-neutral-100 shadow-[0_1px_3px_rgba(0,0,0,0.05)] space-y-3">
+              <div className="border border-neutral-100 rounded-xl px-4 py-4 space-y-3">
                 <div>
                   <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest mb-1.5 block">Title *</label>
                   <Input
@@ -331,12 +331,9 @@ export function CreateAgentView() {
 
               {/* Listed entries */}
               {knowledgeEntries.length > 0 && (
-                <div className="space-y-2">
-                  <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest pl-0.5">
-                    {knowledgeEntries.length}/20 entries
-                  </p>
+                <div className="border border-neutral-100 rounded-xl overflow-hidden divide-y divide-neutral-100">
                   {knowledgeEntries.map((entry, i) => (
-                    <div key={i} className="bg-white rounded-xl px-4 py-3 flex items-start gap-3 border border-neutral-100 shadow-[0_1px_3px_rgba(0,0,0,0.05)]">
+                    <div key={i} className="px-4 py-3 flex items-start gap-3 bg-white">
                       <div className="text-muted-foreground/40 mt-0.5 shrink-0">
                         {entry.content.startsWith('http') ? <LinkIcon size={13} /> : <FileText size={13} />}
                       </div>
@@ -344,7 +341,7 @@ export function CreateAgentView() {
                         <p className="text-sm font-semibold truncate">{entry.title}</p>
                         <p className="text-xs text-muted-foreground mt-0.5 break-all leading-relaxed line-clamp-2">{entry.content}</p>
                       </div>
-                      <button className="text-muted-foreground/60 hover:text-destructive transition-colors shrink-0 p-1" onClick={() => removeKnowledgeEntry(i)}>
+                      <button className="text-muted-foreground/40 hover:text-destructive transition-colors shrink-0 p-1" onClick={() => removeKnowledgeEntry(i)}>
                         <Trash2 size={13} />
                       </button>
                     </div>
@@ -353,7 +350,7 @@ export function CreateAgentView() {
               )}
 
               {/* Summary */}
-              <div className="bg-neutral-50 rounded-xl px-4 py-4 border border-neutral-200">
+              <div className="border border-neutral-100 rounded-xl px-4 py-4 bg-neutral-50">
                 <div className="flex items-center gap-3 mb-2">
                   <span className="text-2xl">{formData.emoji}</span>
                   <div>
@@ -370,7 +367,7 @@ export function CreateAgentView() {
               </div>
 
               {create.isError && (
-                <div className="bg-destructive/8 border border-destructive/15 rounded-xl p-3.5">
+                <div className="border border-destructive/20 rounded-xl p-3.5">
                   <p className="text-xs text-destructive">
                     {create.error instanceof Error ? create.error.message : 'Failed to create agent. Please try again.'}
                   </p>
@@ -378,10 +375,10 @@ export function CreateAgentView() {
               )}
 
               {postCreateErrors.length > 0 && (
-                <div className="bg-amber-50 border border-amber-200 rounded-xl p-3.5">
-                  <p className="text-xs font-semibold text-amber-800 mb-1">Agent created, but some extras failed:</p>
+                <div className="border border-neutral-200 rounded-xl p-3.5">
+                  <p className="text-xs font-semibold text-foreground mb-1">Agent created, but some extras failed:</p>
                   {postCreateErrors.map((e, i) => (
-                    <p key={i} className="text-xs text-amber-700">• {e}</p>
+                    <p key={i} className="text-xs text-muted-foreground">• {e}</p>
                   ))}
                 </div>
               )}
@@ -393,7 +390,7 @@ export function CreateAgentView() {
                   onClick={handleCreate}
                   disabled={create.isPending || addKnowledge.isPending || toggleSkillMutation.isPending}
                 >
-                  {(create.isPending || addKnowledge.isPending || toggleSkillMutation.isPending) ? 'Creating…' : 'Create Agent 🚀'}
+                  {(create.isPending || addKnowledge.isPending || toggleSkillMutation.isPending) ? 'Creating…' : 'Create Agent'}
                 </Button>
               </div>
             </motion.div>

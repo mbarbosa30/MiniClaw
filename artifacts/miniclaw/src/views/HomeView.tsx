@@ -18,10 +18,12 @@ export function HomeView() {
       <div className="flex items-center justify-between px-5 pt-6 pb-5 bg-background border-b border-neutral-100">
         <div>
           <h1 className="font-bold text-[22px] tracking-tight text-foreground">MiniClaw</h1>
-          <div className="flex items-center gap-1.5 mt-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-            <span className="text-[13px] text-muted-foreground font-medium tracking-tight">
-              {formatAddress(address || '')}
+          <div className="mt-1.5">
+            <span className="inline-flex items-center gap-1.5 bg-neutral-100 border border-neutral-200 rounded-full px-2.5 py-0.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+              <span className="text-[12px] text-muted-foreground font-medium tracking-tight">
+                {formatAddress(address || '')}
+              </span>
             </span>
           </div>
         </div>
