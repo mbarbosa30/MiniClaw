@@ -1,18 +1,152 @@
-import { useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { Plus, MoreHorizontal } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Plus, MoreHorizontal, X, TrendingUp } from 'lucide-react';
 import { useTheme } from '@/lib/theme';
 import { useRouter, useAuthStore } from '@/lib/store';
-import { useAgents } from '@/hooks/use-agents';
+import { useAgents, useTasks, useActivity } from '@/hooks/use-agents';
 import { StateIndicator, agentVisualState, STATE_COLOR, STATE_LABEL } from '@/components/StateIndicator';
 import { formatAddress } from '@/lib/utils';
-import type { Agent } from '@/types';
+import type { Agent, DailyBriefItem } from '@/types';
 
 const MONO: React.CSSProperties = {
   fontFamily: 'ui-monospace, Menlo, monospace',
   fontSize: 9,
   letterSpacing: '0.04em',
 };
+
+// --- Cached agents from localStorage ---
+const CACHE_KEY = 'miniclaw_agents_cache';
+
+function getCachedAgents(): Agent[] | null {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) return parsed as Agent[];
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function setCachedAgents(agents: Agent[]) {
+  try {
+    localStorage.setItem(CACHE_KEY, JSON.stringify(agents));
+  } catch {
+    // ignore
+  }
+}
+
+// --- Daily Brief ---
+
+function DailyBriefCard({
+  item,
+  onDismiss,
+  onTellMore,
+}: {
+  item: DailyBriefItem;
+  onDismiss: () => void;
+  onTellMore: () => void;
+}) {
+  const t = useTheme();
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -8 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -8 }}
+      transition={{ duration: 0.3 }}
+      style={{
+        borderRadius: 12,
+        border: `1px solid ${t.divider}`,
+        background: t.surface,
+        padding: '14px 16px',
+        marginBottom: 28,
+        position: 'relative',
+      }}
+    >
+      <button
+        onClick={onDismiss}
+        style={{
+          position: 'absolute',
+          top: 10,
+          right: 10,
+          background: 'none',
+          border: 'none',
+          cursor: 'pointer',
+          color: t.faint,
+          padding: 4,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <X size={13} />
+      </button>
+
+      <div style={{ marginBottom: 4 }}>
+        <span style={{ ...MONO, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' as const, color: t.faint }}>
+          Daily Brief · {item.agentName}
+        </span>
+      </div>
+
+      <p style={{ fontSize: 13, fontWeight: 300, lineHeight: 1.55, color: t.text, paddingRight: 20, marginBottom: 12 }}>
+        {item.finding}
+      </p>
+
+      <button
+        onClick={onTellMore}
+        style={{
+          fontSize: 11,
+          fontWeight: 600,
+          color: t.text,
+          background: 'none',
+          border: `1px solid ${t.divider}`,
+          borderRadius: 8,
+          padding: '5px 12px',
+          cursor: 'pointer',
+          letterSpacing: '-0.01em',
+        }}
+      >
+        Tell me more
+      </button>
+    </motion.div>
+  );
+}
+
+// --- Agent Brief Fetcher (per agent) ---
+
+function useAgentBrief(agent: Agent | null) {
+  const { data: pendingTasks } = useTasks(agent?.id, 'pending');
+  const { data: activity } = useActivity(agent?.id);
+
+  if (!agent) return null;
+
+  const mostRecentTask = pendingTasks?.[0];
+  const mostRecentActivity = activity?.[0];
+
+  const taskFinding = mostRecentTask
+    ? (mostRecentTask.title || mostRecentTask.description || mostRecentTask.action || 'Found a pending task that needs your attention.')
+    : null;
+
+  const activityFinding = mostRecentActivity
+    ? (mostRecentActivity.summary || mostRecentActivity.description || mostRecentActivity.content || null)
+    : null;
+
+  const finding = taskFinding || activityFinding;
+  if (!finding) return null;
+
+  return {
+    agentId: agent.id,
+    agentName: agent.name,
+    finding,
+    type: (taskFinding ? 'task' : 'activity') as 'task' | 'activity',
+    taskId: mostRecentTask?.id,
+    activityId: mostRecentActivity?.id,
+    createdAt: mostRecentTask?.createdAt || mostRecentActivity?.createdAt,
+  } as import('@/types').DailyBriefItem;
+}
+
+// --- Agent Row ---
 
 function AgentRow({
   agent,
@@ -141,12 +275,83 @@ function SkeletonRow({ index }: { index: number }) {
   );
 }
 
+// --- Brief loading sub-component (fetches per-agent data) ---
+function BriefLoader({
+  agents,
+  onBriefReady,
+}: {
+  agents: Agent[];
+  onBriefReady: (brief: DailyBriefItem | null) => void;
+}) {
+  const firstAgent = agents[0] ?? null;
+  const brief = useAgentBrief(firstAgent);
+
+  useEffect(() => {
+    onBriefReady(brief ?? null);
+  }, [brief]);
+
+  return null;
+}
+
+const BRIEF_DISMISSED_KEY = 'miniclaw_brief_dismissed';
+
+function getBriefDismissedDate(): string | null {
+  try {
+    return localStorage.getItem(BRIEF_DISMISSED_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function setBriefDismissed() {
+  try {
+    localStorage.setItem(BRIEF_DISMISSED_KEY, new Date().toDateString());
+  } catch {
+    // ignore
+  }
+}
+
 export function HomeView() {
   const t = useTheme();
   const push = useRouter((s) => s.push);
   const address = useAuthStore((s) => s.address);
   const { data, isLoading, isError } = useAgents();
-  const agents = data?.agents ?? [];
+
+  const [cachedAgents, setCachedAgentsState] = useState<Agent[]>(() => getCachedAgents() ?? []);
+  const [briefItem, setBriefItem] = useState<DailyBriefItem | null>(null);
+  const [briefDismissed, setBriefDismissedState] = useState(() => {
+    const dismissed = getBriefDismissedDate();
+    return dismissed === new Date().toDateString();
+  });
+
+  const apiAgents = data?.agents ?? [];
+
+  // Update localStorage cache when fresh data arrives
+  useEffect(() => {
+    if (apiAgents.length > 0) {
+      setCachedAgentsState(apiAgents);
+      setCachedAgents(apiAgents);
+    }
+  }, [apiAgents]);
+
+  const agents = apiAgents.length > 0 ? apiAgents : cachedAgents;
+  const showSkeleton = isLoading && agents.length === 0;
+
+  const handleDismissBrief = () => {
+    setBriefDismissedState(true);
+    setBriefDismissed();
+  };
+
+  const handleTellMore = () => {
+    if (briefItem) {
+      push('agent-detail', {
+        id: String(briefItem.agentId),
+        briefContext: briefItem.finding,
+      });
+    }
+  };
+
+  const showBrief = briefItem && !briefDismissed && agents.length > 0;
 
   useEffect(() => {
     if (!isLoading && !isError && agents.length === 0) {
@@ -163,15 +368,57 @@ export function HomeView() {
       className="flex-1 overflow-y-auto no-scrollbar"
       style={{ padding: '40px 32px 0', background: t.bg, transition: 'background 0.3s ease' }}
     >
-      <p style={{
-        fontFamily: 'ui-monospace, Menlo, monospace',
-        fontSize: 9,
-        color: t.faint,
-        letterSpacing: '0.05em',
-        marginBottom: 40,
-      }}>
-        {address ? formatAddress(address) : '—'}
-      </p>
+      {/* Address + Growth button row */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 40 }}>
+        <p style={{
+          fontFamily: 'ui-monospace, Menlo, monospace',
+          fontSize: 9,
+          color: t.faint,
+          letterSpacing: '0.05em',
+        }}>
+          {address ? formatAddress(address) : '—'}
+        </p>
+        <button
+          onClick={() => push('growth')}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 4,
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            color: t.faint,
+            padding: 0,
+          }}
+        >
+          <TrendingUp size={13} strokeWidth={1.5} />
+          <span style={{ fontFamily: 'ui-monospace, Menlo, monospace', fontSize: 9, letterSpacing: '0.06em' }}>
+            Growth
+          </span>
+        </button>
+      </div>
+
+      {/* Daily Brief */}
+      <AnimatePresence>
+        {showBrief && (
+          <DailyBriefCard
+            key="brief"
+            item={briefItem}
+            onDismiss={handleDismissBrief}
+            onTellMore={handleTellMore}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Load brief data (only when agents are loaded) */}
+      {agents.length > 0 && !briefDismissed && (
+        <BriefLoader
+          agents={agents}
+          onBriefReady={(b) => {
+            if (b && !briefItem) setBriefItem(b);
+          }}
+        />
+      )}
 
       {isError && (
         <p style={{ fontSize: 11, color: '#f87171', letterSpacing: '-0.01em', marginBottom: 16 }}>
@@ -180,7 +427,7 @@ export function HomeView() {
       )}
 
       <div>
-        {isLoading
+        {showSkeleton
           ? [0, 1, 2].map((i) => <SkeletonRow key={i} index={i} />)
           : agents.map((agent, i) => (
             <AgentRow

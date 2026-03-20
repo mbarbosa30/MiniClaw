@@ -18,6 +18,7 @@ import type {
   Conversation,
   ChatMessage,
   AgentTask,
+  ActivityItem,
   TelegramStatus,
   TelegramSettingsPayload,
 } from '@/types';
@@ -396,5 +397,34 @@ export function useUpdateTelegramSettings() {
       }),
     onSuccess: (_, variables) =>
       qc.invalidateQueries({ queryKey: ['telegram-status', qid(variables.agentId)] }),
+  });
+}
+
+// --- ACTIVITY ---
+
+export function useActivity(agentId: string | number | undefined) {
+  return useQuery({
+    queryKey: ['activity', qid(agentId)],
+    queryFn: () =>
+      apiFetch<ActivityItem[] | { items: ActivityItem[] }>(
+        `/api/selfclaw/v1/hosted-agents/${sid(agentId!)}/activity`
+      ).then(raw => {
+        if (Array.isArray(raw)) return raw;
+        return (raw as { items: ActivityItem[] }).items ?? [];
+      }),
+    enabled: agentId != null && agentId !== '',
+  });
+}
+
+// --- AWARENESS (quota info etc.) ---
+
+export function useAwareness(agentId: string | number | undefined) {
+  return useQuery({
+    queryKey: ['awareness', qid(agentId)],
+    queryFn: () =>
+      apiFetch<Record<string, unknown>>(
+        `/api/selfclaw/v1/hosted-agents/${sid(agentId!)}/awareness`
+      ),
+    enabled: agentId != null && agentId !== '',
   });
 }

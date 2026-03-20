@@ -211,7 +211,43 @@ export interface AgentTask {
   description?: string;
   action?: string;
   status?: 'pending' | 'approved' | 'rejected' | 'completed' | string;
+  taskType?: string;
+  riskLevel?: 'low' | 'medium' | 'high' | string;
+  category?: string;
   createdAt?: string;
+}
+
+export interface ActivityItem {
+  id: string | number;
+  type: string;
+  description?: string;
+  summary?: string;
+  content?: string;
+  createdAt?: string;
+  agentId?: string | number;
+}
+
+export interface DailyBriefItem {
+  agentId: string | number;
+  agentName: string;
+  finding: string;
+  type: 'task' | 'activity';
+  taskId?: string;
+  activityId?: string | number;
+  createdAt?: string;
+}
+
+export interface GrowthSummary {
+  month: string;
+  totalApproved: number;
+  byCategory: Record<string, number>;
+  motivationalSummary?: string;
+}
+
+export interface QuotaInfo {
+  used: number;
+  limit: number;
+  percent: number;
 }
 
 export interface TelegramStatus {

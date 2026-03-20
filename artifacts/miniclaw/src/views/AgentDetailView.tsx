@@ -1,10 +1,10 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useAgent, useConversations, useMessages } from '@/hooks/use-agents';
 import { useRouter } from '@/lib/store';
 import { useTheme } from '@/lib/theme';
 import { Button } from '@/components/ui';
 import { MoreHorizontal } from 'lucide-react';
-import { apiFetchStream } from '@/lib/api-client';
+import { apiFetchStream, apiFetch } from '@/lib/api-client';
 import type { Agent, ChatMessage } from '@/types';
 
 const DOT_COLOR: Record<string, string> = {
@@ -28,16 +28,63 @@ const MONO = {
   letterSpacing: '0.07em',
 } as const;
 
+// --- Quota bar ---
+
+interface QuotaState {
+  used: number;
+  limit: number;
+}
+
+function QuotaBar({ quota }: { quota: QuotaState | null }) {
+  const t = useTheme();
+  if (!quota || quota.limit <= 0) return null;
+
+  const pct = Math.min(quota.used / quota.limit, 1);
+  const isWarning = pct >= 0.8;
+
+  return (
+    <div style={{ marginTop: 6, paddingBottom: 6 }}>
+      <div style={{ height: 2, background: t.surface, borderRadius: 1, overflow: 'hidden' }}>
+        <div
+          style={{
+            height: '100%',
+            width: `${pct * 100}%`,
+            background: isWarning ? '#f59e0b' : t.faint,
+            borderRadius: 1,
+            transition: 'width 0.4s ease',
+          }}
+        />
+      </div>
+      {isWarning && (
+        <p style={{
+          fontFamily: 'ui-monospace, Menlo, monospace',
+          fontSize: 8,
+          color: '#f59e0b',
+          letterSpacing: '0.05em',
+          marginTop: 3,
+          textAlign: 'center',
+        }}>
+          Almost at limit — upgrade for more
+        </p>
+      )}
+    </div>
+  );
+}
+
+// --- Agent Header ---
+
 function AgentHeader({
   agent,
   onBack,
   onOptions,
   onPending,
+  quota,
 }: {
   agent: Agent;
   onBack: () => void;
   onOptions: () => void;
   onPending: () => void;
+  quota: QuotaState | null;
 }) {
   const t = useTheme();
   const stats = agent.stats;
@@ -58,87 +105,161 @@ function AgentHeader({
       flexShrink: 0,
       borderBottom: `1px solid ${t.divider}`,
       background: t.bg,
-      height: 52,
-      display: 'flex',
-      alignItems: 'center',
       paddingLeft: 8,
       paddingRight: 8,
     }}>
-      {/* Left — fixed width, back button */}
-      <div style={{ width: SIDE_W, flexShrink: 0, display: 'flex', alignItems: 'center' }}>
-        <button
-          onClick={onBack}
-          style={{ width: 44, height: 44, background: 'none', border: 'none', cursor: 'pointer', color: t.label, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="m15 18-6-6 6-6"/>
-          </svg>
-        </button>
-      </div>
+      <div style={{
+        height: 52,
+        display: 'flex',
+        alignItems: 'center',
+      }}>
+        {/* Left — fixed width, back button */}
+        <div style={{ width: SIDE_W, flexShrink: 0, display: 'flex', alignItems: 'center' }}>
+          <button
+            onClick={onBack}
+            style={{ width: 44, height: 44, background: 'none', border: 'none', cursor: 'pointer', color: t.label, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="m15 18-6-6 6-6"/>
+            </svg>
+          </button>
+        </div>
 
-      {/* Center — flex:1, two lines, truly centered because sides are equal width */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4, overflow: 'hidden' }}>
-        <span style={{
-          fontSize: 13,
-          fontWeight: 300,
-          letterSpacing: '-0.01em',
-          lineHeight: 1,
-          color: t.label,
-          whiteSpace: 'nowrap',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          maxWidth: '100%',
-          textAlign: 'center',
-        }}>
-          {agent.name || 'Agent'}
-        </span>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 5, maxWidth: '100%', overflow: 'hidden' }}>
-          <span style={{ display: 'block', width: 5, height: 5, borderRadius: '50%', background: dotColor, flexShrink: 0 }} />
+        {/* Center */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4, overflow: 'hidden' }}>
           <span style={{
-            fontSize: 11,
+            fontSize: 13,
             fontWeight: 300,
-            color: t.faint,
-            letterSpacing: '0.01em',
+            letterSpacing: '-0.01em',
             lineHeight: 1,
+            color: t.label,
             whiteSpace: 'nowrap',
             overflow: 'hidden',
             textOverflow: 'ellipsis',
+            maxWidth: '100%',
+            textAlign: 'center',
           }}>
-            {activityText}
+            {agent.name || 'Agent'}
           </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5, maxWidth: '100%', overflow: 'hidden' }}>
+            <span style={{ display: 'block', width: 5, height: 5, borderRadius: '50%', background: dotColor, flexShrink: 0 }} />
+            <span style={{
+              fontSize: 11,
+              fontWeight: 300,
+              color: t.faint,
+              letterSpacing: '0.01em',
+              lineHeight: 1,
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+            }}>
+              {activityText}
+            </span>
+          </div>
+        </div>
+
+        {/* Right — fixed width */}
+        <div style={{ width: SIDE_W, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}>
+          {pendingCount > 0 && (
+            <button
+              onClick={onPending}
+              style={{
+                padding: '2px 5px',
+                background: 'none',
+                border: `1px solid ${t.divider}`,
+                borderRadius: 4,
+                cursor: 'pointer',
+                ...MONO,
+                color: t.label,
+                lineHeight: 1.4,
+                flexShrink: 0,
+              }}
+            >
+              {pendingCount}
+            </button>
+          )}
+          <button
+            onClick={onOptions}
+            style={{ width: 44, height: 44, background: 'none', border: 'none', cursor: 'pointer', color: t.label, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+          >
+            <MoreHorizontal size={17} strokeWidth={1.5} />
+          </button>
         </div>
       </div>
 
-      {/* Right — fixed width matching left, pending badge + options right-aligned */}
-      <div style={{ width: SIDE_W, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}>
-        {pendingCount > 0 && (
-          <button
-            onClick={onPending}
-            style={{
-              padding: '2px 5px',
-              background: 'none',
-              border: `1px solid ${t.divider}`,
-              borderRadius: 4,
-              cursor: 'pointer',
-              ...MONO,
-              color: t.label,
-              lineHeight: 1.4,
-              flexShrink: 0,
-            }}
-          >
-            {pendingCount}
-          </button>
-        )}
-        <button
-          onClick={onOptions}
-          style={{ width: 44, height: 44, background: 'none', border: 'none', cursor: 'pointer', color: t.label, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
-        >
-          <MoreHorizontal size={17} strokeWidth={1.5} />
-        </button>
+      {/* Quota bar */}
+      <div style={{ paddingLeft: 8, paddingRight: 8, paddingBottom: quota ? 0 : undefined }}>
+        <QuotaBar quota={quota} />
       </div>
     </div>
   );
 }
+
+// --- Quick reply chips per persona ---
+
+const PERSONA_CHIPS: Record<string, string[]> = {
+  'ai hustle builder': ['Find me a gig', "What's trending in AI?", 'Help me write a proposal', 'Track my income'],
+  'market analyst': ['Latest market update', 'Best opportunities today', 'Analyze this token', 'Portfolio summary'],
+  'content creator': ['Content ideas for today', 'Help me write a post', 'What is trending?', 'Schedule my week'],
+  'researcher': ['Summarize recent news', 'Deep dive on topic', 'Find sources', 'Latest developments'],
+  'reminder bot': ['Set a reminder', 'What do I have today?', 'Morning briefing', 'Upcoming tasks'],
+  'default': ['What can you do?', 'Give me a summary', 'What did you find?', 'Anything new?'],
+};
+
+function getPersonaChips(agent: Agent): string[] {
+  const nameLower = agent.name?.toLowerCase() ?? '';
+  const descLower = agent.description?.toLowerCase() ?? '';
+  const combined = `${nameLower} ${descLower}`;
+
+  for (const [key, chips] of Object.entries(PERSONA_CHIPS)) {
+    if (key === 'default') continue;
+    if (combined.includes(key)) return chips;
+  }
+
+  // Fallback based on keywords
+  if (combined.includes('gig') || combined.includes('hustle') || combined.includes('income')) {
+    return PERSONA_CHIPS['ai hustle builder'];
+  }
+  if (combined.includes('market') || combined.includes('crypto') || combined.includes('price')) {
+    return PERSONA_CHIPS['market analyst'];
+  }
+  if (combined.includes('content') || combined.includes('post') || combined.includes('write')) {
+    return PERSONA_CHIPS['content creator'];
+  }
+  if (combined.includes('research') || combined.includes('news') || combined.includes('analys')) {
+    return PERSONA_CHIPS['researcher'];
+  }
+  if (combined.includes('remind') || combined.includes('schedule') || combined.includes('task')) {
+    return PERSONA_CHIPS['reminder bot'];
+  }
+
+  return PERSONA_CHIPS['default'];
+}
+
+// --- localStorage message cache ---
+
+const MSG_CACHE_PREFIX = 'miniclaw_msgs_';
+
+function getCachedMessages(agentId: string | number): ChatMessage[] {
+  try {
+    const raw = localStorage.getItem(`${MSG_CACHE_PREFIX}${agentId}`);
+    if (!raw) return [];
+    return JSON.parse(raw) as ChatMessage[];
+  } catch {
+    return [];
+  }
+}
+
+function setCachedMessages(agentId: string | number, messages: ChatMessage[]) {
+  try {
+    const last3 = messages.filter(m => m.role !== 'system').slice(-6);
+    localStorage.setItem(`${MSG_CACHE_PREFIX}${agentId}`, JSON.stringify(last3));
+  } catch {
+    // ignore
+  }
+}
+
+// --- Main view ---
 
 export function AgentDetailView() {
   const t = useTheme();
@@ -147,8 +268,10 @@ export function AgentDetailView() {
   const push = useRouter(s => s.push);
   const id: string = currentView.params?.id ?? '';
   const newChatAt: string | undefined = currentView.params?.newChatAt;
+  const briefContext: string | undefined = currentView.params?.briefContext;
   const { data: agent, isLoading } = useAgent(id);
   const [newChatTrigger, setNewChatTrigger] = useState(0);
+  const [quota, setQuota] = useState<QuotaState | null>(null);
 
   useEffect(() => {
     if (newChatAt) setNewChatTrigger(n => n + 1);
@@ -182,9 +305,16 @@ export function AgentDetailView() {
         onBack={pop}
         onOptions={() => push('agent-options', { id })}
         onPending={() => push('tasks', { id })}
+        quota={quota}
       />
       <div style={{ flex: 1, overflow: 'hidden' }}>
-        <ChatTab agent={agent} agentName={agentName} newChatTrigger={newChatTrigger} />
+        <ChatTab
+          agent={agent}
+          agentName={agentName}
+          newChatTrigger={newChatTrigger}
+          briefContext={briefContext}
+          onQuotaUpdate={setQuota}
+        />
       </div>
     </div>
   );
@@ -202,7 +332,21 @@ function fmtTime(ts?: number, iso?: string): string {
   }
 }
 
-function ChatTab({ agent, agentName, newChatTrigger }: { agent: Agent; agentName: string; newChatTrigger: number }) {
+const SSE_TIMEOUT_MS = 8000;
+
+function ChatTab({
+  agent,
+  agentName,
+  newChatTrigger,
+  briefContext,
+  onQuotaUpdate,
+}: {
+  agent: Agent;
+  agentName: string;
+  newChatTrigger: number;
+  briefContext?: string;
+  onQuotaUpdate: (q: QuotaState | null) => void;
+}) {
   const t = useTheme();
   const { data: conversations, refetch: refetchConversations } = useConversations(agent.id);
   const [activeConversationId, setActiveConversationId] = useState<string | undefined>();
@@ -211,12 +355,16 @@ function ChatTab({ agent, agentName, newChatTrigger }: { agent: Agent; agentName
 
   const makeGreeting = (name: string) => `Hi! I'm ${name}. How can I help you today?`;
 
-  const [messages, setMessages] = useState<LocalMessage[]>([
-    { role: 'assistant', content: makeGreeting(agentName), _ts: Date.now() }
-  ]);
+  const cachedMsgs = getCachedMessages(agent.id);
+  const initialMessages: LocalMessage[] = cachedMsgs.length > 0
+    ? cachedMsgs
+    : [{ role: 'assistant', content: makeGreeting(agentName), _ts: Date.now() }];
+
+  const [messages, setMessages] = useState<LocalMessage[]>(initialMessages);
   const [input, setInput] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
+  const chips = getPersonaChips(agent);
 
   useEffect(() => {
     if (conversations && conversations.length > 0 && !activeConversationId) {
@@ -228,6 +376,7 @@ function ChatTab({ agent, agentName, newChatTrigger }: { agent: Agent; agentName
     if (history && history.length > 0 && !historyLoaded) {
       setMessages(history);
       setHistoryLoaded(true);
+      setCachedMessages(agent.id, history);
     }
   }, [history, historyLoaded]);
 
@@ -242,16 +391,62 @@ function ChatTab({ agent, agentName, newChatTrigger }: { agent: Agent; agentName
     setMessages([{ role: 'assistant', content: makeGreeting(agentName), _ts: Date.now() }]);
   }, [newChatTrigger]);
 
-  const handleSend = async () => {
-    if (!input.trim() || isStreaming) return;
-    const userMsg = input.trim();
-    setInput('');
+  // Brief context — inject as first user message when provided
+  useEffect(() => {
+    if (briefContext && !isStreaming) {
+      const hasContext = messages.some(m => m.role === 'user' && m.content === briefContext);
+      if (!hasContext) {
+        handleSend(briefContext);
+      }
+    }
+  }, [briefContext]);
+
+  const parseQuotaHeaders = (headers: Headers) => {
+    const used = parseInt(headers.get('X-Quota-Used') ?? '', 10);
+    const limit = parseInt(headers.get('X-Quota-Limit') ?? '', 10);
+    if (!isNaN(used) && !isNaN(limit) && limit > 0) {
+      onQuotaUpdate({ used, limit });
+    }
+  };
+
+  const pollForResult = async (messageId: string) => {
+    const maxAttempts = 15;
+    for (let i = 0; i < maxAttempts; i++) {
+      await new Promise(r => setTimeout(r, 2000));
+      try {
+        const res = await apiFetch<{ content: string; done?: boolean }>(
+          `/api/selfclaw/v1/hosted-agents/${agent.id}/chat/${messageId}/result`
+        );
+        if (res.content) {
+          setMessages(prev => {
+            const msgs = [...prev];
+            const last = msgs[msgs.length - 1];
+            if (last && last.role === 'assistant') {
+              msgs[msgs.length - 1] = { ...last, content: res.content, _ts: Date.now() };
+            }
+            return msgs;
+          });
+          if (res.done !== false) return;
+        }
+      } catch {
+        // keep polling
+      }
+    }
+  };
+
+  const handleSend = useCallback(async (override?: string) => {
+    const userMsg = (override ?? input).trim();
+    if (!userMsg || isStreaming) return;
+    if (!override) setInput('');
     const now = Date.now();
-    setMessages(prev => [
-      ...prev,
-      { role: 'user', content: userMsg, _ts: now },
-      { role: 'assistant', content: '', _ts: undefined }
-    ]);
+    setMessages(prev => {
+      const next = [
+        ...prev,
+        { role: 'user' as const, content: userMsg, _ts: now },
+        { role: 'assistant' as const, content: '', _ts: undefined },
+      ];
+      return next;
+    });
     setIsStreaming(true);
 
     try {
@@ -264,12 +459,23 @@ function ChatTab({ agent, agentName, newChatTrigger }: { agent: Agent; agentName
       });
 
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      parseQuotaHeaders(res.headers);
 
       const reader = res.body?.getReader();
       const decoder = new TextDecoder();
       if (!reader) throw new Error('No stream');
 
       let buffer = '';
+      let pendingMessageId: string | null = null;
+      let gotAnyData = false;
+
+      const sseTimeout = setTimeout(() => {
+        if (!gotAnyData && pendingMessageId) {
+          reader.cancel();
+          pollForResult(pendingMessageId);
+        }
+      }, SSE_TIMEOUT_MS);
+
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
@@ -285,12 +491,17 @@ function ChatTab({ agent, agentName, newChatTrigger }: { agent: Agent; agentName
               type: string;
               content?: string;
               conversationId?: number;
-              messageId?: number;
+              messageId?: number | string;
               tokensUsed?: number;
               message?: string;
             } = JSON.parse(data);
 
+            if (parsed.messageId) {
+              pendingMessageId = String(parsed.messageId);
+            }
+
             if (parsed.type === 'done') {
+              clearTimeout(sseTimeout);
               if (parsed.conversationId != null && !activeConversationId) {
                 setActiveConversationId(String(parsed.conversationId));
                 refetchConversations();
@@ -301,12 +512,14 @@ function ChatTab({ agent, agentName, newChatTrigger }: { agent: Agent; agentName
                 if (last && last.role === 'assistant' && !last._ts) {
                   msgs[msgs.length - 1] = { ...last, _ts: Date.now() };
                 }
+                setCachedMessages(agent.id, msgs);
                 return msgs;
               });
               continue;
             }
 
             if (parsed.type === 'error') {
+              clearTimeout(sseTimeout);
               setMessages(prev => [
                 ...prev.slice(0, -1),
                 { role: 'system', content: parsed.message ?? 'The agent encountered an error.', _ts: Date.now() }
@@ -318,6 +531,7 @@ function ChatTab({ agent, agentName, newChatTrigger }: { agent: Agent; agentName
 
             const chunk = parsed.content ?? '';
             if (chunk) {
+              gotAnyData = true;
               setMessages(prev => {
                 const msgs = [...prev];
                 const last = msgs[msgs.length - 1];
@@ -330,15 +544,54 @@ function ChatTab({ agent, agentName, newChatTrigger }: { agent: Agent; agentName
           }
         }
       }
+
+      clearTimeout(sseTimeout);
     } catch {
-      setMessages(prev => [
-        ...prev.slice(0, -1),
-        { role: 'system', content: 'Something went wrong. Please try again.' }
-      ]);
+      // SSE failed — try poll=true fallback
+      try {
+        const body: { message: string; conversationId?: string; poll?: boolean } = {
+          message: userMsg,
+          poll: true,
+        };
+        if (activeConversationId) body.conversationId = activeConversationId;
+
+        const res2 = await apiFetch<{
+          messageId?: string;
+          conversationId?: string;
+          content?: string;
+          reply?: string;
+        }>(`/api/selfclaw/v1/hosted-agents/${agent.id}/chat?poll=true`, {
+          method: 'POST',
+          body: JSON.stringify(body),
+        });
+
+        const reply = res2.content || res2.reply;
+
+        if (reply) {
+          setMessages(prev => {
+            const msgs = [...prev];
+            msgs[msgs.length - 1] = { ...msgs[msgs.length - 1], content: reply, _ts: Date.now() };
+            setCachedMessages(agent.id, msgs);
+            return msgs;
+          });
+        } else if (res2.messageId) {
+          await pollForResult(res2.messageId);
+        }
+
+        if (res2.conversationId && !activeConversationId) {
+          setActiveConversationId(String(res2.conversationId));
+          refetchConversations();
+        }
+      } catch {
+        setMessages(prev => [
+          ...prev.slice(0, -1),
+          { role: 'system', content: 'Something went wrong. Please try again.' }
+        ]);
+      }
     } finally {
       setIsStreaming(false);
     }
-  };
+  }, [input, isStreaming, activeConversationId, agent.id]);
 
   const agentLabel = agentName.toUpperCase();
 
@@ -413,6 +666,44 @@ function ChatTab({ agent, agentName, newChatTrigger }: { agent: Agent; agentName
         <div ref={endRef} />
       </div>
 
+      {/* Quick-reply chips */}
+      {!isStreaming && (
+        <div
+          className="no-scrollbar"
+          style={{
+            flexShrink: 0,
+            overflowX: 'auto',
+            display: 'flex',
+            gap: 8,
+            padding: '8px 32px 4px',
+            scrollbarWidth: 'none',
+          }}
+        >
+          {chips.map((chip) => (
+            <button
+              key={chip}
+              onClick={() => handleSend(chip)}
+              style={{
+                flexShrink: 0,
+                fontSize: 11,
+                fontWeight: 400,
+                color: t.label,
+                background: 'none',
+                border: `1px solid ${t.divider}`,
+                borderRadius: 999,
+                padding: '5px 12px',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                letterSpacing: '-0.01em',
+                transition: 'border-color 0.15s, color 0.15s',
+              }}
+            >
+              {chip}
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Input */}
       <div style={{ flexShrink: 0, borderTop: `1px solid ${t.divider}`, padding: '12px 32px 20px' }}>
         <div style={{ display: 'flex', alignItems: 'flex-end', gap: 16 }}>
@@ -440,7 +731,7 @@ function ChatTab({ agent, agentName, newChatTrigger }: { agent: Agent; agentName
             rows={1}
           />
           <button
-            onClick={handleSend}
+            onClick={() => handleSend()}
             disabled={!input.trim() || isStreaming}
             style={{
               fontFamily: 'ui-monospace, Menlo, monospace',

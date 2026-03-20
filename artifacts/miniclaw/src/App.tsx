@@ -11,6 +11,7 @@ import { ThemeCtx, LIGHT, DARK } from "@/lib/theme";
 import { ConnectView } from "@/views/ConnectView";
 import { HomeView } from "@/views/HomeView";
 import { DashboardView } from "@/views/DashboardView";
+import { GrowthView } from "@/views/GrowthView";
 import { SettingsView } from "@/views/SettingsView";
 import { CreateAgentView } from "@/views/CreateAgentView";
 import { AgentDetailView } from "@/views/AgentDetailView";
@@ -53,6 +54,7 @@ function ViewManager() {
 
   switch (view) {
     case 'create':       return <CreateAgentView />;
+    case 'growth':       return <GrowthView />;
     case 'agent-detail':   return <AgentDetailView />;
     case 'agent-options':  return <AgentOptionsView />;
     case 'agent-settings': return <AgentSettingsView />;

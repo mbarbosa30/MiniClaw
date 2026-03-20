@@ -270,13 +270,57 @@ export function MemoriesView() {
   );
 }
 
+// --- TASK RISK CLASSIFICATION ---
+
+const LOW_RISK_TYPES = new Set([
+  'reminder', 'info', 'information', 'summary', 'report', 'notify',
+  'notification', 'update', 'briefing', 'digest', 'alert', 'note',
+  'analysis', 'research', 'insight',
+]);
+
+const HIGH_RISK_TYPES = new Set([
+  'payment', 'transfer', 'post', 'send', 'sign', 'transaction',
+  'submit', 'publish', 'deploy', 'execute', 'buy', 'sell',
+]);
+
+function isLowRisk(task: import('@/types').AgentTask): boolean {
+  // Prefer explicit riskLevel field if available
+  if (task.riskLevel === 'low') return true;
+  if (task.riskLevel === 'high' || task.riskLevel === 'medium') return false;
+
+  // Fall back to taskType/category inference
+  const type = (task.taskType ?? task.category ?? '').toLowerCase();
+  if (!type) return false;
+  if (HIGH_RISK_TYPES.has(type)) return false;
+  return LOW_RISK_TYPES.has(type);
+}
+
 // --- TASKS VIEW ---
 export function TasksView() {
   const t = useTheme();
   const agentId: string = useRouter(s => s.currentView.params?.id ?? '');
   const [tab, setTab] = useState<'pending' | 'all'>('pending');
-  const { data: tasks, isLoading } = useTasks(agentId, tab);
+  const { data: rawTasks, isLoading } = useTasks(agentId, tab);
   const resolve = useResolveTask();
+  const [autoApproved, setAutoApproved] = useState<Set<string>>(new Set());
+
+  // Auto-approve low-risk pending tasks
+  useEffect(() => {
+    if (!rawTasks || tab !== 'pending') return;
+    for (const task of rawTasks) {
+      if (task.status !== 'pending') continue;
+      if (autoApproved.has(task.id)) continue;
+      if (isLowRisk(task)) {
+        setAutoApproved(prev => new Set(prev).add(task.id));
+        resolve.mutate({ agentId, taskId: task.id, action: 'approve' });
+      }
+    }
+  }, [rawTasks, tab]);
+
+  // After auto-approval, only show high-risk (action-required) tasks in 'pending' tab
+  const tasks = tab === 'pending'
+    ? (rawTasks ?? []).filter(task => !isLowRisk(task) && !autoApproved.has(task.id))
+    : rawTasks ?? [];
 
   return (
     <SubScreenLayout title="Tasks">
@@ -299,57 +343,84 @@ export function TasksView() {
             }}
             onClick={() => setTab(tabId)}
           >
-            {tabId === 'pending' ? 'Needs Review' : 'All Tasks'}
+            {tabId === 'pending' ? 'Action Required' : 'All Tasks'}
           </button>
         ))}
       </div>
 
-      {isLoading ? <LoadingState /> : !tasks?.length ? (
+      {autoApproved.size > 0 && tab === 'pending' && (
+        <div style={{ padding: '8px 20px', background: t.surface, borderBottom: `1px solid ${t.divider}` }}>
+          <p style={{ fontSize: 10, color: t.faint, fontFamily: 'ui-monospace, Menlo, monospace', letterSpacing: '0.04em' }}>
+            {autoApproved.size} low-risk {autoApproved.size === 1 ? 'task' : 'tasks'} auto-approved
+          </p>
+        </div>
+      )}
+
+      {isLoading ? <LoadingState /> : !tasks.length ? (
         <EmptyState
           icon={<CircleCheck size={22} />}
-          title={tab === 'pending' ? 'No pending tasks' : 'No tasks yet'}
-          description={tab === 'pending' ? "No autonomous actions are waiting for your approval." : "Your agent hasn't started any tasks yet."}
+          title={tab === 'pending' ? 'No action required' : 'No tasks yet'}
+          description={tab === 'pending' ? "All pending tasks have been handled. Nice work." : "Your agent hasn't started any tasks yet."}
         />
       ) : (
         <div>
-          {tasks.map((task, i) => (
-            <div key={task.id}>
-              <div style={{ padding: '14px 20px' }}>
-                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, marginBottom: 6 }}>
-                  <p style={{ fontSize: 13, fontWeight: 600, flex: 1, lineHeight: 1.4, color: t.text }}>
-                    {task.title ?? task.description ?? task.action ?? 'Pending task'}
-                  </p>
-                  {task.status && (
-                    <span style={{ fontSize: 10, fontWeight: 600, fontFamily: 'ui-monospace, Menlo, monospace', padding: '2px 8px', borderRadius: 999, border: `1px solid ${t.divider}`, color: t.label, flexShrink: 0 }}>
-                      {task.status}
-                    </span>
+          {tasks.map((task, i) => {
+            const needsAction = tab === 'pending' || task.status === 'pending';
+            const taskRisk = task.riskLevel ?? (isLowRisk(task) ? 'low' : 'action');
+
+            return (
+              <div key={task.id}>
+                <div style={{ padding: '14px 20px' }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, marginBottom: 6 }}>
+                    <p style={{ fontSize: 13, fontWeight: 600, flex: 1, lineHeight: 1.4, color: t.text }}>
+                      {task.title ?? task.description ?? task.action ?? 'Pending task'}
+                    </p>
+                    <div style={{ display: 'flex', gap: 4, flexShrink: 0, alignItems: 'center' }}>
+                      {task.taskType && (
+                        <span style={{ fontSize: 9, fontWeight: 600, fontFamily: 'ui-monospace, Menlo, monospace', padding: '2px 6px', borderRadius: 999, background: `${t.faint}20`, color: t.faint }}>
+                          {task.taskType}
+                        </span>
+                      )}
+                      {task.status && (
+                        <span style={{ fontSize: 10, fontWeight: 600, fontFamily: 'ui-monospace, Menlo, monospace', padding: '2px 8px', borderRadius: 999, border: `1px solid ${t.divider}`, color: t.label }}>
+                          {task.status}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  {task.description && task.title && (
+                    <p style={{ fontSize: 11, color: t.label, lineHeight: 1.5, marginBottom: 12 }}>{task.description}</p>
+                  )}
+                  {needsAction && !isLowRisk(task) && (
+                    <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+                      <button
+                        style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '10px 0', borderRadius: 12, background: t.text, color: t.bg, fontSize: 14, fontWeight: 600, border: 'none', cursor: 'pointer', opacity: resolve.isPending ? 0.5 : 1 }}
+                        onClick={() => resolve.mutate({ agentId, taskId: task.id, action: 'approve' })}
+                        disabled={resolve.isPending}
+                      >
+                        <Check size={14} /> Approve
+                      </button>
+                      <button
+                        style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '10px 0', borderRadius: 12, background: t.surface, color: t.label, fontSize: 14, fontWeight: 600, border: `1px solid ${t.divider}`, cursor: 'pointer', opacity: resolve.isPending ? 0.5 : 1 }}
+                        onClick={() => resolve.mutate({ agentId, taskId: task.id, action: 'reject' })}
+                        disabled={resolve.isPending}
+                      >
+                        <X size={14} /> Reject
+                      </button>
+                    </div>
+                  )}
+                  {needsAction && isLowRisk(task) && (
+                    <div style={{ marginTop: 8 }}>
+                      <span style={{ fontSize: 10, color: t.faint, fontFamily: 'ui-monospace, Menlo, monospace', letterSpacing: '0.04em' }}>
+                        low-risk · auto-approved
+                      </span>
+                    </div>
                   )}
                 </div>
-                {task.description && task.title && (
-                  <p style={{ fontSize: 11, color: t.label, lineHeight: 1.5, marginBottom: 12 }}>{task.description}</p>
-                )}
-                {(task.status === 'pending' || tab === 'pending') && (
-                  <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
-                    <button
-                      style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '8px 0', borderRadius: 10, background: t.text, color: t.bg, fontSize: 13, fontWeight: 600, border: 'none', cursor: 'pointer', opacity: resolve.isPending ? 0.5 : 1 }}
-                      onClick={() => resolve.mutate({ agentId, taskId: task.id, action: 'approve' })}
-                      disabled={resolve.isPending}
-                    >
-                      <Check size={13} /> Approve
-                    </button>
-                    <button
-                      style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '8px 0', borderRadius: 10, background: t.surface, color: t.label, fontSize: 13, fontWeight: 600, border: `1px solid ${t.divider}`, cursor: 'pointer', opacity: resolve.isPending ? 0.5 : 1 }}
-                      onClick={() => resolve.mutate({ agentId, taskId: task.id, action: 'reject' })}
-                      disabled={resolve.isPending}
-                    >
-                      <X size={13} /> Reject
-                    </button>
-                  </div>
-                )}
+                {i < tasks.length - 1 && <Divider />}
               </div>
-              {i < tasks.length - 1 && <Divider />}
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </SubScreenLayout>
