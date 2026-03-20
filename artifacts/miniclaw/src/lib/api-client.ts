@@ -1,9 +1,15 @@
 export const BASE_URL = 'https://selfclaw.ai';
 
-// Platform key — set as VITE_SELFCLAW_KEY env var (identifies MiniClaw app to SelfClaw)
+// Platform key — identifies the MiniClaw app to SelfClaw (set via VITE_SELFCLAW_KEY env var)
 const PLATFORM_KEY = import.meta.env.VITE_SELFCLAW_KEY as string | undefined;
 
 export const apiEvents = new EventTarget();
+
+// Current wallet address — set by useAutoConnect, injected into every request
+let _walletAddress: string | null = null;
+export function setWalletAddress(addr: string | null) {
+  _walletAddress = addr;
+}
 
 export async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
   const url = `${BASE_URL}${path}`;
@@ -18,10 +24,13 @@ export async function apiFetch<T>(path: string, options?: RequestInit): Promise<
     headers.set('Authorization', `Bearer ${PLATFORM_KEY}`);
   }
 
+  if (_walletAddress) {
+    headers.set('X-Wallet-Address', _walletAddress);
+  }
+
   const response = await fetch(url, {
     ...options,
     headers,
-    credentials: 'include', // required for cookie-based sessions
   });
 
   if (response.status === 401) {

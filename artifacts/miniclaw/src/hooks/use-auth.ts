@@ -1,18 +1,20 @@
 import { useEffect } from 'react';
-import { useConnect, useConnectors, useDisconnect, useAccount, useSignMessage } from 'wagmi';
-import { useMutation, useQuery } from '@tanstack/react-query';
-import { apiFetch, apiEvents } from '@/lib/api-client';
+import { useConnect, useConnectors, useDisconnect, useAccount } from 'wagmi';
+import { useMutation } from '@tanstack/react-query';
+import { apiFetch, apiEvents, setWalletAddress } from '@/lib/api-client';
 import { useAuthStore, useRouter } from '@/lib/store';
-import type { AuthMe } from '@/types';
 
 /**
  * Auto-connect to the injected MiniPay wallet on page load.
+ * As soon as the wallet address is available, navigate straight to home.
+ * No signing required — platform key + wallet address is sufficient.
  */
 export function useAutoConnect() {
   const connectors = useConnectors();
   const { connect } = useConnect();
   const { address } = useAccount();
-  const setAddress = useAuthStore(s => s.setAddress);
+  const { setAuthenticated, setAddress } = useAuthStore();
+  const resetRoute = useRouter(s => s.reset);
 
   useEffect(() => {
     if (connectors.length > 0) {
@@ -21,90 +23,31 @@ export function useAutoConnect() {
   }, [connectors, connect]);
 
   useEffect(() => {
-    if (address) setAddress(address);
-  }, [address, setAddress]);
+    if (address) {
+      setWalletAddress(address);
+      setAuthenticated(address);
+      resetRoute('home');
+    }
+  }, [address, setAuthenticated, setAddress, resetRoute]);
 }
 
 /**
- * On mount, check GET /api/auth/self/me to restore an existing cookie session.
- * Also installs the global 401 listener for auto-logout.
+ * Installs the global 401 listener — if the API rejects the platform key,
+ * send the user back to the connect/loading screen.
  */
 export function useRestoreSession() {
-  const { setAuthenticated, logout } = useAuthStore();
+  const { logout } = useAuthStore();
   const resetRoute = useRouter(s => s.reset);
 
-  // Global 401 → auto-logout
   useEffect(() => {
     const handle = () => {
+      setWalletAddress(null);
       logout();
       resetRoute('connect');
     };
     apiEvents.addEventListener('unauthorized', handle);
     return () => apiEvents.removeEventListener('unauthorized', handle);
   }, [logout, resetRoute]);
-
-  // Try to restore existing cookie session
-  useQuery({
-    queryKey: ['restore-session'],
-    queryFn: async () => {
-      try {
-        const me = await apiFetch<AuthMe>('/api/auth/self/me');
-        if (me?.walletAddress) {
-          setAuthenticated(me.walletAddress);
-          resetRoute('home');
-        }
-        return me;
-      } catch {
-        return null;
-      }
-    },
-    retry: false,
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
-  });
-}
-
-/**
- * MiniPay wallet auth flow (Opera MiniPay):
- *   1. POST /api/auth/self/wallet/minipay-verify/challenge  → { challenge, nonce }
- *   2. signMessage(challenge) with the injected wallet
- *   3. POST /api/auth/self/wallet/minipay-verify            → session cookie set
- */
-export function useMiniPayAuth() {
-  const { address } = useAccount();
-  const { signMessageAsync } = useSignMessage();
-  const { setAuthenticated } = useAuthStore();
-  const resetRoute = useRouter(s => s.reset);
-
-  return useMutation({
-    mutationFn: async () => {
-      if (!address) throw new Error('No wallet connected');
-
-      // Step 1: get challenge
-      const { challenge, nonce } = await apiFetch<{ challenge: string; nonce: string }>(
-        '/api/auth/self/wallet/minipay-verify/challenge',
-        { method: 'POST' }
-      );
-
-      // Step 2: sign
-      const signature = await signMessageAsync({ message: challenge });
-
-      // Step 3: verify → sets session cookie
-      const result = await apiFetch<{ success: boolean; walletAddress: string }>(
-        '/api/auth/self/wallet/minipay-verify',
-        {
-          method: 'POST',
-          body: JSON.stringify({ address, signature, nonce }),
-        }
-      );
-
-      return result;
-    },
-    onSuccess: (result) => {
-      setAuthenticated(result.walletAddress || address!);
-      resetRoute('home');
-    },
-  });
 }
 
 export function useLogout() {
@@ -117,6 +60,7 @@ export function useLogout() {
       await apiFetch<void>('/api/auth/self/logout', { method: 'POST' }).catch(() => {});
     },
     onSettled: () => {
+      setWalletAddress(null);
       disconnect();
       logout();
       resetRoute('connect');
