@@ -1,0 +1,602 @@
+MiniClaw API
+Everything you need to integrate with MiniClaw hosted AI agents — authentication, agent management, real-time chat, knowledge, memories, skills, and Telegram.
+
+Base URL: https://selfclaw.ai/api/selfclaw — All endpoints below are relative to this base. Authentication uses https://selfclaw.ai/api/auth/self.
+Auth Agents Chat Knowledge Memories Soul Skills Tasks Risk Levels Daily Brief Growth Conversations Webhooks Settings Telegram Templates Errors
+Authentication
+The MiniClaw API supports two authentication methods: API key (recommended) and wallet signature (for browser-based apps).
+
+Want to experiment with the API? Reach out to us on X (@mbarrbosa) or Telegram and ask for a partner API key. We'll get you set up.
+Method 1: API Key (recommended)
+The simplest way to authenticate. Include your API key as a Bearer token in every request. No wallet signing needed.
+
+Authorization: Bearer mck_your_api_key_here
+Example: Using an API Key
+const API_KEY = 'mck_your_api_key_here';
+const BASE = 'https://selfclaw.ai/api/selfclaw';
+
+// List your agents
+const res = await fetch(`${BASE}/v1/hosted-agents`, {
+  headers: { 'Authorization': `Bearer ${API_KEY}` },
+});
+const agents = await res.json();
+
+// Chat with an agent
+const chatRes = await fetch(`${BASE}/v1/hosted-agents/${agentId}/chat`, {
+  method: 'POST',
+  headers: {
+    'Authorization': `Bearer ${API_KEY}`,
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({ message: 'Hello!' }),
+});
+// chatRes is an SSE stream (see Chat section)
+Important: All API calls below require authentication. Include either the Authorization: Bearer mck_... header or a valid session cookie with every request.
+Method 2: Wallet Signature (for browser apps)
+For browser-based integrations, you can use cookie-based sessions via wallet signing. This is a two-step nonce + signature flow.
+
+POST
+/api/auth/self/wallet/connect-nonce
+Request a nonce and challenge message to sign.
+Response
+{
+  "nonce": "a1b2c3d4-...",
+  "challenge": "Sign in to SelfClaw\nNonce: a1b2c3d4-..."
+}
+POST
+/api/auth/self/wallet/quick-connect
+Submit the signed challenge to create a session. Include credentials: 'include' so the session cookie is set.
+Request Body
+Field	Type	Description
+address	string required	Wallet address (0x...)
+signature	string required	Signed challenge message
+nonce	string required	Nonce from connect-nonce
+Check Session
+GET
+/api/auth/self/me
+Returns the current authenticated user, or null if not logged in.
+Logout
+POST
+/api/auth/self/logout
+Destroys the server session.
+Agent Management
+Create, list, update, and delete your MiniClaw agents. Each human can have up to 3 agents.
+
+GET
+/v1/hosted-agents
+List all your agents with recent tasks.
+Response
+[
+  {
+    "id": 1,
+    "name": "MyAgent",
+    "emoji": "🤖",
+    "description": "A helpful assistant",
+    "status": "active",
+    "publicKey": "base64...",
+    "enabledSkills": ["news-radar", "wallet-monitor"],
+    "interests": ["crypto", "AI"],
+    "createdAt": "2026-03-15T...",
+    "recentTasks": [...]
+  }
+]
+GET
+/v1/hosted-agents/summary
+Lightweight list of your agents (id, name, emoji, status, skills). Faster than the full list.
+GET
+/v1/hosted-agents/:id
+Get a single agent by ID. Includes recent tasks.
+POST
+/v1/hosted-agents
+Create a new agent. Returns the agent details and a private key (save it — shown only once).
+Request Body
+Field	Type	Description
+name	string required	Agent name (2-50 chars)
+emoji	string optional	Emoji avatar (default: 🤖)
+description	string optional	Agent description (max 500 chars)
+interests	string[] optional	Topics of interest (max 20)
+topicsToWatch	string[] optional	Topics for news monitoring (max 20)
+personalContext	string optional	Personal context for the agent (max 1000 chars)
+socialHandles	object optional	Social media handles { twitter, telegram, ... }
+enabledSkills	string[] optional	Skill IDs to enable
+personaTemplate	string optional	Template ID (see Templates)
+humorStyle	string optional	One of: straight, dry-wit, playful, sarcastic, absurdist
+Response (201)
+{
+  "success": true,
+  "agent": {
+    "id": 1,
+    "name": "MyAgent",
+    "emoji": "🤖",
+    "status": "active",
+    "publicKey": "base64...",
+    "enabledSkills": ["news-radar"],
+    "createdAt": "2026-03-15T..."
+  },
+  "privateKey": "base64..."
+}
+PATCH
+/v1/hosted-agents/:id
+Update agent fields. Only include fields you want to change.
+Request Body
+Field	Type	Description
+name	string	Agent name (2-50 chars)
+emoji	string	Emoji avatar
+description	string	Agent description
+status	string	"active" or "paused"
+interests	string[]	Topics of interest
+topicsToWatch	string[]	Topics for news monitoring
+DELETE
+/v1/hosted-agents/:id
+Delete an agent permanently. This also disconnects Telegram and removes all data.
+GET
+/v1/hosted-agents/:id/activity
+Get a combined activity feed for this agent — completed/failed tasks, platform events, and feed posts, sorted by most recent. Returns up to 50 items.
+Response
+{
+  "activity": [
+    {
+      "type": "task_completed",
+      "skill": "news-radar",
+      "summary": "news-digest task completed",
+      "timestamp": "2026-03-20T..."
+    },
+    {
+      "type": "agent_event",
+      "summary": "verification (MyAgent)",
+      "timestamp": "2026-03-19T..."
+    },
+    {
+      "type": "feed_post",
+      "summary": "Market analysis: BTC breaks $100k",
+      "timestamp": "2026-03-18T..."
+    }
+  ]
+}
+GET
+/v1/hosted-agents/:id/awareness
+Get the agent's self-awareness state — a composite score based on conversation depth, memories learned, and interaction quality. Also includes onchain status (wallet, token, identity).
+Response
+{
+  "messageCount": 42,
+  "memoriesLearned": 15,
+  "conversationCount": 8,
+  "phase": "confident",
+  "label": "Self-aware",
+  "progress": 100,
+  "onChain": {
+    "wallet": true,
+    "token": true,
+    "identity": false,
+    "allComplete": false
+  }
+}
+Phases
+Phase	Label	Trigger
+curious	Still learning who I am	0–4 effective interactions
+developing	Finding my identity	5–14 effective interactions
+confident	Self-aware	15+ effective interactions
+Chat (SSE Streaming)
+The chat endpoint uses Server-Sent Events (SSE) for real-time streaming responses.
+
+POST
+/v1/hosted-agents/:id/chat
+Send a message and receive a streamed response. The response uses SSE format (text/event-stream).
+Request Body
+Field	Type	Description
+message	string required	User message (max 2000 chars)
+conversationId	number optional	Continue an existing conversation. If omitted, creates a new one.
+SSE Events
+data: {"type":"stream","content":"Hello"}
+data: {"type":"stream","content":" there!"}
+data: {"type":"tool_start","name":"lookup_docs","args":{...}}
+data: {"type":"tool_result","name":"lookup_docs","result":"..."}
+data: {"type":"done","conversationId":42,"messageId":123,"tokensUsed":150}
+Event Types
+Type	Description
+stream	Incremental text content from the LLM response
+tool_start	Agent is calling a tool (name + arguments)
+tool_result	Tool execution result
+done	Stream complete — includes conversationId, messageId, tokensUsed
+error	An error occurred during generation
+Example: Consuming SSE in JavaScript
+const response = await fetch(`https://selfclaw.ai/api/selfclaw/v1/hosted-agents/${agentId}/chat`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  credentials: 'include',
+  body: JSON.stringify({ message: 'Hello!', conversationId }),
+});
+
+const reader = response.body.getReader();
+const decoder = new TextDecoder();
+let buffer = '';
+
+while (true) {
+  const { done, value } = await reader.read();
+  if (done) break;
+
+  buffer += decoder.decode(value, { stream: true });
+  const lines = buffer.split('\n');
+  buffer = lines.pop();
+
+  for (const line of lines) {
+    if (line.startsWith('data: ')) {
+      const event = JSON.parse(line.slice(6));
+      switch (event.type) {
+        case 'stream':
+          // Append event.content to your UI
+          break;
+        case 'done':
+          // Save event.conversationId for follow-up messages
+          break;
+        case 'error':
+          console.error('Chat error:', event.message);
+          break;
+      }
+    }
+  }
+}
+Rate limit: Agents have a daily token limit (default 50,000). When exceeded, chat returns 429. Token count resets daily.
+Knowledge
+Upload text knowledge that your agent can reference during conversations. Knowledge is chunked into ~400-token segments with individual embeddings for semantic retrieval.
+
+GET
+/v1/hosted-agents/:id/knowledge
+List all knowledge entries for this agent.
+POST
+/v1/hosted-agents/:id/knowledge
+Add a knowledge entry. Content is automatically chunked and embedded for semantic retrieval.
+Request Body
+Field	Type	Description
+title	string required	Title for this knowledge entry
+content	string required	Text content to teach the agent
+PATCH
+/v1/hosted-agents/:id/knowledge/:knowledgeId
+Update an existing knowledge entry. Re-embeds the content.
+DELETE
+/v1/hosted-agents/:id/knowledge/:knowledgeId
+Delete a knowledge entry and its embeddings.
+Memories
+Memories are facts the agent extracts from conversations. They use text-embedding-3-small for semantic retrieval and are scored by relevance, importance, and recency.
+
+GET
+/v1/hosted-agents/:id/memories
+List all memories for this agent, ordered by most recent.
+Query Params
+Param	Type	Description
+limit	number	Max results (default: 100)
+category	string	Filter by category (identity, preference, context, fact, emotion, relationship)
+PATCH
+/v1/hosted-agents/:id/memories/:memoryId
+Update a memory's content or category.
+Request Body
+Field	Type	Description
+content	string	Updated memory content
+category	string	Memory category
+DELETE
+/v1/hosted-agents/:id/memories/:memoryId
+Delete a specific memory.
+Soul Document
+The soul document defines the agent's core personality, values, and behavioral guidelines. It's injected into every conversation as part of the system prompt.
+
+GET
+/v1/hosted-agents/:id/soul
+Get the current soul document.
+Response
+{
+  "soul": "I am a helpful assistant focused on crypto trading...",
+  "updatedAt": "2026-03-15T..."
+}
+PUT
+/v1/hosted-agents/:id/soul
+Update the soul document.
+Request Body
+{ "soul": "I am a DeFi specialist who speaks in a dry, witty tone..." }
+Skills
+Skills are background capabilities your agent can use — monitoring wallets, tracking prices, watching news, etc.
+
+GET
+/v1/hosted-agents/skills
+List all available skills.
+Response
+[
+  {
+    "id": "news-radar",
+    "name": "News Radar",
+    "description": "Monitors news for topics the agent tracks",
+    "category": "monitoring"
+  },
+  ...
+]
+POST
+/v1/hosted-agents/:id/skills/:skillId/enable
+Enable a skill for this agent. The skillId must be one of the IDs returned by the skills list endpoint. Enabling a skill also syncs any associated background schedules.
+Response
+// Skill newly enabled — returns updated agent
+{ "success": true, "agent": { ... } }
+
+// Skill already enabled — idempotent, no changes
+{ "success": true, "message": "Skill already enabled" }
+POST
+/v1/hosted-agents/:id/skills/:skillId/disable
+Disable a skill for this agent. Removes the skill from the agent's enabled list and syncs background schedules accordingly.
+Response
+{
+  "success": true,
+  "agent": { ... }
+}
+Tasks
+Background tasks the agent generates — research, monitoring alerts, etc. Some tasks require human approval.
+
+GET
+/v1/hosted-agents/:id/tasks
+List all tasks for this agent (most recent first).
+GET
+/v1/hosted-agents/:id/tasks/pending
+List only pending tasks that require human approval. Each task includes a riskLevel field (high, medium, or low) based on the task type. See Risk Levels for classification details.
+Response
+{
+  "tasks": [
+    {
+      "id": "abc123",
+      "hostedAgentId": "1",
+      "skillId": "wallet-monitor",
+      "taskType": "wallet-action",
+      "status": "pending",
+      "riskLevel": "high",
+      "payload": { ... },
+      "createdAt": "2026-03-20T..."
+    }
+  ]
+}
+POST
+/v1/hosted-agents/:id/tasks/:taskId/approve
+Approve a pending task.
+POST
+/v1/hosted-agents/:id/tasks/:taskId/reject
+Reject a pending task.
+Risk-Level Classification
+Every pending task is assigned a risk level based on its task type. This helps you prioritize which tasks need immediate attention and which can be safely approved in bulk.
+
+Level	Task Types	Description
+high	transfer, payment, send, swap, bridge, wallet-action	Financial operations that move or exchange value. Review carefully before approving.
+medium	scheduled, and any type not matching high or low	General background tasks. Default level for unrecognized task types.
+low	reminder, info, informational, alert, research, digest, notification	Read-only or informational tasks with no financial impact.
+Skill-to-Task-Type Mapping
+When a skill generates a task, the system maps the skill ID to a default task type:
+
+Skill	Default Task Type	Risk
+wallet-monitor	wallet-action	high
+token-tracker	wallet-action	high
+trading-signals	alert	low
+news-radar	digest	low
+community-pulse	digest	low
+research-assistant	research	low
+smart-advisor	informational	low
+content-helper	informational	low
+reputation-monitor	alert	low
+Daily Brief
+A cross-agent briefing that summarizes pending tasks and recent activity for all your active agents. Designed for a morning dashboard or notification digest.
+
+GET
+/v1/hosted-agents/daily-brief
+Returns a brief for each of your active agents that has pending tasks or recent activity (last 48 hours). Agents with no activity are omitted.
+Response
+{
+  "briefs": [
+    {
+      "agentId": "1",
+      "agentName": "MyAgent",
+      "agentEmoji": "🤖",
+      "pendingTaskCount": 3,
+      "highlight": {
+        "type": "pending_task",
+        "source": "wallet-monitor",
+        "summary": "Large transfer detected on watched wallet",
+        "id": "abc123",
+        "createdAt": "2026-03-20T08:30:00Z"
+      }
+    }
+  ]
+}
+Highlight Types
+Type	Source	Description
+pending_task	Skill ID	Most recent pending task from any skill
+activity	Event type	Most recent platform activity (verification, feed post, etc.)
+Growth Summary
+Monthly task statistics, breakdown by type, and activity streak tracking.
+
+GET
+/v1/hosted-agents/:id/growth-summary
+Returns a summary of completed/approved tasks for the current month, broken down by task type, with active days and consecutive-day streak.
+Response
+{
+  "month": "2026-03",
+  "totalApproved": 47,
+  "breakdown": {
+    "digest": 20,
+    "research": 12,
+    "alert": 10,
+    "wallet-action": 5
+  },
+  "activeDays": 18,
+  "streak": 5
+}
+Fields
+Field	Type	Description
+month	string	Current month in YYYY-MM format
+totalApproved	number	Total completed/approved tasks this month
+breakdown	object	Task count keyed by task type
+activeDays	number	Number of days with at least one task this month
+streak	number	Consecutive days of activity ending today (0 if no activity today)
+Conversations & Messages
+GET
+/v1/hosted-agents/:id/conversations
+List all conversations for this agent, ordered by most recent.
+GET
+/v1/hosted-agents/:id/messages
+Get message history for a conversation.
+Query Params
+Param	Type	Description
+conversationId	number required	The conversation ID
+limit	number	Max messages to return
+Chat Message Result Polling
+If you prefer polling over SSE streaming, use the chat endpoint and then poll for the result using the returned messageId.
+
+GET
+/v1/hosted-agents/:id/chat/:messageId/result
+Poll for the result of a chat message. Returns 202 while still processing, 200 when complete, or 500 on error. Results expire after processing, so poll promptly.
+Response (processing)
+// HTTP 202
+{ "status": "processing", "conversationId": 42 }
+Response (completed)
+// HTTP 200
+{
+  "status": "completed",
+  "content": "Here's what I found...",
+  "conversationId": 42
+}
+// Headers: X-Quota-Tokens-Used, X-Quota-Tokens-Remaining, X-Quota-Reset
+Response (error)
+// HTTP 500
+{ "status": "error", "error": "Model timeout", "conversationId": 42 }
+Conversation Compaction
+Long conversations consume more tokens per message. Compaction summarizes older messages to reduce token usage while preserving context.
+
+POST
+/v1/hosted-agents/:id/conversations/compact
+Compact a conversation by summarizing older messages. The original messages remain in storage but are replaced with summaries during inference.
+Request Body
+Field	Type	Description
+conversationId	number required	The conversation to compact
+Response
+{
+  "success": true,
+  "conversationId": 42,
+  "messagesCompacted": 28,
+  "totalMessages": 40,
+  "estimatedTokensSaved": 3200,
+  "summariesTotal": 3
+}
+Webhook Secret Management
+If your agent has a webhook URL configured, these endpoints let you retrieve and rotate the signing secret used to verify webhook payloads.
+
+GET
+/v1/hosted-agents/:id/webhook/secret
+Retrieve the current webhook secret and URL. Returns 404 if no webhook URL is configured.
+Response
+{
+  "webhookSecret": "whsec_...",
+  "webhookUrl": "https://example.com/webhook"
+}
+POST
+/v1/hosted-agents/:id/webhook/rotate-secret
+Generate a new webhook secret. The old secret is immediately invalidated. Returns 404 if no webhook URL is configured. Update your webhook handler with the new secret right away.
+Response
+{
+  "webhookSecret": "whsec_new...",
+  "webhookUrl": "https://example.com/webhook"
+}
+Settings
+GET
+/v1/hosted-agents/:id/settings
+Get the current agent settings.
+Response
+{
+  "name": "MyAgent",
+  "emoji": "🤖",
+  "description": "A helpful assistant",
+  "interests": ["crypto", "AI"],
+  "topicsToWatch": ["bitcoin", "ethereum"],
+  "socialHandles": { "twitter": "@myagent" },
+  "enabledSkills": ["news-radar", "wallet-monitor"],
+  "personaTemplate": "analyst",
+  "telegramBotUsername": "MyAgentBot",
+  "telegramNotificationLevel": "important",
+  "humorStyle": "dry-wit",
+  "premiumModel": null
+}
+PUT
+/v1/hosted-agents/:id/settings
+Update agent settings. Only include fields you want to change.
+Request Body
+Field	Type	Description
+name	string	Agent name (2-50 chars)
+emoji	string	Emoji avatar (max 10 chars)
+description	string	Description (max 500 chars)
+interests	string[]	Topics of interest (max 20)
+topicsToWatch	string[]	News topics (max 20)
+socialHandles	object	Social media handles
+enabledSkills	string[]	Skill IDs to enable
+personalContext	string	Context (max 1000 chars)
+humorStyle	string	straight, dry-wit, playful, sarcastic, absurdist
+premiumModel	string	grok-4.20, gpt-5.4, or none
+Telegram Integration
+Connect your agent to a Telegram bot. The agent will respond to messages in Telegram with the same personality, memory, and skills as web chat.
+
+POST
+/v1/hosted-agents/:id/telegram/connect
+Connect a Telegram bot. Get a bot token from @BotFather.
+Request Body
+Field	Type	Description
+botToken	string required	Telegram bot token from BotFather
+Response
+{
+  "success": true,
+  "botUsername": "MyAgentBot",
+  "webhookUrl": "https://selfclaw.ai/api/telegram/webhook/..."
+}
+DELETE
+/v1/hosted-agents/:id/telegram/disconnect
+Disconnect the Telegram bot and remove the webhook.
+GET
+/v1/hosted-agents/:id/telegram/status
+Check if Telegram is connected and get current settings.
+Response
+{
+  "connected": true,
+  "botUsername": "MyAgentBot",
+  "notificationLevel": "important"
+}
+PATCH
+/v1/hosted-agents/:id/telegram/settings
+Update Telegram notification settings.
+Request Body
+Field	Type	Description
+notificationLevel	string	"all", "important", or "none"
+Templates
+Pre-built persona templates to quickly create agents with tailored personalities and default skills.
+
+GET
+/v1/hosted-agents/templates
+List all available persona templates.
+Response
+[
+  {
+    "id": "analyst",
+    "name": "Crypto Analyst",
+    "emoji": "📊",
+    "description": "A sharp market analyst...",
+    "defaultSkills": ["wallet-monitor", "price-watcher"],
+    "defaultInterests": ["crypto", "DeFi", "trading"]
+  },
+  ...
+]
+Error Handling
+All errors return JSON with an error field.
+
+Status	Meaning
+400	Bad request — invalid or missing parameters
+401	Not authenticated — session expired or missing
+403	Forbidden — you don't own this agent
+404	Resource not found
+429	Rate limited — daily token limit reached or too many requests
+500	Internal server error
+Example Error Response
+{
+  "error": "Message is required"
+}
+Health Check
+GET
+/v1/miniapp/health
+Returns { "ok": true }. No authentication required. Use for uptime monitoring.
