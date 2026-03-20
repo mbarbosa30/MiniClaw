@@ -51,44 +51,33 @@ function AgentHeader({
     return statusFallback(agent.status);
   })();
 
+  const SIDE_W = 72;
+
   return (
     <div style={{
       flexShrink: 0,
       borderBottom: `1px solid ${t.divider}`,
       background: t.bg,
       height: 52,
-      position: 'relative',
       display: 'flex',
       alignItems: 'center',
       paddingLeft: 8,
       paddingRight: 8,
     }}>
-      {/* Left — back button */}
-      <button
-        onClick={onBack}
-        style={{ width: 44, height: 44, background: 'none', border: 'none', cursor: 'pointer', color: t.label, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, zIndex: 1 }}
-      >
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="m15 18-6-6 6-6"/>
-        </svg>
-      </button>
+      {/* Left — fixed width, back button */}
+      <div style={{ width: SIDE_W, flexShrink: 0, display: 'flex', alignItems: 'center' }}>
+        <button
+          onClick={onBack}
+          style={{ width: 44, height: 44, background: 'none', border: 'none', cursor: 'pointer', color: t.label, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="m15 18-6-6 6-6"/>
+          </svg>
+        </button>
+      </div>
 
-      {/* Center — absolutely positioned so it's always screen-centered */}
-      <div style={{
-        position: 'absolute',
-        left: 0,
-        right: 0,
-        top: 0,
-        bottom: 0,
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 4,
-        pointerEvents: 'none',
-        paddingLeft: 60,
-        paddingRight: 60,
-      }}>
+      {/* Center — flex:1, two lines, truly centered because sides are equal width */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4, overflow: 'hidden' }}>
         <span style={{
           fontSize: 13,
           fontWeight: 300,
@@ -103,7 +92,7 @@ function AgentHeader({
         }}>
           {agent.name || 'Agent'}
         </span>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5, maxWidth: '100%', overflow: 'hidden' }}>
           <span style={{ display: 'block', width: 5, height: 5, borderRadius: '50%', background: dotColor, flexShrink: 0 }} />
           <span style={{
             fontSize: 11,
@@ -114,20 +103,19 @@ function AgentHeader({
             whiteSpace: 'nowrap',
             overflow: 'hidden',
             textOverflow: 'ellipsis',
-            maxWidth: 200,
           }}>
             {activityText}
           </span>
         </div>
       </div>
 
-      {/* Right — pending badge + options, pushed to right */}
-      <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0, zIndex: 1 }}>
+      {/* Right — fixed width matching left, pending badge + options right-aligned */}
+      <div style={{ width: SIDE_W, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}>
         {pendingCount > 0 && (
           <button
             onClick={onPending}
             style={{
-              padding: '2px 6px',
+              padding: '2px 5px',
               background: 'none',
               border: `1px solid ${t.divider}`,
               borderRadius: 4,
@@ -135,7 +123,7 @@ function AgentHeader({
               ...MONO,
               color: t.label,
               lineHeight: 1.4,
-              whiteSpace: 'nowrap',
+              flexShrink: 0,
             }}
           >
             {pendingCount}
