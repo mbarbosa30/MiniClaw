@@ -1,0 +1,58 @@
+import { List, LayoutGrid, SlidersHorizontal } from 'lucide-react';
+import { useTheme } from '@/lib/theme';
+import { useRouter, type ViewName } from '@/lib/store';
+
+type NavTab = 'home' | 'dashboard' | 'settings';
+
+const TABS: { id: NavTab; Icon: React.ElementType }[] = [
+  { id: 'home', Icon: List },
+  { id: 'dashboard', Icon: LayoutGrid },
+  { id: 'settings', Icon: SlidersHorizontal },
+];
+
+export function AppNav() {
+  const t = useTheme();
+  const push = useRouter((s) => s.push);
+  const currentView = useRouter((s) => s.currentView.name) as ViewName;
+
+  const activeTab: NavTab = (['home', 'dashboard', 'settings'] as NavTab[]).includes(currentView as NavTab)
+    ? (currentView as NavTab)
+    : 'home';
+
+  return (
+    <div
+      style={{
+        borderTop: `1px solid ${t.navBorder}`,
+        display: 'flex',
+        paddingBottom: 20,
+        paddingTop: 12,
+        background: t.bg,
+        transition: 'background 0.3s ease, border-color 0.3s ease',
+        flexShrink: 0,
+      }}
+    >
+      {TABS.map(({ id, Icon }) => (
+        <button
+          key={id}
+          onClick={() => push(id)}
+          style={{
+            flex: 1,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            padding: '8px 0',
+          }}
+        >
+          <Icon
+            size={18}
+            strokeWidth={activeTab === id ? 2.25 : 1.5}
+            color={activeTab === id ? t.text : t.faint}
+          />
+        </button>
+      ))}
+    </div>
+  );
+}

@@ -5,6 +5,8 @@ import { create } from 'zustand';
 export type ViewName =
   | 'connect'
   | 'home'
+  | 'dashboard'
+  | 'settings'
   | 'create'
   | 'agent-detail'
   | 'memories'
@@ -71,4 +73,18 @@ export const useAuthStore = create<AuthStore>((set) => ({
   setAddress: (address) => set({ address }),
   setAuthError: (msg) => set({ authError: msg }),
   logout: () => set({ isAuthenticated: false, address: null }),
+}));
+
+// --- APP PREFERENCES ---
+
+interface AppStore {
+  darkMode: boolean;
+  setDarkMode: (v: boolean) => void;
+  toggleDarkMode: () => void;
+}
+
+export const useAppStore = create<AppStore>((set) => ({
+  darkMode: false,
+  setDarkMode: (v) => set({ darkMode: v }),
+  toggleDarkMode: () => set((s) => ({ darkMode: !s.darkMode })),
 }));
