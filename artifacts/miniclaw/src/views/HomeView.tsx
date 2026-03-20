@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, MoreHorizontal, X, TrendingUp } from 'lucide-react';
 import { useTheme } from '@/lib/theme';
 import { useRouter, useAuthStore } from '@/lib/store';
-import { useAgents, useTasks, useActivity } from '@/hooks/use-agents';
+import { useAgents, useTasks, useActivity, useAwareness } from '@/hooks/use-agents';
 import { StateIndicator, agentVisualState, STATE_COLOR, STATE_LABEL } from '@/components/StateIndicator';
 import { formatAddress } from '@/lib/utils';
 import type { Agent, DailyBriefItem } from '@/types';
@@ -146,6 +146,18 @@ function useAgentBrief(agent: Agent | null) {
   } as import('@/types').DailyBriefItem;
 }
 
+// --- Phase pill helpers (mirrors AgentDetailView) ---
+
+const PHASE_COLOR: Record<string, string> = {
+  curious: '#555555',
+  developing: '#f59e0b',
+  confident: '#22c55e',
+};
+
+function phaseColor(phase: string): string {
+  return PHASE_COLOR[phase] ?? '#555555';
+}
+
 // --- Agent Row ---
 
 function AgentRow({
@@ -164,6 +176,10 @@ function AgentRow({
   const color = STATE_COLOR[state];
   const isIdle = state === 'idle' || state === 'pending';
 
+  const { data: awareness } = useAwareness(agent.id);
+  const { data: pendingTasks } = useTasks(agent.id, 'pending');
+  const pendingCount = pendingTasks?.length ?? 0;
+
   const liveActivity = agent.stats?.currentActivity?.trim() || null;
   const activity =
     liveActivity ??
@@ -177,6 +193,8 @@ function AgentRow({
   if (agent.pocScore != null && agent.pocScore > 0) statSegments.push(`PoC ${agent.pocScore}`);
   if (agent.celoBalance != null && agent.celoBalance > 0) statSegments.push(`${agent.celoBalance} CELO`);
 
+  const pColor = awareness ? phaseColor(awareness.phase) : null;
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -184,7 +202,7 @@ function AgentRow({
       transition={{ delay: index * 0.07, duration: 0.35 }}
       style={{ paddingTop: 20, paddingBottom: 20 }}
     >
-      {/* Row 1: name + options button */}
+      {/* Row 1: name + phase pill + options button */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <button
           className="text-left"
@@ -200,31 +218,52 @@ function AgentRow({
             letterSpacing: '-0.025em',
             lineHeight: 1,
             color: isIdle ? t.textDim : t.text,
+            minWidth: 0,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
           }}
         >
           {agent.name}
         </button>
-        <button
-          onClick={(e) => { e.stopPropagation(); onOptions(); }}
-          style={{
-            width: 32,
-            height: 32,
-            background: 'none',
-            border: 'none',
-            cursor: 'pointer',
-            color: t.faint,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexShrink: 0,
-            marginLeft: 4,
-          }}
-        >
-          <MoreHorizontal size={16} strokeWidth={1.5} />
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, marginLeft: 6 }}>
+          {awareness && pColor && (
+            <span style={{
+              fontFamily: 'ui-monospace, Menlo, monospace',
+              fontSize: 8,
+              fontWeight: 600,
+              letterSpacing: '0.07em',
+              textTransform: 'uppercase',
+              color: pColor,
+              background: `${pColor}1a`,
+              border: `1px solid ${pColor}40`,
+              borderRadius: 3,
+              padding: '2px 5px',
+              whiteSpace: 'nowrap',
+            }}>
+              {awareness.label || awareness.phase}
+            </span>
+          )}
+          <button
+            onClick={(e) => { e.stopPropagation(); onOptions(); }}
+            style={{
+              width: 32,
+              height: 32,
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              color: t.faint,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <MoreHorizontal size={16} strokeWidth={1.5} />
+          </button>
+        </div>
       </div>
 
-      {/* Row 2: status dot + label + activity text */}
+      {/* Row 2: status dot + label + pending badge + activity text */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 6 }}>
         <span style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
           <StateIndicator state={state} />
@@ -239,6 +278,18 @@ function AgentRow({
         }}>
           {STATE_LABEL[state]}
         </span>
+        {pendingCount > 0 && (
+          <span style={{
+            fontFamily: 'ui-monospace, Menlo, monospace',
+            fontSize: 9,
+            fontWeight: 600,
+            letterSpacing: '0.05em',
+            color: '#f59e0b',
+            flexShrink: 0,
+          }}>
+            {pendingCount} pending
+          </span>
+        )}
         {activity && (
           <span style={{ fontSize: 10, color: t.label, fontStyle: 'italic', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {activity}
