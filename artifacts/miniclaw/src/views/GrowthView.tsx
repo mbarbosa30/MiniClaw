@@ -35,6 +35,7 @@ function isThisMonth(dateStr?: string): boolean {
 }
 
 function aggregateTasks(tasks: AgentTask[]): { total: number; cats: Record<string, number> } {
+  if (!Array.isArray(tasks)) return { total: 0, cats: {} };
   let total = 0;
   const cats: Record<string, number> = {};
   for (const task of tasks) {
@@ -88,7 +89,7 @@ function AgentTaskFetcher({
   const { data: tasks } = useTasks(agentId, 'all');
 
   useEffect(() => {
-    if (tasks) onData(agentId, tasks);
+    if (tasks !== undefined) onData(agentId, Array.isArray(tasks) ? tasks : []);
   }, [tasks]);
 
   return null;
