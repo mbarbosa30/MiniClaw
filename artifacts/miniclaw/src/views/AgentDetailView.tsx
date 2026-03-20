@@ -1,75 +1,130 @@
 import { useState, useRef, useEffect } from 'react';
-import { useAgent, useConversations, useMessages } from '@/hooks/use-agents';
+import { useAgent, useActivity, useTasks, useConversations, useMessages } from '@/hooks/use-agents';
 import { useRouter } from '@/lib/store';
 import { useTheme } from '@/lib/theme';
 import { Button } from '@/components/ui';
 import { MoreHorizontal } from 'lucide-react';
 import { apiFetchStream } from '@/lib/api-client';
-import { StateIndicator, agentVisualState, STATE_COLOR, STATE_LABEL } from '@/components/StateIndicator';
 import type { Agent, ChatMessage } from '@/types';
 
-function AgentHeader({ agent, onBack, onOptions }: { agent: Agent; onBack: () => void; onOptions: () => void }) {
+const DOT_COLOR: Record<string, string> = {
+  active: '#22c55e',
+  error: '#f59e0b',
+};
+
+function statusDotColor(status: string): string {
+  return DOT_COLOR[status] ?? '#555555';
+}
+
+function statusFallback(status: string): string {
+  if (status === 'active') return 'active';
+  if (status === 'error') return 'error';
+  return 'paused';
+}
+
+function AgentHeader({
+  agent,
+  agentId,
+  onBack,
+  onOptions,
+  onPending,
+}: {
+  agent: Agent;
+  agentId: string;
+  onBack: () => void;
+  onOptions: () => void;
+  onPending: () => void;
+}) {
   const t = useTheme();
-  const state = agentVisualState(agent);
-  const color = STATE_COLOR[state];
-  const isIdle = state === 'idle' || state === 'pending';
+  const { data: activity } = useActivity(agentId, { refetchInterval: 60_000 });
+  const { data: pendingTasks } = useTasks(agentId, 'pending', { refetchInterval: 60_000 });
+
+  const pendingCount = pendingTasks?.length ?? 0;
+  const dotColor = statusDotColor(agent.status);
+
+  const subtitleText: string = (() => {
+    if (activity?.description) return activity.description;
+    const firstTask = agent.recentTasks?.[0]?.title;
+    if (firstTask) return firstTask;
+    return statusFallback(agent.status);
+  })();
 
   return (
     <div style={{
       flexShrink: 0,
       borderBottom: `1px solid ${t.divider}`,
       background: t.bg,
-      transition: 'background 0.3s ease',
-      padding: '10px 32px 16px',
+      padding: '10px 32px 10px',
     }}>
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-        {/* Back button — optically aligned with text */}
+      {/* Nav row */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        {/* Back */}
         <button
           onClick={onBack}
           style={{ padding: '4px 8px 4px 0', background: 'none', border: 'none', cursor: 'pointer', color: t.label, display: 'flex', alignItems: 'center', flexShrink: 0 }}
         >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="m15 18-6-6 6-6"/>
           </svg>
         </button>
 
-        {/* Agent name + status */}
-        <div style={{ flex: 1 }}>
+        {/* Centered: dot + name */}
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7 }}>
+          <span style={{ display: 'block', width: 6, height: 6, borderRadius: '50%', background: dotColor, flexShrink: 0 }} />
           <span style={{
-            display: 'block',
-            fontSize: 27,
+            fontSize: 16,
             fontWeight: 300,
-            letterSpacing: '-0.025em',
+            letterSpacing: '-0.015em',
             lineHeight: 1,
-            color: isIdle ? t.textDim : t.text,
-            marginBottom: 7,
+            color: t.text,
           }}>
             {agent.name || 'Agent'}
           </span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-            <span style={{ display: 'flex', alignItems: 'center', height: 10 }}>
-              <StateIndicator state={state} />
-            </span>
-            <span style={{
-              fontSize: 9,
-              fontFamily: 'ui-monospace, Menlo, monospace',
-              fontWeight: 600,
-              letterSpacing: '0.09em',
-              textTransform: 'uppercase',
-              color,
-            }}>
-              {STATE_LABEL[state]}
-            </span>
-          </div>
         </div>
 
-        {/* Options button */}
-        <button
-          onClick={onOptions}
-          style={{ padding: '4px 0 4px 8px', background: 'none', border: 'none', cursor: 'pointer', color: t.label, display: 'flex', alignItems: 'center', flexShrink: 0 }}
-        >
-          <MoreHorizontal size={18} strokeWidth={1.5} />
-        </button>
+        {/* Right side: pending badge + options */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+          {pendingCount > 0 && (
+            <button
+              onClick={onPending}
+              style={{
+                padding: '2px 6px',
+                background: 'none',
+                border: `1px solid ${t.divider}`,
+                borderRadius: 4,
+                cursor: 'pointer',
+                fontSize: 9,
+                fontFamily: 'ui-monospace, Menlo, monospace',
+                fontWeight: 600,
+                letterSpacing: '0.07em',
+                textTransform: 'uppercase' as const,
+                color: t.label,
+                lineHeight: 1.4,
+              }}
+            >
+              {pendingCount} pending
+            </button>
+          )}
+          <button
+            onClick={onOptions}
+            style={{ padding: '4px 0 4px 8px', background: 'none', border: 'none', cursor: 'pointer', color: t.label, display: 'flex', alignItems: 'center' }}
+          >
+            <MoreHorizontal size={18} strokeWidth={1.5} />
+          </button>
+        </div>
+      </div>
+
+      {/* Subtitle row */}
+      <div style={{ textAlign: 'center', marginTop: 4 }}>
+        <span style={{
+          fontSize: 11,
+          fontWeight: 300,
+          color: t.faint,
+          letterSpacing: '0.01em',
+          lineHeight: 1,
+        }}>
+          {subtitleText}
+        </span>
       </div>
     </div>
   );
@@ -114,8 +169,10 @@ export function AgentDetailView() {
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: t.bg, transition: 'background 0.3s ease' }}>
       <AgentHeader
         agent={agent}
+        agentId={id}
         onBack={pop}
         onOptions={() => push('agent-options', { id })}
+        onPending={() => push('tasks', { id })}
       />
       <div style={{ flex: 1, overflow: 'hidden' }}>
         <ChatTab agent={agent} agentName={agentName} newChatTrigger={newChatTrigger} />

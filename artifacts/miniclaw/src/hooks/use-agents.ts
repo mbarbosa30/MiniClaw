@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '@/lib/api-client';
 import type {
   Agent,
+  AgentActivity,
   AgentSettings,
   PersonaTemplate,
   SkillDef,
@@ -302,7 +303,7 @@ export function useMessages(agentId: string | number | undefined, conversationId
 
 // --- TASKS ---
 
-export function useTasks(agentId: string | number | undefined, status: 'pending' | 'all' = 'pending') {
+export function useTasks(agentId: string | number | undefined, status: 'pending' | 'all' = 'pending', options?: { refetchInterval?: number }) {
   return useQuery({
     queryKey: ['tasks', qid(agentId), status],
     queryFn: () =>
@@ -310,6 +311,7 @@ export function useTasks(agentId: string | number | undefined, status: 'pending'
         `/api/selfclaw/v1/hosted-agents/${sid(agentId!)}/tasks${status === 'pending' ? '/pending' : ''}`
       ),
     enabled: agentId != null && agentId !== '',
+    refetchInterval: options?.refetchInterval,
   });
 }
 
@@ -333,6 +335,37 @@ export function useResolveTask() {
       qc.invalidateQueries({ queryKey: ['tasks', qid(variables.agentId), 'pending'] });
       qc.invalidateQueries({ queryKey: ['tasks', qid(variables.agentId), 'all'] });
     },
+  });
+}
+
+// --- ACTIVITY ---
+
+// GET /:id/activity — shape is uncertain; normalize to AgentActivity | null
+export function useActivity(agentId: string | number | undefined, options?: { refetchInterval?: number }) {
+  return useQuery({
+    queryKey: ['activity', qid(agentId)],
+    queryFn: async (): Promise<AgentActivity | null> => {
+      try {
+        const raw = await apiFetch<unknown>(`/api/selfclaw/v1/hosted-agents/${sid(agentId!)}/activity`);
+        if (!raw) return null;
+        // Shape: { description, timestamp } or { activity: string, ... } or array
+        if (Array.isArray(raw)) {
+          const first = raw[0] as Record<string, unknown>;
+          if (!first) return null;
+          const desc = (first.description ?? first.activity ?? first.title ?? first.action) as string | undefined;
+          return desc ? { description: String(desc), timestamp: first.timestamp as string | undefined } : null;
+        }
+        const obj = raw as Record<string, unknown>;
+        const desc = (obj.description ?? obj.activity ?? obj.title ?? obj.action) as string | undefined;
+        if (desc) return { description: String(desc), timestamp: obj.timestamp as string | undefined };
+        return null;
+      } catch {
+        return null;
+      }
+    },
+    enabled: agentId != null && agentId !== '',
+    refetchInterval: options?.refetchInterval,
+    retry: false,
   });
 }
 

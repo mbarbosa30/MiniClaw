@@ -185,3 +185,9 @@ export type TelegramNotificationLevel = 'all' | 'important' | 'none';
 export interface TelegramSettingsPayload {
   notificationLevel: TelegramNotificationLevel;
 }
+
+// GET /:id/activity — shape is uncertain; normalize in the hook
+export interface AgentActivity {
+  description: string;
+  timestamp?: string;
+}
