@@ -63,13 +63,13 @@ function AgentGrowthFetcher({
   onData,
 }: {
   agentId: string | number;
-  onData: (id: string | number, data: GrowthSummary | undefined, isLoading: boolean) => void;
+  onData: (id: string | number, data: GrowthSummary | undefined) => void;
 }) {
   const { data, isLoading } = useGrowthSummary(agentId);
 
   useEffect(() => {
     if (!isLoading) {
-      onData(agentId, data, false);
+      onData(agentId, data);
     }
   }, [data, isLoading]);
 
