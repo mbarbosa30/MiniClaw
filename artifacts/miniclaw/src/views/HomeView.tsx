@@ -3,7 +3,7 @@ import { Plus, MoreHorizontal } from 'lucide-react';
 import { useTheme } from '@/lib/theme';
 import { useRouter, useAuthStore } from '@/lib/store';
 import { useAgents } from '@/hooks/use-agents';
-import { agentVisualState, STATE_COLOR, STATE_LABEL } from '@/components/StateIndicator';
+import { StateIndicator, agentVisualState, STATE_COLOR, STATE_LABEL } from '@/components/StateIndicator';
 import { formatAddress } from '@/lib/utils';
 import type { Agent } from '@/types';
 
@@ -12,12 +12,6 @@ const MONO: React.CSSProperties = {
   fontSize: 9,
   letterSpacing: '0.04em',
 };
-
-function formatTok(n: number): string {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `${(n / 1_000).toFixed(0)}k`;
-  return String(n);
-}
 
 function AgentRow({
   agent,
@@ -40,12 +34,12 @@ function AgentRow({
     (agent.description ? agent.description.slice(0, 52) + (agent.description.length > 52 ? '…' : '') : null);
 
   const statSegments: string[] = [];
-  if (agent.llmTokensUsedToday) statSegments.push(`${formatTok(agent.llmTokensUsedToday)} tok`);
+  if (agent.llmTokensUsedToday) statSegments.push(`${agent.llmTokensUsedToday.toLocaleString()} tok`);
   if (agent.memorySizeEstimate != null && agent.memorySizeEstimate > 0) {
     statSegments.push(`${(agent.memorySizeEstimate / 1_048_576).toFixed(1)} MB`);
   }
-  if (agent.pocScore != null) statSegments.push(`PoC ${agent.pocScore}`);
-  if (agent.celoBalance != null) statSegments.push(`${agent.celoBalance} CELO`);
+  if (agent.pocScore != null && agent.pocScore > 0) statSegments.push(`PoC ${agent.pocScore}`);
+  if (agent.celoBalance != null && agent.celoBalance > 0) statSegments.push(`${agent.celoBalance} CELO`);
 
   return (
     <motion.div
@@ -94,8 +88,11 @@ function AgentRow({
         </button>
       </div>
 
-      {/* Row 2: status label + activity text */}
+      {/* Row 2: status dot + label + activity text */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 6 }}>
+        <span style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+          <StateIndicator state={state} />
+        </span>
         <span style={{
           fontSize: 9,
           fontWeight: 600,
