@@ -552,9 +552,10 @@ export function AgentOptionsView() {
   const t = useTheme();
   const pop = useRouter(s => s.pop);
   const push = useRouter(s => s.push);
+  const popWithSignal = useRouter(s => s.popWithSignal);
   const agentId: string = useRouter(s => s.currentView.params?.id ?? '');
 
-  const menu = [
+  const subMenuItems = [
     { id: 'agent-settings', label: 'Settings',  meta: 'configure · identity' },
     { id: 'memories',       label: 'Memories',   meta: 'facts · conversations' },
     { id: 'knowledge',      label: 'Knowledge',  meta: 'docs · urls' },
@@ -564,14 +565,27 @@ export function AgentOptionsView() {
     { id: 'telegram',       label: 'Telegram',   meta: 'bot connection' },
   ];
 
+  const allItems = [
+    { id: '__new_chat__', label: 'New chat', meta: 'reset conversation' },
+    ...subMenuItems,
+  ];
+
+  const handleItem = (id: string) => {
+    if (id === '__new_chat__') {
+      popWithSignal('newChatAt');
+      return;
+    }
+    push(id as Parameters<typeof push>[0], { id: agentId });
+  };
+
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: t.bg, transition: 'background 0.3s ease' }}>
       <ScreenHeader title="Options" onBack={pop} />
       <div className="no-scrollbar" style={{ flex: 1, overflowY: 'auto', padding: '0 32px 80px' }}>
-        {menu.map((item, i) => (
+        {allItems.map((item, i) => (
           <button
             key={item.id}
-            onClick={() => push(item.id as Parameters<typeof push>[0], { id: agentId })}
+            onClick={() => handleItem(item.id)}
             style={{
               width: '100%',
               textAlign: 'left',
@@ -580,7 +594,7 @@ export function AgentOptionsView() {
               display: 'block',
               background: 'none',
               border: 'none',
-              borderBottom: i < menu.length - 1 ? `1px solid ${t.divider}` : 'none',
+              borderBottom: i < allItems.length - 1 ? `1px solid ${t.divider}` : 'none',
               cursor: 'pointer',
             }}
           >

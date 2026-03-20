@@ -13,8 +13,13 @@ export function AgentDetailView() {
   const pop = useRouter(s => s.pop);
   const push = useRouter(s => s.push);
   const id: string = currentView.params?.id ?? '';
+  const newChatAt: string | undefined = currentView.params?.newChatAt;
   const { data: agent, isLoading } = useAgent(id);
   const [newChatTrigger, setNewChatTrigger] = useState(0);
+
+  useEffect(() => {
+    if (newChatAt) setNewChatTrigger(n => n + 1);
+  }, [newChatAt]);
 
   if (isLoading) {
     return (

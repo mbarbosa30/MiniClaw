@@ -33,7 +33,9 @@ interface RouterStore {
   currentView: ViewState;
   push: (name: ViewName, params?: ViewParams) => void;
   pop: () => void;
+  popWithSignal: (signalKey: string) => void;
   reset: (name: ViewName) => void;
+  replace: (name: ViewName, params?: ViewParams) => void;
 }
 
 export const useRouter = create<RouterStore>((set) => ({
@@ -51,6 +53,18 @@ export const useRouter = create<RouterStore>((set) => ({
     const prevView = newHistory.pop()!;
     return { history: newHistory, currentView: prevView };
   }),
+
+  popWithSignal: (signalKey) => set((state) => {
+    if (state.history.length === 0) return state;
+    const newHistory = [...state.history];
+    const prevView = newHistory.pop()!;
+    const patched: ViewState = { ...prevView, params: { ...prevView.params, [signalKey]: String(Date.now()) } };
+    return { history: newHistory, currentView: patched };
+  }),
+
+  replace: (name, params) => set(() => ({
+    currentView: { name, params }
+  })),
 
   reset: (name) => set({ history: [], currentView: { name } })
 }));
