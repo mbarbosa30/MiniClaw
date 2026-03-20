@@ -16,6 +16,15 @@ app.use(
     target: "https://selfclaw.ai",
     changeOrigin: true,
     pathFilter: "/api/selfclaw",
+    on: {
+      error: (err, req, res) => {
+        console.error("[proxy error]", err.message);
+        if ("headersSent" in res && !res.headersSent) {
+          res.writeHead(502, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ error: "Proxy error: upstream connection failed." }));
+        }
+      },
+    },
   }),
 );
 
