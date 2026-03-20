@@ -2,8 +2,8 @@ import { useState, useRef, useEffect } from 'react';
 import { useAgent, useDeleteAgent, useUpdateAgent, useConversations, useMessages } from '@/hooks/use-agents';
 import { useRouter } from '@/lib/store';
 import { useTheme } from '@/lib/theme';
-import { ScreenHeader, Button, Input, Textarea } from '@/components/ui';
-import { Settings, MessageSquare, MoreHorizontal, Send, Trash2, Plus, Brain, BookOpen, Zap, ScrollText, CircleCheck } from 'lucide-react';
+import { ScreenHeader, Button } from '@/components/ui';
+import { Settings, MessageSquare, MoreHorizontal, Send, Trash2, Plus } from 'lucide-react';
 import { apiFetchStream } from '@/lib/api-client';
 import type { Agent, HumorStyle, PremiumModel, ChatMessage } from '@/types';
 
@@ -367,15 +367,98 @@ function ChatTab({ agent, agentName, newChatTrigger }: { agent: Agent; agentName
   );
 }
 
-// --- SETTINGS TAB ---
-const HUMOR_LABELS: Record<HumorStyle, string> = {
-  straight: 'Straight',
-  'dry-wit': 'Dry Wit',
-  playful: 'Playful',
-  sarcastic: 'Sarcastic',
-  absurdist: 'Absurdist',
-};
+// --- SETTINGS TAB HELPERS ---
+const HUMOR_OPTIONS: HumorStyle[] = ['straight', 'dry-wit', 'playful', 'sarcastic', 'absurdist'];
+const MODEL_OPTIONS: { value: PremiumModel; label: string }[] = [
+  { value: 'none', label: 'standard' },
+  { value: 'grok-4.20', label: 'grok 4.20' },
+  { value: 'gpt-5.4', label: 'gpt-5.4' },
+];
 
+function SLabel({ children }: { children: React.ReactNode }) {
+  const t = useTheme();
+  return (
+    <p style={{
+      fontSize: 9, fontWeight: 600, color: t.faint,
+      letterSpacing: '0.10em', textTransform: 'uppercase',
+      fontFamily: 'ui-monospace, Menlo, monospace',
+      paddingTop: 28, paddingBottom: 10,
+    }}>{children}</p>
+  );
+}
+
+function SRow({ label, children }: { label: string; children: React.ReactNode }) {
+  const t = useTheme();
+  return (
+    <div style={{
+      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+      paddingTop: 13, paddingBottom: 13,
+      borderBottom: `1px solid ${t.divider}`,
+    }}>
+      <span style={{ fontSize: 12, color: t.label, letterSpacing: '-0.01em' }}>{label}</span>
+      {children}
+    </div>
+  );
+}
+
+function STextRow({ label, value, onChange, placeholder }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string }) {
+  const t = useTheme();
+  return (
+    <div style={{ paddingTop: 13, paddingBottom: 13, borderBottom: `1px solid ${t.divider}` }}>
+      <p style={{ fontSize: 9, color: t.faint, letterSpacing: '0.06em', textTransform: 'uppercase', fontFamily: 'ui-monospace, Menlo, monospace', marginBottom: 6 }}>{label}</p>
+      <input
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        placeholder={placeholder}
+        style={{
+          width: '100%', background: 'transparent', border: 'none', outline: 'none',
+          fontSize: 13, color: t.text, fontFamily: 'inherit', letterSpacing: '-0.01em',
+          padding: 0,
+        }}
+      />
+    </div>
+  );
+}
+
+function STextAreaRow({ label, value, onChange, placeholder }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string }) {
+  const t = useTheme();
+  return (
+    <div style={{ paddingTop: 13, paddingBottom: 13, borderBottom: `1px solid ${t.divider}` }}>
+      <p style={{ fontSize: 9, color: t.faint, letterSpacing: '0.06em', textTransform: 'uppercase', fontFamily: 'ui-monospace, Menlo, monospace', marginBottom: 6 }}>{label}</p>
+      <textarea
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        placeholder={placeholder}
+        rows={2}
+        style={{
+          width: '100%', background: 'transparent', border: 'none', outline: 'none', resize: 'none',
+          fontSize: 13, color: t.text, fontFamily: 'inherit', letterSpacing: '-0.01em',
+          lineHeight: 1.6, padding: 0,
+        }}
+      />
+    </div>
+  );
+}
+
+function SPicker<T extends string>({ options, value, onChange, label }: { options: T[]; value: T; onChange: (v: T) => void; label: (v: T) => string }) {
+  const t = useTheme();
+  const i = options.indexOf(value);
+  return (
+    <button
+      onClick={() => onChange(options[(i + 1) % options.length])}
+      style={{
+        fontFamily: 'ui-monospace, Menlo, monospace', fontSize: 10, color: t.text,
+        letterSpacing: '0.02em', background: 'none', border: 'none', padding: 0,
+        cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4,
+      }}
+    >
+      {label(value)}
+      <span style={{ color: t.faint, fontSize: 8 }}>▼</span>
+    </button>
+  );
+}
+
+// --- SETTINGS TAB ---
 function SettingsTab({ agent, onDeleted }: { agent: Agent; onDeleted: () => void }) {
   const t = useTheme();
   const update = useUpdateAgent();
@@ -423,153 +506,64 @@ function SettingsTab({ agent, onDeleted }: { agent: Agent; onDeleted: () => void
     }
   };
 
-  const fieldGap = 14;
-
   return (
-    <div className="no-scrollbar" style={{ height: '100%', overflowY: 'auto', padding: '16px 20px 96px', display: 'flex', flexDirection: 'column', gap: fieldGap }}>
-      <FieldBlock label="Name" t={t}>
-        <Input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} />
-      </FieldBlock>
-
-      <FieldBlock label="Description" t={t}>
-        <Textarea value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} rows={3} />
-      </FieldBlock>
-
-      <FieldBlock label="Interests" hint="Separate topics with commas" t={t}>
-        <Input
-          value={form.interests}
-          onChange={e => setForm(p => ({ ...p, interests: e.target.value }))}
-          placeholder="DeFi, NFTs, AI"
+    <div className="no-scrollbar" style={{ height: '100%', overflowY: 'auto', padding: '0 32px 80px' }}>
+      <SLabel>Identity</SLabel>
+      <STextRow label="Name" value={form.name} onChange={v => setForm(p => ({ ...p, name: v }))} placeholder="Agent name" />
+      <SRow label="Humor">
+        <SPicker
+          options={HUMOR_OPTIONS}
+          value={form.humorStyle}
+          onChange={v => setForm(p => ({ ...p, humorStyle: v }))}
+          label={v => v}
         />
-      </FieldBlock>
-
-      <FieldBlock label="Topics to Watch" hint="Separate topics with commas" t={t}>
-        <Input
-          value={form.topicsToWatch}
-          onChange={e => setForm(p => ({ ...p, topicsToWatch: e.target.value }))}
-          placeholder="Celo price, ETH news"
+      </SRow>
+      <SRow label="Model">
+        <SPicker
+          options={MODEL_OPTIONS.map(o => o.value)}
+          value={form.premiumModel}
+          onChange={v => setForm(p => ({ ...p, premiumModel: v }))}
+          label={v => MODEL_OPTIONS.find(o => o.value === v)?.label ?? v}
         />
-      </FieldBlock>
+      </SRow>
 
-      <FieldBlock label="Humor Style" t={t}>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-          {(Object.keys(HUMOR_LABELS) as HumorStyle[]).map(style => (
-            <button
-              key={style}
-              type="button"
-              style={{
-                padding: '6px 14px',
-                borderRadius: 8,
-                fontSize: 12,
-                fontWeight: 500,
-                cursor: 'pointer',
-                transition: 'all 0.15s',
-                background: form.humorStyle === style ? t.text : t.surface,
-                color: form.humorStyle === style ? t.bg : t.label,
-                border: `1px solid ${form.humorStyle === style ? t.text : t.divider}`,
-              }}
-              onClick={() => setForm(p => ({ ...p, humorStyle: style }))}
-            >
-              {HUMOR_LABELS[style]}
-            </button>
-          ))}
-        </div>
-      </FieldBlock>
+      <SLabel>Content</SLabel>
+      <STextAreaRow label="Description" value={form.description} onChange={v => setForm(p => ({ ...p, description: v }))} placeholder="What this agent does…" />
+      <STextRow label="Interests" value={form.interests} onChange={v => setForm(p => ({ ...p, interests: v }))} placeholder="DeFi, NFTs, AI" />
+      <STextRow label="Topics to watch" value={form.topicsToWatch} onChange={v => setForm(p => ({ ...p, topicsToWatch: v }))} placeholder="Celo price, ETH news" />
 
-      <FieldBlock label="AI Model Tier" t={t}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {([
-            { value: 'none', label: 'Standard', description: 'Default model included in your plan' },
-            { value: 'grok-4.20', label: 'Grok 4.20', description: 'xAI advanced reasoning model' },
-            { value: 'gpt-5.4', label: 'GPT-5.4', description: 'Latest OpenAI flagship model' },
-          ] as { value: PremiumModel; label: string; description: string }[]).map(({ value, label, description }) => (
-            <button
-              key={value}
-              type="button"
-              style={{
-                width: '100%',
-                textAlign: 'left',
-                padding: '12px 14px',
-                borderRadius: 12,
-                cursor: 'pointer',
-                transition: 'all 0.15s',
-                background: form.premiumModel === value ? t.surface : 'transparent',
-                border: `1px solid ${form.premiumModel === value ? t.text : t.divider}`,
-              }}
-              onClick={() => setForm(p => ({ ...p, premiumModel: value }))}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span style={{ fontSize: 13, fontWeight: 600, color: t.text }}>{label}</span>
-                <div style={{
-                  width: 16, height: 16, borderRadius: '50%',
-                  border: `2px solid ${form.premiumModel === value ? t.text : t.divider}`,
-                  background: form.premiumModel === value ? t.text : 'transparent',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}>
-                  {form.premiumModel === value && <div style={{ width: 5, height: 5, borderRadius: '50%', background: t.bg }} />}
-                </div>
-              </div>
-              <p style={{ fontSize: 11, color: t.label, marginTop: 2 }}>{description}</p>
-            </button>
-          ))}
-        </div>
-      </FieldBlock>
+      <SLabel>Social</SLabel>
+      <STextRow label="Twitter / X" value={form.socialHandles.twitter} onChange={v => setForm(p => ({ ...p, socialHandles: { ...p.socialHandles, twitter: v } }))} placeholder="@username" />
+      <STextRow label="Telegram" value={form.socialHandles.telegram} onChange={v => setForm(p => ({ ...p, socialHandles: { ...p.socialHandles, telegram: v } }))} placeholder="@username" />
+      <STextRow label="Farcaster" value={form.socialHandles.farcaster} onChange={v => setForm(p => ({ ...p, socialHandles: { ...p.socialHandles, farcaster: v } }))} placeholder="@username" />
 
-      <FieldBlock label="Social Handles" t={t}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {[
-            { key: 'twitter', label: 'Twitter / X' },
-            { key: 'telegram', label: 'Telegram' },
-            { key: 'farcaster', label: 'Farcaster' },
-          ].map(({ key, label }) => (
-            <div key={key}>
-              <p style={{ fontSize: 11, color: t.label, marginBottom: 4 }}>{label}</p>
-              <Input
-                value={form.socialHandles[key as keyof typeof form.socialHandles]}
-                onChange={e => setForm(p => ({ ...p, socialHandles: { ...p.socialHandles, [key]: e.target.value } }))}
-                placeholder="@username"
-              />
-            </div>
-          ))}
-        </div>
-      </FieldBlock>
-
+      <SLabel>Actions</SLabel>
       {update.isError && (
-        <div style={{ background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.2)', borderRadius: 12, padding: '12px 14px' }}>
-          <p style={{ fontSize: 11, color: '#f87171' }}>
-            {update.error instanceof Error ? update.error.message : 'Failed to save. Please try again.'}
-          </p>
-        </div>
+        <p style={{ fontSize: 11, color: '#f87171', fontFamily: 'ui-monospace, Menlo, monospace', marginBottom: 8 }}>
+          {update.error instanceof Error ? update.error.message : 'Failed to save.'}
+        </p>
       )}
-
       {update.isSuccess && (
-        <div style={{ background: 'rgba(34,197,94,0.06)', border: '1px solid rgba(34,197,94,0.2)', borderRadius: 12, padding: '12px 14px' }}>
-          <p style={{ fontSize: 11, color: '#22c55e' }}>Settings saved successfully.</p>
-        </div>
+        <p style={{ fontSize: 11, color: '#22c55e', fontFamily: 'ui-monospace, Menlo, monospace', marginBottom: 8 }}>Saved.</p>
       )}
-
-      <Button style={{ width: '100%' }} onClick={handleSave} disabled={update.isPending}>
-        {update.isPending ? 'Saving…' : 'Save Changes'}
-      </Button>
-
-      <div style={{ paddingTop: 8, borderTop: `1px solid ${t.divider}` }}>
-        <Button variant="destructive" style={{ width: '100%', display: 'flex', gap: 8 }} onClick={handleDelete} disabled={remove.isPending}>
-          <Trash2 size={15} />
-          {remove.isPending ? 'Deleting…' : 'Delete Agent'}
-        </Button>
+      <div style={{ paddingTop: 13, paddingBottom: 13, borderBottom: `1px solid ${t.divider}` }}>
+        <button
+          onClick={handleSave}
+          disabled={update.isPending}
+          style={{ fontSize: 12, color: t.label, textDecoration: 'underline', textUnderlineOffset: 3, background: 'none', border: 'none', padding: 0, cursor: 'pointer', letterSpacing: '-0.01em', opacity: update.isPending ? 0.5 : 1 }}
+        >
+          {update.isPending ? 'Saving…' : 'Save changes'}
+        </button>
       </div>
-    </div>
-  );
-}
-
-function FieldBlock({ label, hint, children, t }: { label: string; hint?: string; children: React.ReactNode; t: ReturnType<typeof useTheme> }) {
-  return (
-    <div>
-      <p style={{ fontSize: 9, fontWeight: 600, color: t.faint, letterSpacing: '0.10em', textTransform: 'uppercase', fontFamily: 'ui-monospace, Menlo, monospace', marginBottom: 8 }}>
-        {label}
-      </p>
-      {children}
-      {hint && <p style={{ fontSize: 10, color: t.faint, marginTop: 4 }}>{hint}</p>}
+      <div style={{ paddingTop: 13, paddingBottom: 13, borderBottom: `1px solid ${t.divider}` }}>
+        <button
+          onClick={handleDelete}
+          disabled={remove.isPending}
+          style={{ fontSize: 12, color: '#f87171', textDecoration: 'underline', textUnderlineOffset: 3, background: 'none', border: 'none', padding: 0, cursor: 'pointer', letterSpacing: '-0.01em', opacity: remove.isPending ? 0.5 : 1 }}
+        >
+          {remove.isPending ? 'Deleting…' : 'Delete agent'}
+        </button>
+      </div>
     </div>
   );
 }
@@ -579,55 +573,54 @@ function MoreTab({ agentId, onNavigate }: { agentId: string; onNavigate: (path: 
   const t = useTheme();
 
   const menu = [
-    { id: 'memories',  label: 'Memories',       icon: <Brain size={18} />,       desc: 'Facts learned from conversations' },
-    { id: 'knowledge', label: 'Knowledge Base',  icon: <BookOpen size={18} />,    desc: 'Custom docs & URLs' },
-    { id: 'skills',    label: 'Skills',          icon: <Zap size={18} />,         desc: 'Enable capabilities' },
-    { id: 'soul',      label: 'Soul Document',   icon: <ScrollText size={18} />,  desc: 'Core identity & directives' },
-    { id: 'tasks',     label: 'Pending Tasks',   icon: <CircleCheck size={18} />, desc: 'Approve autonomous actions' },
-    { id: 'telegram',  label: 'Telegram Bot',    icon: <Send size={18} />,        desc: 'Connect to Telegram' },
+    { id: 'memories',  label: 'Memories',   meta: 'facts · conversations' },
+    { id: 'knowledge', label: 'Knowledge',   meta: 'docs · urls' },
+    { id: 'skills',    label: 'Skills',      meta: 'capabilities' },
+    { id: 'soul',      label: 'Soul',        meta: 'identity · directives' },
+    { id: 'tasks',     label: 'Tasks',       meta: 'pending approvals' },
+    { id: 'telegram',  label: 'Telegram',    meta: 'bot connection' },
   ];
 
   return (
-    <div className="no-scrollbar" style={{ height: '100%', overflowY: 'auto', paddingBottom: 80 }}>
-      <div>
-        {menu.map((item, i) => (
-          <div key={item.id}>
-            <button
-              style={{
-                width: '100%',
-                textAlign: 'left',
-                padding: '16px 20px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 14,
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-              }}
-              onClick={() => onNavigate(item.id)}
-            >
-              <div style={{
-                width: 36, height: 36, borderRadius: 10,
-                background: t.surface,
-                border: `1px solid ${t.divider}`,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: t.label,
-                flexShrink: 0,
-              }}>
-                {item.icon}
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ fontSize: 13, fontWeight: 600, color: t.text, letterSpacing: '-0.01em' }}>{item.label}</p>
-                <p style={{ fontSize: 11, color: t.label, marginTop: 2 }}>{item.desc}</p>
-              </div>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" style={{ color: t.divider, flexShrink: 0 }}>
-                <path d="m9 18 6-6-6-6" />
-              </svg>
-            </button>
-            {i < menu.length - 1 && <div style={{ height: 1, background: t.divider, marginLeft: 70 }} />}
-          </div>
-        ))}
-      </div>
+    <div className="no-scrollbar" style={{ height: '100%', overflowY: 'auto', padding: '0 32px 80px' }}>
+      {menu.map((item, i) => (
+        <button
+          key={item.id}
+          onClick={() => onNavigate(item.id)}
+          style={{
+            width: '100%',
+            textAlign: 'left',
+            paddingTop: 20,
+            paddingBottom: 20,
+            display: 'block',
+            background: 'none',
+            border: 'none',
+            borderBottom: i < menu.length - 1 ? `1px solid ${t.divider}` : 'none',
+            cursor: 'pointer',
+          }}
+        >
+          <span style={{
+            fontSize: 22,
+            fontWeight: 300,
+            letterSpacing: '-0.025em',
+            lineHeight: 1,
+            color: t.text,
+            display: 'block',
+          }}>
+            {item.label}
+          </span>
+          <span style={{
+            fontSize: 9,
+            color: t.faint,
+            fontFamily: 'ui-monospace, Menlo, monospace',
+            letterSpacing: '0.04em',
+            marginTop: 6,
+            display: 'block',
+          }}>
+            {item.meta}
+          </span>
+        </button>
+      ))}
     </div>
   );
 }
