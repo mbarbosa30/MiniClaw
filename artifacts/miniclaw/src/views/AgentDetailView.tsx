@@ -42,10 +42,9 @@ function AgentHeader({
   const t = useTheme();
   const stats = agent.stats;
   const pendingCount = stats?.pendingTasksCount ?? 0;
-  const totalActions = stats?.totalActionsCount ?? 0;
   const dotColor = statusDotColor(agent.status);
 
-  const subtitleText: string = (() => {
+  const activityText: string = (() => {
     if (stats?.currentActivity) return stats.currentActivity;
     const firstTask = agent.recentTasks?.[0]?.title;
     if (firstTask) return firstTask;
@@ -57,78 +56,97 @@ function AgentHeader({
       flexShrink: 0,
       borderBottom: `1px solid ${t.divider}`,
       background: t.bg,
-      padding: '10px 32px 10px',
+      height: 52,
+      position: 'relative',
+      display: 'flex',
+      alignItems: 'center',
+      paddingLeft: 8,
+      paddingRight: 8,
     }}>
-      {/* Nav row */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        {/* Back */}
-        <button
-          onClick={onBack}
-          style={{ padding: '4px 8px 4px 0', background: 'none', border: 'none', cursor: 'pointer', color: t.label, display: 'flex', alignItems: 'center', flexShrink: 0 }}
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="m15 18-6-6 6-6"/>
-          </svg>
-        </button>
+      {/* Left — back button */}
+      <button
+        onClick={onBack}
+        style={{ width: 44, height: 44, background: 'none', border: 'none', cursor: 'pointer', color: t.label, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, zIndex: 1 }}
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="m15 18-6-6 6-6"/>
+        </svg>
+      </button>
 
-        {/* Centered: dot + name */}
-        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7 }}>
-          <span style={{ display: 'block', width: 6, height: 6, borderRadius: '50%', background: dotColor, flexShrink: 0 }} />
+      {/* Center — absolutely positioned so it's always screen-centered */}
+      <div style={{
+        position: 'absolute',
+        left: 0,
+        right: 0,
+        top: 0,
+        bottom: 0,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 4,
+        pointerEvents: 'none',
+        paddingLeft: 60,
+        paddingRight: 60,
+      }}>
+        <span style={{
+          fontSize: 13,
+          fontWeight: 300,
+          letterSpacing: '-0.01em',
+          lineHeight: 1,
+          color: t.label,
+          whiteSpace: 'nowrap',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          maxWidth: '100%',
+          textAlign: 'center',
+        }}>
+          {agent.name || 'Agent'}
+        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+          <span style={{ display: 'block', width: 5, height: 5, borderRadius: '50%', background: dotColor, flexShrink: 0 }} />
           <span style={{
-            fontSize: 16,
+            fontSize: 11,
             fontWeight: 300,
-            letterSpacing: '-0.015em',
+            color: t.faint,
+            letterSpacing: '0.01em',
             lineHeight: 1,
-            color: t.text,
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            maxWidth: 200,
           }}>
-            {agent.name || 'Agent'}
+            {activityText}
           </span>
-        </div>
-
-        {/* Right side: actions count + pending badge + options */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-          {totalActions > 0 && (
-            <span style={{ ...MONO, color: t.faint }}>
-              {totalActions} actions
-            </span>
-          )}
-          {pendingCount > 0 && (
-            <button
-              onClick={onPending}
-              style={{
-                padding: '2px 6px',
-                background: 'none',
-                border: `1px solid ${t.divider}`,
-                borderRadius: 4,
-                cursor: 'pointer',
-                ...MONO,
-                color: t.label,
-                lineHeight: 1.4,
-              }}
-            >
-              {pendingCount} pending
-            </button>
-          )}
-          <button
-            onClick={onOptions}
-            style={{ padding: '4px 0 4px 8px', background: 'none', border: 'none', cursor: 'pointer', color: t.label, display: 'flex', alignItems: 'center' }}
-          >
-            <MoreHorizontal size={18} strokeWidth={1.5} />
-          </button>
         </div>
       </div>
 
-      {/* Subtitle row */}
-      <div style={{ textAlign: 'center', marginTop: 4 }}>
-        <span style={{
-          fontSize: 11,
-          fontWeight: 300,
-          color: t.faint,
-          letterSpacing: '0.01em',
-          lineHeight: 1,
-        }}>
-          {subtitleText}
-        </span>
+      {/* Right — pending badge + options, pushed to right */}
+      <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0, zIndex: 1 }}>
+        {pendingCount > 0 && (
+          <button
+            onClick={onPending}
+            style={{
+              padding: '2px 6px',
+              background: 'none',
+              border: `1px solid ${t.divider}`,
+              borderRadius: 4,
+              cursor: 'pointer',
+              ...MONO,
+              color: t.label,
+              lineHeight: 1.4,
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {pendingCount}
+          </button>
+        )}
+        <button
+          onClick={onOptions}
+          style={{ width: 44, height: 44, background: 'none', border: 'none', cursor: 'pointer', color: t.label, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+        >
+          <MoreHorizontal size={17} strokeWidth={1.5} />
+        </button>
       </div>
     </div>
   );
@@ -414,7 +432,7 @@ function ChatTab({ agent, agentName, newChatTrigger }: { agent: Agent; agentName
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
-            placeholder="Message…"
+            placeholder={`Message ${agentName}…`}
             className="no-scrollbar"
             style={{
               flex: 1,

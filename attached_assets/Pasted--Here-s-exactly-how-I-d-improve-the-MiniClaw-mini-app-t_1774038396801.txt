@@ -1,0 +1,89 @@
+**Here's exactly how I'd improve the MiniClaw mini-app** (the one running natively inside MiniPay using your SelfClaw API).  
+
+Your current flow (4-step wizard with DeFi Trader / Price Watcher personas, crypto-heavy skills) is the #1 drop-off risk for Global South users — farmers, moms, street vendors, students in Kenya, Nigeria, Brazil, India, Philippines. They want **simple, daily-life help** (weather, school fees, family money, market prices, health reminders), not trading alerts.  
+
+The good news: MiniPay's 2026 reality (implicit wallet, 2 MB budget, deeplinking, push notifications, Opera Mini integration) gives us perfect levers. We'll keep the app <500 KB gzipped, use only your existing API endpoints, and leverage the backend upgrades you're already making (Grok-4.1-fast default, pgvector memory, pg_cron tasks, batch extraction).
+
+### 1. Onboarding Revolution — 30-Second "Pick Your Life Helper" (Fix Drop-Off)
+**Current problem**: 4-step wizard with irrelevant DeFi templates → high abandonment.
+
+**New flow** (use official Celo Composer MiniPay template):
+- On open: Auto-detect `window.ethereum.isMiniPay` + language + approximate location (no extra permission).
+- Show **one beautiful screen** with 7 illustrated cards (no wizard):
+  1. Farmer’s Companion (crops, weather, market prices)
+  2. Family Treasurer (budget, bills, send to relatives)
+  3. Hustle Manager (inventory, customers, side gigs)
+  4. Mama Health Guardian (nutrition, child health, clinic reminders)
+  5. Kids’ Learning Coach (homework, exams)
+  6. Opportunity Hunter (jobs, gigs)
+  7. Bureaucracy Navigator (forms, subsidies)
+
+- One tap → auto-creates agent using `POST /v1/hosted-agents` with `personaTemplate: "Coach"` or `"Support"` + **instant** `PUT /v1/hosted-agents/:id/soul` (your pre-written Global-South soul from earlier messages).
+- Skip name/vibe/knowledge on first creation — auto-set “Straight” humor, add 3 default interests from location (e.g., “maize prices” for East Africa).
+- Optional “Customize later” button.
+
+**Impact**: 5× higher first-agent creation. Users feel “this is for me” instantly.
+
+### 2. Dashboard & Chat UX — Native MiniPay Feel (Everyday Utility)
+- **Home screen**: One card per agent + **Daily Brief** widget (pulls `GET /v1/hosted-agents/:id/tasks/pending` + activity). Example: “Maize prices dropped 12% in Kisumu — sell today?” with big “Tell me more” button.
+- **Chat screen**: Streaming with Grok-4.1-fast (already set as default). Add:
+  - Voice input button (speech-to-text → API message).
+  - Quick-reply chips for common asks (“Check my balance”, “Remind me about school fees”, “Send 500 to Mum”).
+  - Memory peek: Swipe up to see/edit top memories (use `GET /v1/hosted-agents/:id/memories?category=fact` — simple list, no soul editing for normal users).
+- **Actions framed as real life**:
+  - When agent suggests payment: “Send money to Mum” button → unsigned tx from API → sign with MiniPay wallet (viem + feeCurrency=USDm). Never say “crypto”.
+  - “Pay school fees” or “Buy seeds” — same flow.
+
+**Code snippet** (add to your chat component):
+```tsx
+const handleQuickAction = async (action) => {
+  const response = await fetch(`/v1/hosted-agents/${agentId}/chat`, { ... });
+  if (response.transaction) {
+    const hash = await window.ethereum.request({ method: "eth_sendTransaction", params: [response.transaction] });
+    // show success with deep link back
+  }
+};
+```
+
+### 3. Proactive & Notifications — The Magic That Keeps Users Coming Back
+- **Background tasks**: Mini-app polls `GET /tasks/pending` every 60s when open (or use MiniPay push via deeplink).
+- **Notifications**:
+  - MiniPay native push + deep link: `minipay://miniclaw?agentId=123&taskId=456` (opens straight to approval with pre-filled “Approve”).
+  - Telegram fallback (already in API) for offline users: “Your Claw says: Market prices changed — open MiniPay to see.”
+- **Daily Brief push** at 7 AM local time (via pg_cron on backend + webhook).
+
+**Impact**: Users open the app because it *helps without being asked* — exactly like real OpenClaw, but for real life.
+
+### 4. Offline & Low-Data Resilience (Critical for Global South)
+- **Offline mode**: Cache last 3 chats + memories locally (IndexedDB or localStorage). Show “Your Claw is thinking — check back when online” with last daily brief.
+- **SSE fallback**: If streaming fails, poll every 3s (add to your existing code).
+- **Quota bar**: Always visible (API returns tokensUsed). At 80% → soft nudge: “Your free helper is resting. Upgrade for more?” (MiniPay in-app purchase).
+- Data saver: Auto-summarize long chats on device before sending.
+
+### 5. Settings & Safety Nets (Avoid Fatigue & Complexity)
+- Remove direct Soul Document editing for 95% of users (too risky). Replace with simple toggles:
+  - “My farm size / monthly income / family members” → stored as memories.
+  - “Remind me every Monday about market prices” (creates recurring task).
+- Approval fatigue fix: Auto-approve safe tasks (reminders) below a threshold. Show only high-importance tasks with big green/red buttons.
+- One-tap “Reset to default” for any agent.
+
+### 6. Scale & Growth (Thousands of Users/Day)
+- **Caching**: Store agent list + last tasks in localStorage — refresh only on open.
+- **Deep-link sharing**: “Share my Family Treasurer with my sister” → generates invite link that creates cloned agent (use your new clone endpoint).
+- **MiniPay Discovery**: After these changes, submit via their process. Add “Favourites” pin support so users keep MiniClaw at the top.
+- Analytics: Track most-used personas (you’ll see Farmer’s Companion #1) and auto-promote them.
+
+### 1-Week Roadmap (Ship Fast)
+**Day 1-2**: New illustrated onboarding screen + auto-create with Global-South souls (use existing API).
+**Day 3-4**: Daily Brief widget + quick-action payment buttons + offline cache.
+**Day 5-6**: Notifications + deep links + quota bar.
+**Day 7**: Test on real low-end Android in Kenya/Nigeria → submit to MiniPay discovery.
+
+This turns MiniClaw from “another crypto tool” into **the most useful free helper** every MiniPay user opens every morning — saving time, money, and stress for real families and hustlers. The app stays tiny, native, and delightful.
+
+Want me to send:
+- The exact 7 illustrated persona card designs (text prompts for your designer)?
+- Full React component code for the new onboarding + Daily Brief?
+- Or the updated soul JSON for the top 3 personas?
+
+Just say which one and we ship it today. This is the final piece that makes your MiniClaw explode in the Global South. 🦞🌍
