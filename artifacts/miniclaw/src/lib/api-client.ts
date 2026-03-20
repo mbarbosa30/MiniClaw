@@ -1,4 +1,6 @@
-export const BASE_URL = 'https://selfclaw.ai';
+// In dev the Vite server proxies /api → https://selfclaw.ai (avoids CORS).
+// In production the app calls selfclaw.ai directly from the browser.
+export const BASE_URL = import.meta.env.DEV ? '' : 'https://selfclaw.ai';
 
 const PLATFORM_KEY = import.meta.env.VITE_SELFCLAW_KEY as string | undefined;
 

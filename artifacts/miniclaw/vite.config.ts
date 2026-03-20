@@ -47,6 +47,13 @@ export default defineConfig({
       strict: true,
       deny: ["**/.*"],
     },
+    proxy: {
+      "/api": {
+        target: "https://selfclaw.ai",
+        changeOrigin: true,
+        secure: true,
+      },
+    },
   },
   preview: {
     port,
