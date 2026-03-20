@@ -1,11 +1,11 @@
-// API DTOs for the SelfClaw / MiniClaw API
+// API DTOs for the SelfClaw / MiniClaw API — sourced from https://selfclaw.ai/miniclaw-api
 
-export interface AuthStatus {
-  loggedIn: boolean;
-  user?: {
-    address: string;
-    id?: string;
-  };
+// /api/auth/self/me response
+export interface AuthMe {
+  id: string;
+  humanId: string;
+  walletAddress: string;
+  authMethod: string;
 }
 
 export interface Agent {
@@ -14,19 +14,23 @@ export interface Agent {
   emoji: string;
   description: string;
   status: 'active' | 'paused' | 'error' | string;
-  humorStyle: HumorStyle;
+  humorStyle?: HumorStyle;
   interests?: string[];
   topicsToWatch?: string[];
   premiumModel?: PremiumModel;
   socialHandles?: SocialHandles;
   enabledSkills?: string[];
   personalContext?: string;
+  publicKey?: string;
+  createdAt?: string;
+  recentTasks?: AgentTask[];
 }
 
-export type HumorStyle = 'none' | 'dry' | 'warm' | 'playful' | 'sarcastic';
+// Per API docs: straight | dry-wit | playful | sarcastic | absurdist
+export type HumorStyle = 'straight' | 'dry-wit' | 'playful' | 'sarcastic' | 'absurdist';
 
-// premiumModel values per API: "grok-4" | "gpt-5.4" | "none"
-export type PremiumModel = 'none' | 'grok-4' | 'gpt-5.4';
+// Per API docs: "grok-4.20" | "gpt-5.4" | null/none
+export type PremiumModel = 'none' | 'grok-4.20' | 'gpt-5.4';
 
 export interface SocialHandles {
   twitter?: string;
@@ -39,6 +43,8 @@ export interface PersonaTemplate {
   name: string;
   description: string;
   emoji: string;
+  defaultSkills?: string[];
+  defaultInterests?: string[];
 }
 
 export interface SkillDef {
@@ -64,14 +70,19 @@ export interface CreateAgentPayload {
   humorStyle?: HumorStyle;
 }
 
+// POST /v1/hosted-agents response — agent + one-time privateKey
+export interface CreateAgentResponse {
+  success: boolean;
+  agent: Agent;
+  privateKey: string;
+}
+
 // PATCH /:id — partial update
 export interface UpdateAgentPayload {
   name?: string;
   emoji?: string;
   description?: string;
   status?: 'active' | 'paused';
-  enabledSkills?: string[];
-  autoApproveThreshold?: number;
   interests?: string[];
   topicsToWatch?: string[];
   socialHandles?: SocialHandles;
@@ -80,7 +91,7 @@ export interface UpdateAgentPayload {
   premiumModel?: PremiumModel;
 }
 
-// PUT /:id/settings — settings-only update (same optional fields)
+// PUT /:id/settings — settings-only update
 export interface UpdateAgentSettingsPayload {
   name?: string;
   emoji?: string;
@@ -94,26 +105,25 @@ export interface UpdateAgentSettingsPayload {
   premiumModel?: PremiumModel;
 }
 
+// Knowledge entry — title is required per API docs
 export interface Knowledge {
   id: string;
-  type: 'text' | 'url';
+  title: string;
   content: string;
-  title?: string;
   createdAt?: string;
 }
 
+// Memory — content + category per API docs (not fact/pinned)
 export interface Memory {
   id: string;
-  fact?: string;
-  pinned?: boolean;
-  category?: string;
+  content: string;
+  category?: 'identity' | 'preference' | 'context' | 'fact' | 'emotion' | 'relationship' | string;
   createdAt?: string;
 }
 
 export interface SoulDocument {
   soul: string;
   updatedAt?: string;
-  isDefault?: boolean;
 }
 
 export interface Conversation {

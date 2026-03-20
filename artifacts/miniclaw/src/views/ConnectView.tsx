@@ -1,26 +1,45 @@
 import { useConnection, useConnect } from 'wagmi';
 import { motion } from 'framer-motion';
-import { Sparkles, AlertTriangle, Loader2 } from 'lucide-react';
+import { Sparkles, AlertTriangle, Loader2, RotateCcw } from 'lucide-react';
+import { useAuthStore } from '@/lib/store';
+
+const SESSION_MESSAGES: Record<string, string> = {
+  signing: 'Sign the request in your wallet…',
+  verifying: 'Verifying your signature…',
+  error: 'Signature failed. Tap to retry.',
+};
 
 /**
- * ConnectView — shown while auto-connecting to the MiniPay wallet.
+ * ConnectView — shown while auto-connecting to the MiniPay wallet
+ * and during the nonce→sign→session establishment flow.
  *
- * Per MiniPay docs, there is NO connect button. Wagmi auto-connects
- * on mount (via useAutoConnect in ViewManager). This screen simply shows
- * progress and handles the "not in MiniPay" case.
+ * Per MiniPay docs, there is NO connect button — Wagmi auto-connects
+ * on mount (via useAutoConnect in ViewManager). This screen shows
+ * progress through the three phases:
+ *   1. Wallet connecting (Wagmi)
+ *   2. Signing challenge (useWalletSync → signMessageAsync)
+ *   3. Verifying signature (quick-connect POST)
  */
 export function ConnectView() {
-  // useConnection is wagmi v3's hook for reading connection state
   const { address, isConnected, isConnecting } = useConnection();
   const { error: connectError } = useConnect();
+  const { sessionStatus, setSessionStatus } = useAuthStore();
 
-  // "Provider not found" = window.ethereum absent = not inside MiniPay
   const isNoProvider =
     !!connectError &&
     connectError.message?.toLowerCase().includes('provider not found');
 
-  const showSpinner = !isNoProvider && (isConnecting || (!isConnected && !connectError));
-  const showError = !!connectError && !isNoProvider;
+  const showSpinner =
+    !isNoProvider &&
+    sessionStatus !== 'error' &&
+    (isConnecting || (!isConnected && !connectError) || isConnected);
+
+  const showConnectError = !!connectError && !isNoProvider;
+
+  const handleRetry = () => {
+    setSessionStatus('idle');
+    window.location.reload();
+  };
 
   return (
     <div className="flex flex-col items-center justify-center h-full p-8 bg-gradient-to-b from-background via-background to-secondary/20 relative overflow-hidden">
@@ -68,7 +87,7 @@ export function ConnectView() {
         )}
 
         {/* Connection error (not a missing provider) */}
-        {showError && (
+        {showConnectError && (
           <motion.div
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
@@ -82,7 +101,29 @@ export function ConnectView() {
           </motion.div>
         )}
 
-        {/* Connecting spinner */}
+        {/* Session signing error */}
+        {sessionStatus === 'error' && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex flex-col items-center gap-3 mb-5"
+          >
+            <div className="bg-destructive/10 border border-destructive/20 rounded-2xl p-3.5 w-full text-left">
+              <p className="text-xs text-destructive leading-relaxed">
+                Could not sign in. The wallet request may have been rejected or timed out.
+              </p>
+            </div>
+            <button
+              onClick={handleRetry}
+              className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-primary text-primary-foreground text-sm font-semibold shadow-md active:scale-95 transition-all"
+            >
+              <RotateCcw size={15} />
+              Try Again
+            </button>
+          </motion.div>
+        )}
+
+        {/* Connecting / signing / verifying spinner */}
         {showSpinner && (
           <motion.div
             initial={{ opacity: 0 }}
@@ -92,7 +133,8 @@ export function ConnectView() {
           >
             <Loader2 className="w-7 h-7 text-primary animate-spin" />
             <p className="text-sm text-muted-foreground">
-              {address ? 'Setting up…' : 'Connecting to wallet…'}
+              {SESSION_MESSAGES[sessionStatus] ??
+                (address ? 'Setting up your account…' : 'Connecting to wallet…')}
             </p>
           </motion.div>
         )}

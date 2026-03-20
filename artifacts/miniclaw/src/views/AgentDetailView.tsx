@@ -156,34 +156,52 @@ function ChatTab({ agent }: { agent: Agent }) {
           if (!line.startsWith('data: ')) continue;
           const data = line.slice(6).trim();
           if (data === '[DONE]') continue;
-          let chunk = '';
           try {
+            // Per API docs SSE event shape:
+            //   { type: "stream", content: "..." }        — text chunk
+            //   { type: "tool_start", ... }               — tool is running
+            //   { type: "tool_result", ... }              — tool finished
+            //   { type: "done", conversationId, messageId, tokensUsed } — stream ended
+            //   { type: "error", message: "..." }         — error during generation
             const parsed: {
-              done?: boolean;
+              type: string;
               content?: string;
-              conversationId?: number | string;
+              conversationId?: number;
+              messageId?: number;
+              tokensUsed?: number;
+              message?: string;
             } = JSON.parse(data);
-            // Per API docs: final event is {"done": true, "conversationId": 123}
-            if (parsed.done) {
+
+            if (parsed.type === 'done') {
               if (parsed.conversationId != null && !activeConversationId) {
-                const newId = String(parsed.conversationId);
-                setActiveConversationId(newId);
-                // Refresh conversation list so the new thread appears
+                setActiveConversationId(String(parsed.conversationId));
                 refetchConversations();
               }
               continue;
             }
-            chunk = parsed?.content ?? '';
+
+            if (parsed.type === 'error') {
+              setMessages(prev => [
+                ...prev.slice(0, -1),
+                { role: 'system', content: parsed.message ?? 'The agent encountered an error.' }
+              ]);
+              continue;
+            }
+
+            // tool_start and tool_result are informational — skip silently
+            if (parsed.type !== 'stream') continue;
+
+            const chunk = parsed.content ?? '';
+            if (chunk) {
+              setMessages(prev => {
+                const msgs = [...prev];
+                const last = msgs[msgs.length - 1];
+                msgs[msgs.length - 1] = { ...last, content: last.content + chunk };
+                return msgs;
+              });
+            }
           } catch {
-            chunk = '';
-          }
-          if (chunk) {
-            setMessages(prev => {
-              const msgs = [...prev];
-              const last = msgs[msgs.length - 1];
-              msgs[msgs.length - 1] = { ...last, content: last.content + chunk };
-              return msgs;
-            });
+            // Malformed SSE line — skip
           }
         }
       }
@@ -293,9 +311,17 @@ function ChatTab({ agent }: { agent: Agent }) {
   );
 }
 
+// Humor style display labels
+const HUMOR_LABELS: Record<HumorStyle, string> = {
+  straight: 'Straight',
+  'dry-wit': 'Dry Wit',
+  playful: 'Playful',
+  sarcastic: 'Sarcastic',
+  absurdist: 'Absurdist',
+};
+
 // --- SETTINGS TAB ---
 function SettingsTab({ agent, onDeleted }: { agent: Agent; onDeleted: () => void }) {
-  // Use PATCH /:id for general agent update including premiumModel
   const update = useUpdateAgent();
   const remove = useDeleteAgent();
 
@@ -303,11 +329,10 @@ function SettingsTab({ agent, onDeleted }: { agent: Agent; onDeleted: () => void
     name: agent.name ?? '',
     emoji: agent.emoji ?? '🤖',
     description: agent.description ?? '',
-    // interests and topicsToWatch are string[] arrays — display as comma-separated
     interests: (agent.interests ?? []).join(', '),
     topicsToWatch: (agent.topicsToWatch ?? []).join(', '),
-    humorStyle: agent.humorStyle as HumorStyle,
-    // premiumModel: "grok-4" | "gpt-5.4" | "none" per API docs
+    humorStyle: (agent.humorStyle ?? 'straight') as HumorStyle,
+    // Per API docs: "grok-4.20" | "gpt-5.4" | "none"
     premiumModel: (agent.premiumModel ?? 'none') as PremiumModel,
     socialHandles: {
       twitter: agent.socialHandles?.twitter ?? '',
@@ -316,7 +341,6 @@ function SettingsTab({ agent, onDeleted }: { agent: Agent; onDeleted: () => void
     },
   });
 
-  // Parse comma-separated string to array, removing empty entries
   const toArray = (s: string): string[] =>
     s.split(',').map(x => x.trim()).filter(Boolean);
 
@@ -392,30 +416,31 @@ function SettingsTab({ agent, onDeleted }: { agent: Agent; onDeleted: () => void
         <p className="text-xs text-muted-foreground mt-1">Separate topics with commas</p>
       </div>
 
+      {/* Humor Style — per API docs: straight | dry-wit | playful | sarcastic | absurdist */}
       <div>
         <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 block">Humor Style</label>
         <div className="flex flex-wrap gap-2">
-          {(['none', 'dry', 'warm', 'playful', 'sarcastic'] as HumorStyle[]).map(style => (
+          {(Object.keys(HUMOR_LABELS) as HumorStyle[]).map(style => (
             <button
               key={style}
               type="button"
-              className={`px-4 py-2 rounded-xl text-sm font-medium capitalize transition-all ${form.humorStyle === style ? 'bg-primary text-primary-foreground shadow-md' : 'bg-muted text-muted-foreground hover:bg-muted/80'}`}
+              className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${form.humorStyle === style ? 'bg-primary text-primary-foreground shadow-md' : 'bg-muted text-muted-foreground hover:bg-muted/80'}`}
               onClick={() => setForm(p => ({ ...p, humorStyle: style }))}
             >
-              {style}
+              {HUMOR_LABELS[style]}
             </button>
           ))}
         </div>
       </div>
 
-      {/* Model tier */}
+      {/* Model tier — per API docs: "grok-4.20" | "gpt-5.4" | "none" */}
       <div>
         <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 block">AI Model Tier</label>
         <div className="space-y-2">
           {([
-            { value: 'none', label: 'Standard (GPT-5)', description: 'Default model included in your plan' },
-            { value: 'grok-4', label: 'Grok 4', description: 'Advanced reasoning and analysis' },
-            { value: 'gpt-5.4', label: 'GPT-5.4', description: 'Latest OpenAI model' },
+            { value: 'none', label: 'Standard', description: 'Default model included in your plan' },
+            { value: 'grok-4.20', label: 'Grok 4.20', description: 'xAI advanced reasoning model' },
+            { value: 'gpt-5.4', label: 'GPT-5.4', description: 'Latest OpenAI flagship model' },
           ] as { value: PremiumModel; label: string; description: string }[]).map(({ value, label, description }) => (
             <button
               key={value}

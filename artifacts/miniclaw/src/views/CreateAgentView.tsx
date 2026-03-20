@@ -15,10 +15,20 @@ interface FormData {
   personaTemplate: string;
 }
 
+// Knowledge requires a title (per API docs)
 interface KnowledgeEntry {
-  type: 'text' | 'url';
+  title: string;
   content: string;
 }
+
+// Humor style display labels — per API docs: straight|dry-wit|playful|sarcastic|absurdist
+const HUMOR_LABELS: Record<HumorStyle, string> = {
+  straight: 'Straight',
+  'dry-wit': 'Dry Wit',
+  playful: 'Playful',
+  sarcastic: 'Sarcastic',
+  absurdist: 'Absurdist',
+};
 
 const TOTAL_STEPS = 4;
 
@@ -36,13 +46,13 @@ export function CreateAgentView() {
     name: '',
     emoji: '🤖',
     description: '',
-    humorStyle: 'warm',
+    humorStyle: 'straight',
     personaTemplate: ''
   });
   const [showEmoji, setShowEmoji] = useState(false);
   const [selectedSkills, setSelectedSkills] = useState<Set<string>>(new Set());
   const [knowledgeEntries, setKnowledgeEntries] = useState<KnowledgeEntry[]>([]);
-  const [knowledgeType, setKnowledgeType] = useState<'text' | 'url'>('text');
+  const [knowledgeTitle, setKnowledgeTitle] = useState('');
   const [knowledgeContent, setKnowledgeContent] = useState('');
 
   const toggleSkill = (skillId: string) => {
@@ -55,8 +65,9 @@ export function CreateAgentView() {
   };
 
   const addKnowledgeEntry = () => {
-    if (!knowledgeContent.trim() || knowledgeEntries.length >= 20) return;
-    setKnowledgeEntries(prev => [...prev, { type: knowledgeType, content: knowledgeContent.trim() }]);
+    if (!knowledgeTitle.trim() || !knowledgeContent.trim() || knowledgeEntries.length >= 20) return;
+    setKnowledgeEntries(prev => [...prev, { title: knowledgeTitle.trim(), content: knowledgeContent.trim() }]);
+    setKnowledgeTitle('');
     setKnowledgeContent('');
   };
 
@@ -68,7 +79,9 @@ export function CreateAgentView() {
 
   const handleCreate = async () => {
     setPostCreateErrors([]);
-    const newAgent = await create.mutateAsync({
+
+    // Create agent — response is { success, agent, privateKey }
+    const result = await create.mutateAsync({
       name: formData.name,
       emoji: formData.emoji,
       description: formData.description,
@@ -76,6 +89,7 @@ export function CreateAgentView() {
       personaTemplate: formData.personaTemplate,
     });
 
+    const newAgent = result.agent;
     const errors: string[] = [];
 
     // Enable each selected skill sequentially; collect failures
@@ -92,13 +106,13 @@ export function CreateAgentView() {
       try {
         await addKnowledge.mutateAsync({ agentId: newAgent.id, data: entry });
       } catch {
-        errors.push(`Failed to add knowledge entry: ${entry.content.slice(0, 40)}`);
+        errors.push(`Failed to add knowledge: "${entry.title}"`);
       }
     }
 
     if (errors.length > 0) {
       setPostCreateErrors(errors);
-      // Still navigate — agent was created, partial config can be fixed in settings
+      // Still navigate — agent was created; partial config can be fixed in settings
     }
 
     pop();
@@ -218,17 +232,18 @@ export function CreateAgentView() {
                 />
               </div>
 
+              {/* Humor Style — per API docs: straight|dry-wit|playful|sarcastic|absurdist */}
               <div>
                 <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 block">Humor Style</label>
                 <div className="flex flex-wrap gap-2">
-                  {(['none', 'dry', 'warm', 'playful', 'sarcastic'] as HumorStyle[]).map(style => (
+                  {(Object.keys(HUMOR_LABELS) as HumorStyle[]).map(style => (
                     <button
                       key={style}
                       type="button"
-                      className={`px-4 py-2 rounded-xl text-sm font-medium capitalize transition-all ${formData.humorStyle === style ? 'bg-primary text-primary-foreground shadow-md' : 'bg-muted text-muted-foreground hover:bg-muted/80'}`}
+                      className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${formData.humorStyle === style ? 'bg-primary text-primary-foreground shadow-md' : 'bg-muted text-muted-foreground hover:bg-muted/80'}`}
                       onClick={() => setFormData(p => ({ ...p, humorStyle: style }))}
                     >
-                      {style}
+                      {HUMOR_LABELS[style]}
                     </button>
                   ))}
                 </div>
@@ -300,28 +315,23 @@ export function CreateAgentView() {
 
               {/* Add entry */}
               <div className="bg-white rounded-2xl p-4 border border-black/5 shadow-sm space-y-3">
-                <div className="flex gap-1.5 bg-muted p-1 rounded-xl">
-                  {(['text', 'url'] as const).map(t => (
-                    <button
-                      key={t}
-                      className={`flex-1 py-2 text-sm font-semibold rounded-lg capitalize transition-all flex items-center justify-center gap-1.5 ${knowledgeType === t ? 'bg-white text-primary shadow-sm' : 'text-muted-foreground'}`}
-                      onClick={() => setKnowledgeType(t)}
-                    >
-                      {t === 'text' ? <FileText size={13} /> : <LinkIcon size={13} />}
-                      {t}
-                    </button>
-                  ))}
+                <div>
+                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1 block">Title *</label>
+                  <Input
+                    placeholder="e.g. Tokenomics overview"
+                    value={knowledgeTitle}
+                    onChange={e => setKnowledgeTitle(e.target.value)}
+                  />
                 </div>
-                {knowledgeType === 'text' ? (
-                  <Textarea rows={2} placeholder="Paste text..." value={knowledgeContent} onChange={e => setKnowledgeContent(e.target.value)} />
-                ) : (
-                  <Input placeholder="https://..." value={knowledgeContent} onChange={e => setKnowledgeContent(e.target.value)} />
-                )}
+                <div>
+                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1 block">Content *</label>
+                  <Textarea rows={2} placeholder="Paste text or URL..." value={knowledgeContent} onChange={e => setKnowledgeContent(e.target.value)} />
+                </div>
                 <Button
                   variant="secondary"
                   className="w-full flex gap-2"
                   onClick={addKnowledgeEntry}
-                  disabled={!knowledgeContent.trim() || knowledgeEntries.length >= 20}
+                  disabled={!knowledgeTitle.trim() || !knowledgeContent.trim() || knowledgeEntries.length >= 20}
                 >
                   <Plus size={16} /> Add Entry
                 </Button>
@@ -336,9 +346,12 @@ export function CreateAgentView() {
                   {knowledgeEntries.map((entry, i) => (
                     <div key={i} className="bg-white rounded-2xl p-3.5 flex items-start gap-3 border border-black/5 shadow-sm">
                       <div className="text-primary/40 mt-0.5 shrink-0">
-                        {entry.type === 'url' ? <LinkIcon size={14} /> : <FileText size={14} />}
+                        {entry.content.startsWith('http') ? <LinkIcon size={14} /> : <FileText size={14} />}
                       </div>
-                      <p className="text-sm flex-1 break-all leading-relaxed line-clamp-2 text-foreground/80">{entry.content}</p>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold truncate">{entry.title}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5 break-all leading-relaxed line-clamp-2">{entry.content}</p>
+                      </div>
                       <button className="text-muted-foreground hover:text-destructive transition-colors shrink-0 p-1" onClick={() => removeKnowledgeEntry(i)}>
                         <Trash2 size={14} />
                       </button>
@@ -353,7 +366,9 @@ export function CreateAgentView() {
                   <span className="text-3xl">{formData.emoji}</span>
                   <div>
                     <p className="font-bold text-base">{formData.name}</p>
-                    <p className="text-xs text-muted-foreground capitalize">{formData.personaTemplate} · {formData.humorStyle} humor</p>
+                    <p className="text-xs text-muted-foreground capitalize">
+                      {formData.personaTemplate} · {HUMOR_LABELS[formData.humorStyle]} humor
+                    </p>
                   </div>
                 </div>
                 <div className="flex gap-4 text-xs text-muted-foreground">
@@ -367,6 +382,15 @@ export function CreateAgentView() {
                   <p className="text-xs text-destructive">
                     {create.error instanceof Error ? create.error.message : 'Failed to create agent. Please try again.'}
                   </p>
+                </div>
+              )}
+
+              {postCreateErrors.length > 0 && (
+                <div className="bg-amber-50 border border-amber-200 rounded-2xl p-3.5">
+                  <p className="text-xs font-semibold text-amber-800 mb-1">Agent created, but some extras failed:</p>
+                  {postCreateErrors.map((e, i) => (
+                    <p key={i} className="text-xs text-amber-700">• {e}</p>
+                  ))}
                 </div>
               )}
 

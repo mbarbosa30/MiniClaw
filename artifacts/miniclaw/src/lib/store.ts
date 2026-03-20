@@ -60,16 +60,22 @@ export const useRouter = create<RouterStore>((set) => ({
 
 // --- AUTH STATE ---
 
+export type SessionStatus = 'idle' | 'signing' | 'verifying' | 'error';
+
 interface AuthStore {
   isAuthenticated: boolean;
   address: string | null;
+  sessionStatus: SessionStatus;
   setAuth: (address: string | null) => void;
+  setSessionStatus: (status: SessionStatus) => void;
   logout: () => void;
 }
 
 export const useAuthStore = create<AuthStore>((set) => ({
   isAuthenticated: false,
   address: null,
-  setAuth: (address) => set({ isAuthenticated: !!address, address }),
-  logout: () => set({ isAuthenticated: false, address: null })
+  sessionStatus: 'idle',
+  setAuth: (address) => set({ isAuthenticated: !!address, address, sessionStatus: 'idle' }),
+  setSessionStatus: (sessionStatus) => set({ sessionStatus }),
+  logout: () => set({ isAuthenticated: false, address: null, sessionStatus: 'idle' }),
 }));

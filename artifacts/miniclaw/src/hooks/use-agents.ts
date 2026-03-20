@@ -5,6 +5,7 @@ import type {
   PersonaTemplate,
   SkillDef,
   CreateAgentPayload,
+  CreateAgentResponse,
   UpdateAgentPayload,
   UpdateAgentSettingsPayload,
   Knowledge,
@@ -50,11 +51,12 @@ export function useSkillDefs() {
   });
 }
 
+// POST /v1/hosted-agents — response is { success, agent, privateKey }
 export function useCreateAgent() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (data: CreateAgentPayload) =>
-      apiFetch<Agent>('/api/selfclaw/v1/hosted-agents', {
+      apiFetch<CreateAgentResponse>('/api/selfclaw/v1/hosted-agents', {
         method: 'POST',
         body: JSON.stringify(data)
       }),
@@ -97,7 +99,6 @@ export function useUpdateAgentSettings() {
 export function useDeleteAgent() {
   const qc = useQueryClient();
   return useMutation({
-    // DELETE soft-deletes by setting status to "paused"
     mutationFn: (id: string) =>
       apiFetch<void>(`/api/selfclaw/v1/hosted-agents/${id}`, { method: 'DELETE' }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['agents'] })
@@ -122,7 +123,11 @@ export function useToggleSkill() {
         `/api/selfclaw/v1/hosted-agents/${agentId}/skills/${skillId}/${enable ? 'enable' : 'disable'}`,
         { method: 'POST' }
       ),
-    onSuccess: (_, variables) => qc.invalidateQueries({ queryKey: ['skills', variables.agentId] })
+    onSuccess: (_, variables) => {
+      // enabledSkills lives on the agent object, so invalidate both caches
+      qc.invalidateQueries({ queryKey: ['skills', variables.agentId] });
+      qc.invalidateQueries({ queryKey: ['agents', variables.agentId] });
+    }
   });
 }
 
@@ -136,10 +141,11 @@ export function useKnowledge(agentId: string | undefined) {
   });
 }
 
+// title is required by the API
 export function useAddKnowledge() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ agentId, data }: { agentId: string; data: { type: 'text' | 'url'; content: string; title?: string } }) =>
+    mutationFn: ({ agentId, data }: { agentId: string; data: { title: string; content: string } }) =>
       apiFetch<Knowledge>(`/api/selfclaw/v1/hosted-agents/${agentId}/knowledge`, {
         method: 'POST',
         body: JSON.stringify(data)
@@ -167,11 +173,11 @@ export function useMemories(agentId: string | undefined) {
   });
 }
 
+// Per API docs: body is { content?: string; category?: string }
 export function useUpdateMemory() {
   const qc = useQueryClient();
   return useMutation({
-    // Body: { fact?: string; pinned?: boolean }
-    mutationFn: ({ agentId, id, data }: { agentId: string; id: string; data: { fact?: string; pinned?: boolean } }) =>
+    mutationFn: ({ agentId, id, data }: { agentId: string; id: string; data: { content?: string; category?: string } }) =>
       apiFetch<Memory>(`/api/selfclaw/v1/hosted-agents/${agentId}/memories/${id}`, {
         method: 'PATCH',
         body: JSON.stringify(data)
@@ -202,7 +208,6 @@ export function useSoul(agentId: string | undefined) {
 export function useUpdateSoul() {
   const qc = useQueryClient();
   return useMutation({
-    // Body: { soul: string } — min 10, max 5000 chars
     mutationFn: ({ agentId, soul }: { agentId: string; soul: string }) =>
       apiFetch<SoulDocument>(`/api/selfclaw/v1/hosted-agents/${agentId}/soul`, {
         method: 'PUT',
@@ -222,6 +227,7 @@ export function useConversations(agentId: string | undefined) {
   });
 }
 
+// Per API docs: GET /:id/messages?conversationId=X
 export function useMessages(agentId: string | undefined, conversationId: string | number | undefined) {
   return useQuery({
     queryKey: ['messages', agentId, conversationId],
@@ -244,6 +250,7 @@ export function useTasks(agentId: string | undefined, status: 'pending' | 'all' 
   });
 }
 
+// Per API docs: POST /:id/tasks/:taskId/approve or /reject
 export function useResolveTask() {
   const qc = useQueryClient();
   return useMutation({
@@ -271,7 +278,6 @@ export function useTelegramStatus(agentId: string | undefined) {
 export function useUpdateTelegramSettings() {
   const qc = useQueryClient();
   return useMutation({
-    // Body: { notificationLevel: "all" | "important" | "none" }
     mutationFn: ({ agentId, data }: { agentId: string; data: TelegramSettingsPayload }) =>
       apiFetch<void>(`/api/selfclaw/v1/hosted-agents/${agentId}/telegram/settings`, {
         method: 'PATCH',

@@ -11,7 +11,7 @@ import {
 } from '@/hooks/use-agents';
 import { apiFetch } from '@/lib/api-client';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Trash2, Link as LinkIcon, FileText, Pin, PinOff, Check, X, Send } from 'lucide-react';
+import { Trash2, Link as LinkIcon, FileText, Check, X, Send } from 'lucide-react';
 import type { Memory, TelegramNotificationLevel } from '@/types';
 
 function SubScreenLayout({ title, children }: { title: string; children: React.ReactNode }) {
@@ -46,10 +46,7 @@ function EmptyState({ icon, title, description }: { icon: string; title: string;
 }
 
 // --- SKILLS VIEW ---
-// Per API docs, there is no GET /:id/skills endpoint.
-// We derive enabled state by cross-referencing:
-//   - GET /skills (global list) via useSkillDefs()
-//   - agent.enabledSkills[] from GET /:id via useAgent()
+// enabledSkills lives on the agent object; cross-reference with global skill defs
 export function SkillsView() {
   const agentId: string = useRouter(s => s.currentView.params?.id ?? '');
   const { data: skillDefs, isLoading: skillsLoading } = useSkillDefs();
@@ -87,46 +84,51 @@ export function SkillsView() {
 }
 
 // --- KNOWLEDGE VIEW ---
+// Per API docs: title is required, content is the body
 export function KnowledgeView() {
   const agentId: string = useRouter(s => s.currentView.params?.id ?? '');
   const { data: knowledge, isLoading } = useKnowledge(agentId);
   const add = useAddKnowledge();
   const remove = useDeleteKnowledge();
 
-  const [type, setType] = useState<'text' | 'url'>('text');
+  const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
 
   const used = knowledge?.length ?? 0;
 
   const handleAdd = () => {
-    if (!content.trim()) return;
-    add.mutate({ agentId, data: { type, content: content.trim() } }, {
-      onSuccess: () => setContent('')
+    if (!title.trim() || !content.trim()) return;
+    add.mutate({ agentId, data: { title: title.trim(), content: content.trim() } }, {
+      onSuccess: () => { setTitle(''); setContent(''); }
     });
   };
 
   return (
     <SubScreenLayout title="Knowledge Base">
       {/* Add new */}
-      <div className="bg-white rounded-2xl p-4 border border-primary/10 shadow-sm">
-        <div className="flex gap-1.5 mb-4 bg-muted p-1 rounded-xl">
-          {(['text', 'url'] as const).map(t => (
-            <button
-              key={t}
-              className={`flex-1 py-2 text-sm font-semibold rounded-lg capitalize transition-all flex items-center justify-center gap-2 ${type === t ? 'bg-white text-primary shadow-sm' : 'text-muted-foreground'}`}
-              onClick={() => setType(t)}
-            >
-              {t === 'text' ? <FileText size={14} /> : <LinkIcon size={14} />}
-              {t}
-            </button>
-          ))}
+      <div className="bg-white rounded-2xl p-4 border border-primary/10 shadow-sm space-y-3">
+        <div>
+          <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1 block">Title *</label>
+          <Input
+            placeholder="e.g. Company overview"
+            value={title}
+            onChange={e => setTitle(e.target.value)}
+          />
         </div>
-        {type === 'text' ? (
-          <Textarea rows={3} placeholder="Paste text content..." value={content} onChange={e => setContent(e.target.value)} className="mb-3" />
-        ) : (
-          <Input placeholder="https://example.com/article" value={content} onChange={e => setContent(e.target.value)} className="mb-3" />
-        )}
-        <Button className="w-full" onClick={handleAdd} disabled={add.isPending || !content.trim() || used >= 20}>
+        <div>
+          <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1 block">Content *</label>
+          <Textarea
+            rows={3}
+            placeholder="Paste text or paste a URL..."
+            value={content}
+            onChange={e => setContent(e.target.value)}
+          />
+        </div>
+        <Button
+          className="w-full"
+          onClick={handleAdd}
+          disabled={add.isPending || !title.trim() || !content.trim() || used >= 20}
+        >
           {add.isPending ? 'Adding...' : used >= 20 ? 'Limit reached (20/20)' : 'Add to Knowledge Base'}
         </Button>
       </div>
@@ -140,15 +142,18 @@ export function KnowledgeView() {
           </span>
         </div>
         {isLoading ? <LoadingState /> : !knowledge?.length ? (
-          <EmptyState icon="📚" title="No knowledge yet" description="Add text or URLs to teach your agent about specific topics." />
+          <EmptyState icon="📚" title="No knowledge yet" description="Add entries to teach your agent about specific topics." />
         ) : (
           <div className="space-y-2.5">
             {knowledge.map(k => (
               <div key={k.id} className="bg-white rounded-2xl p-4 flex items-start gap-3 border border-black/5 shadow-sm">
                 <div className="mt-0.5 text-primary/40 shrink-0">
-                  {k.type === 'url' ? <LinkIcon size={16} /> : <FileText size={16} />}
+                  {k.content.startsWith('http') ? <LinkIcon size={16} /> : <FileText size={16} />}
                 </div>
-                <div className="flex-1 text-sm break-all leading-relaxed line-clamp-3 text-foreground/80">{k.content}</div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold truncate">{k.title}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5 break-all leading-relaxed line-clamp-2">{k.content}</p>
+                </div>
                 <button
                   className="text-muted-foreground hover:text-destructive transition-colors p-1.5 -mr-1 shrink-0"
                   onClick={() => remove.mutate({ agentId, id: k.id })}
@@ -211,29 +216,36 @@ export function SoulView() {
   );
 }
 
+// Category badge color map
+const CATEGORY_COLORS: Record<string, string> = {
+  identity: 'bg-violet-100 text-violet-700',
+  preference: 'bg-blue-100 text-blue-700',
+  context: 'bg-amber-100 text-amber-700',
+  fact: 'bg-green-100 text-green-700',
+  emotion: 'bg-rose-100 text-rose-700',
+  relationship: 'bg-orange-100 text-orange-700',
+};
+
 // --- MEMORIES VIEW ---
+// Per API docs: Memory has content (not fact) and category (not pinned)
 export function MemoriesView() {
   const agentId: string = useRouter(s => s.currentView.params?.id ?? '');
   const { data: memories, isLoading } = useMemories(agentId);
   const updateMemory = useUpdateMemory();
   const deleteMemory = useDeleteMemory();
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editFact, setEditFact] = useState('');
+  const [editContent, setEditContent] = useState('');
 
   const handleEdit = (memory: Memory) => {
     setEditingId(memory.id);
-    setEditFact(memory.fact ?? '');
+    setEditContent(memory.content ?? '');
   };
 
   const handleSaveEdit = (memoryId: string) => {
     updateMemory.mutate(
-      { agentId, id: memoryId, data: { fact: editFact } },
-      { onSuccess: () => { setEditingId(null); setEditFact(''); } }
+      { agentId, id: memoryId, data: { content: editContent } },
+      { onSuccess: () => { setEditingId(null); setEditContent(''); } }
     );
-  };
-
-  const handlePin = (memory: Memory) => {
-    updateMemory.mutate({ agentId, id: memory.id, data: { pinned: !memory.pinned } });
   };
 
   return (
@@ -244,13 +256,13 @@ export function MemoriesView() {
         memories.map(memory => (
           <div
             key={memory.id}
-            className={`bg-white rounded-2xl p-4 border shadow-sm transition-all ${memory.pinned ? 'border-primary/20 bg-primary/5' : 'border-black/5'}`}
+            className="bg-white rounded-2xl p-4 border border-black/5 shadow-sm"
           >
             {editingId === memory.id ? (
               <div className="space-y-2">
                 <Textarea
-                  value={editFact}
-                  onChange={e => setEditFact(e.target.value)}
+                  value={editContent}
+                  onChange={e => setEditContent(e.target.value)}
                   rows={3}
                   className="text-sm"
                   autoFocus
@@ -263,24 +275,22 @@ export function MemoriesView() {
             ) : (
               <>
                 <p className="text-sm leading-relaxed text-foreground/85 mb-3">
-                  {memory.fact ?? JSON.stringify(memory)}
+                  {memory.content ?? JSON.stringify(memory)}
                 </p>
                 <div className="flex items-center gap-2">
+                  {memory.category && (
+                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full capitalize ${CATEGORY_COLORS[memory.category] ?? 'bg-muted text-muted-foreground'}`}>
+                      {memory.category}
+                    </span>
+                  )}
                   <button
-                    className={`p-1.5 rounded-lg transition-colors text-xs flex items-center gap-1.5 ${memory.pinned ? 'text-primary bg-primary/10' : 'text-muted-foreground hover:text-primary hover:bg-primary/5'}`}
-                    onClick={() => handlePin(memory)}
-                  >
-                    {memory.pinned ? <Pin size={13} /> : <PinOff size={13} />}
-                    {memory.pinned ? 'Pinned' : 'Pin'}
-                  </button>
-                  <button
-                    className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground transition-colors text-xs"
+                    className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground transition-colors text-xs ml-auto"
                     onClick={() => handleEdit(memory)}
                   >
                     Edit
                   </button>
                   <button
-                    className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive transition-colors ml-auto"
+                    className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive transition-colors"
                     onClick={() => deleteMemory.mutate({ agentId, id: memory.id })}
                   >
                     <Trash2 size={14} />
@@ -378,7 +388,6 @@ export function TelegramView() {
   const [botToken, setBotToken] = useState('');
   const [notificationLevel, setNotificationLevel] = useState<TelegramNotificationLevel>('all');
 
-  // Sync notificationLevel from server once status loads
   useEffect(() => {
     if (status?.notificationLevel) {
       setNotificationLevel(status.notificationLevel);
@@ -449,7 +458,6 @@ export function TelegramView() {
                 </Button>
               </div>
 
-              {/* How-to guide */}
               <div className="bg-secondary/20 rounded-2xl p-4 border border-secondary/30">
                 <h4 className="font-semibold text-sm mb-2">How to create a bot</h4>
                 <ol className="text-xs text-muted-foreground space-y-1.5 list-decimal list-inside leading-relaxed">
