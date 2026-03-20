@@ -135,7 +135,7 @@ export function SettingsView() {
   const [pocTracking, setPocTracking] = useState(true);
   const [autoMemory, setAutoMemory] = useState(false);
   const [notifications, setNotifications] = useState(false);
-  const [model, setModel] = useState('gpt-4o');
+  const [model, setModel] = useState<'none' | 'grok-4.20' | 'gpt-5.4'>('none');
   const [format, setFormat] = useState('text');
 
   return (
@@ -186,7 +186,7 @@ export function SettingsView() {
 
       <SectionLabel>Agent defaults</SectionLabel>
       <Row label="Default model">
-        <Picker options={['gpt-4o', 'gpt-4o-mini', 'claude-3-5-sonnet', 'gemini-1.5-pro']} value={model} onChange={setModel} />
+        <Picker options={['none', 'grok-4.20', 'gpt-5.4']} value={model} onChange={(v) => setModel(v as 'none' | 'grok-4.20' | 'gpt-5.4')} />
       </Row>
       <Row label="Temperature"><Val mono>0.7</Val></Row>
       <Row label="Max tokens"><Val mono>4,096</Val></Row>

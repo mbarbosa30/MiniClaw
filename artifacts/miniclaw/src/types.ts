@@ -9,7 +9,8 @@ export interface AuthMe {
 }
 
 export interface Agent {
-  id: string;
+  // API returns numeric IDs; typed as string | number for robustness
+  id: string | number;
   name: string;
   emoji: string;
   description: string;
@@ -17,7 +18,7 @@ export interface Agent {
   humorStyle?: HumorStyle;
   interests?: string[];
   topicsToWatch?: string[];
-  premiumModel?: PremiumModel;
+  premiumModel?: PremiumModel | null;
   socialHandles?: SocialHandles;
   enabledSkills?: string[];
   personalContext?: string;
@@ -88,7 +89,7 @@ export interface UpdateAgentPayload {
   socialHandles?: SocialHandles;
   personalContext?: string;
   humorStyle?: HumorStyle;
-  premiumModel?: PremiumModel;
+  premiumModel?: PremiumModel | null;
 }
 
 // PUT /:id/settings — settings-only update
@@ -102,7 +103,24 @@ export interface UpdateAgentSettingsPayload {
   enabledSkills?: string[];
   personalContext?: string;
   humorStyle?: HumorStyle;
-  premiumModel?: PremiumModel;
+  premiumModel?: PremiumModel | null;
+}
+
+// GET /:id/settings response — full agent settings object
+export interface AgentSettings {
+  name?: string;
+  emoji?: string;
+  description?: string;
+  interests?: string[];
+  topicsToWatch?: string[];
+  socialHandles?: SocialHandles;
+  enabledSkills?: string[];
+  personalContext?: string;
+  personaTemplate?: string;
+  telegramBotUsername?: string;
+  telegramNotificationLevel?: TelegramNotificationLevel;
+  humorStyle?: HumorStyle;
+  premiumModel?: PremiumModel | null;
 }
 
 // Knowledge entry — title is required per API docs
@@ -111,6 +129,12 @@ export interface Knowledge {
   title: string;
   content: string;
   createdAt?: string;
+}
+
+// PATCH /:id/knowledge/:knowledgeId — re-embeds content on save
+export interface UpdateKnowledgePayload {
+  title?: string;
+  content?: string;
 }
 
 // Memory — content + category per API docs (not fact/pinned)

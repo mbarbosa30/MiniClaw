@@ -124,7 +124,7 @@ export function HomeView() {
               key={agent.id}
               agent={agent}
               index={i}
-              onPress={() => push('agent-detail', { id: agent.id })}
+              onPress={() => push('agent-detail', { id: String(agent.id) })}
             />
           ))}
 
