@@ -20,16 +20,12 @@ export const STATE_LABEL: Record<VisualState, string> = {
 };
 
 export function agentVisualState(agent: Agent): VisualState {
-  // Prefer runtimeStatus (granular) over the coarser status field
+  // runtimeStatus is the canonical source; null/undefined/unknown → idle (dim)
   const rs = agent.runtimeStatus;
   if (rs === 'thinking') return 'thinking';
   if (rs === 'running') return 'running';
   if (rs === 'waiting') return 'waiting';
-  if (rs === 'idle') return 'idle';
-  // Fall back to status field
-  if (agent.status === 'active') return 'running';
-  if (agent.status === 'paused') return 'idle';
-  if (agent.status === 'error') return 'waiting';
+  // 'idle', null, undefined, or any unknown string → idle
   return 'idle';
 }
 
