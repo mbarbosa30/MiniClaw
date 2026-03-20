@@ -12,14 +12,21 @@ export const STATE_COLOR: Record<VisualState, string> = {
 };
 
 export const STATE_LABEL: Record<VisualState, string> = {
-  running: 'active',
+  running: 'running',
   thinking: 'thinking',
-  waiting: 'error',
+  waiting: 'waiting',
   pending: 'pending',
-  idle: 'paused',
+  idle: 'idle',
 };
 
 export function agentVisualState(agent: Agent): VisualState {
+  // Prefer runtimeStatus (granular) over the coarser status field
+  const rs = agent.runtimeStatus;
+  if (rs === 'thinking') return 'thinking';
+  if (rs === 'running') return 'running';
+  if (rs === 'waiting') return 'waiting';
+  if (rs === 'idle') return 'idle';
+  // Fall back to status field
   if (agent.status === 'active') return 'running';
   if (agent.status === 'paused') return 'idle';
   if (agent.status === 'error') return 'waiting';

@@ -1,76 +1,129 @@
 import { motion } from 'framer-motion';
-import { Plus } from 'lucide-react';
+import { Plus, MoreHorizontal } from 'lucide-react';
 import { useTheme } from '@/lib/theme';
 import { useRouter, useAuthStore } from '@/lib/store';
 import { useAgents } from '@/hooks/use-agents';
-import { StateIndicator, agentVisualState, STATE_COLOR, STATE_LABEL } from '@/components/StateIndicator';
+import { agentVisualState, STATE_COLOR, STATE_LABEL } from '@/components/StateIndicator';
 import { formatAddress } from '@/lib/utils';
 import type { Agent } from '@/types';
 
-function AgentRow({ agent, index, onPress }: { agent: Agent; index: number; onPress: () => void }) {
+const MONO: React.CSSProperties = {
+  fontFamily: 'ui-monospace, Menlo, monospace',
+  fontSize: 9,
+  letterSpacing: '0.04em',
+};
+
+function formatTok(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(0)}k`;
+  return String(n);
+}
+
+function AgentRow({
+  agent,
+  index,
+  onPress,
+  onOptions,
+}: {
+  agent: Agent;
+  index: number;
+  onPress: () => void;
+  onOptions: () => void;
+}) {
   const t = useTheme();
   const state = agentVisualState(agent);
   const color = STATE_COLOR[state];
   const isIdle = state === 'idle' || state === 'pending';
 
-  const skills = agent.enabledSkills?.length ?? 0;
-  const interests = agent.interests?.length ?? 0;
-  const model = agent.premiumModel && agent.premiumModel !== 'none' ? agent.premiumModel : 'std';
-  const snippet = agent.description ? agent.description.slice(0, 42) : STATE_LABEL[state];
+  const activity =
+    agent.stats?.currentActivity ??
+    (agent.description ? agent.description.slice(0, 52) + (agent.description.length > 52 ? '…' : '') : null);
+
+  const statSegments: string[] = [];
+  if (agent.llmTokensUsedToday) statSegments.push(`${formatTok(agent.llmTokensUsedToday)} tok`);
+  if (agent.memorySizeEstimate != null && agent.memorySizeEstimate > 0) {
+    statSegments.push(`${(agent.memorySizeEstimate / 1_048_576).toFixed(1)} MB`);
+  }
+  if (agent.pocScore != null) statSegments.push(`PoC ${agent.pocScore}`);
+  if (agent.celoBalance != null) statSegments.push(`${agent.celoBalance} CELO`);
 
   return (
-    <motion.button
+    <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ delay: index * 0.07, duration: 0.35 }}
-      className="w-full text-left"
-      onClick={onPress}
-      style={{ paddingTop: 20, paddingBottom: 20, display: 'block' }}
+      style={{ paddingTop: 20, paddingBottom: 20 }}
     >
+      {/* Row 1: name + options button */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <span style={{
-          fontSize: 27,
-          fontWeight: 300,
-          letterSpacing: '-0.025em',
-          lineHeight: 1,
-          color: isIdle ? t.textDim : t.text,
-        }}>
+        <button
+          className="text-left"
+          onClick={onPress}
+          style={{
+            flex: 1,
+            background: 'none',
+            border: 'none',
+            padding: 0,
+            cursor: 'pointer',
+            fontSize: 27,
+            fontWeight: 300,
+            letterSpacing: '-0.025em',
+            lineHeight: 1,
+            color: isIdle ? t.textDim : t.text,
+          }}
+        >
           {agent.name}
-        </span>
-        <span style={{ display: 'flex', alignItems: 'center', height: 12 }}>
-          <StateIndicator state={state} />
-        </span>
+        </button>
+        <button
+          onClick={(e) => { e.stopPropagation(); onOptions(); }}
+          style={{
+            width: 32,
+            height: 32,
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            color: t.faint,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+            marginLeft: 4,
+          }}
+        >
+          <MoreHorizontal size={16} strokeWidth={1.5} />
+        </button>
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6 }}>
+
+      {/* Row 2: status label + activity text */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 6 }}>
         <span style={{
           fontSize: 9,
           fontWeight: 600,
           letterSpacing: '0.09em',
           textTransform: 'uppercase',
           color,
+          flexShrink: 0,
         }}>
           {STATE_LABEL[state]}
         </span>
-        <span style={{ fontSize: 10, color: t.label, fontStyle: 'italic' }}>
-          {snippet}{agent.description && agent.description.length > 42 ? '…' : ''}
-        </span>
-      </div>
-      <div style={{ display: 'flex', gap: 16, marginTop: 5 }}>
-        {[`${skills} skills`, `${interests} interests`, model].map((v) => (
-          <span
-            key={v}
-            style={{
-              fontFamily: 'ui-monospace, Menlo, monospace',
-              fontSize: 9,
-              color: t.faint,
-              letterSpacing: '0.03em',
-            }}
-          >
-            {v}
+        {activity && (
+          <span style={{ fontSize: 10, color: t.label, fontStyle: 'italic', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {activity}
           </span>
-        ))}
+        )}
       </div>
-    </motion.button>
+
+      {/* Row 3: monospace live stats */}
+      {statSegments.length > 0 && (
+        <div style={{ display: 'flex', gap: 14, marginTop: 5 }}>
+          {statSegments.map((seg) => (
+            <span key={seg} style={{ ...MONO, color: t.faint }}>
+              {seg}
+            </span>
+          ))}
+        </div>
+      )}
+    </motion.div>
   );
 }
 
@@ -126,6 +179,7 @@ export function HomeView() {
               agent={agent}
               index={i}
               onPress={() => push('agent-detail', { id: String(agent.id) })}
+              onOptions={() => push('agent-options', { id: String(agent.id) })}
             />
           ))}
 
