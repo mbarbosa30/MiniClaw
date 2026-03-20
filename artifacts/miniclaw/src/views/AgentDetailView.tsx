@@ -75,14 +75,21 @@ function AwarenessSection({ agentId }: { agentId: string }) {
 
   const OnchainDot = ({ done, label }: { done: boolean; label: string }) => (
     <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-      <div style={{
-        width: 6,
-        height: 6,
-        borderRadius: '50%',
-        background: done ? '#22c55e' : t.surface,
-        border: `1px solid ${done ? '#22c55e' : t.faint}`,
-        flexShrink: 0,
-      }} />
+      {done ? (
+        <svg width="8" height="8" viewBox="0 0 8 8" fill="none" style={{ flexShrink: 0 }}>
+          <circle cx="4" cy="4" r="3.5" fill="#22c55e" />
+          <path d="M2.2 4l1.2 1.2 2.4-2.4" stroke="#0f0f0f" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      ) : (
+        <div style={{
+          width: 6,
+          height: 6,
+          borderRadius: '50%',
+          background: 'transparent',
+          border: `1px solid ${t.faint}`,
+          flexShrink: 0,
+        }} />
+      )}
       <span style={{
         fontFamily: 'ui-monospace, Menlo, monospace',
         fontSize: 9,
