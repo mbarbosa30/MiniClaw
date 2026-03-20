@@ -1,6 +1,7 @@
-// In dev the Vite server proxies /api → https://selfclaw.ai (avoids CORS).
-// In production the app calls selfclaw.ai directly from the browser.
-export const BASE_URL = import.meta.env.DEV ? '' : 'https://selfclaw.ai';
+// Always use relative URLs — the Replit shared proxy routes /api/* to the
+// api-server in both dev and production. The api-server proxies /api/selfclaw/*
+// to selfclaw.ai server-side, avoiding any browser CORS restrictions.
+export const BASE_URL = '';
 
 const PLATFORM_KEY = import.meta.env.VITE_SELFCLAW_KEY as string | undefined;
 
