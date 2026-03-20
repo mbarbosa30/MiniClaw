@@ -131,7 +131,8 @@ function SkeletonCard({ i }: { i: number }) {
 
 export function DashboardView() {
   const t = useTheme();
-  const { data: agents = [], isLoading } = useAgents();
+  const { data, isLoading } = useAgents();
+  const agents = data?.agents ?? [];
 
   const active = agents.filter((a) => a.status === 'active').length;
   const paused = agents.filter((a) => a.status === 'paused').length;

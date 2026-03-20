@@ -16,6 +16,17 @@ export interface AgentStats {
   currentActivity: string | null;
 }
 
+// Top-level summary object returned by GET /v1/hosted-agents
+export interface AgentListSummary {
+  activeCount: number;
+  totalCount: number;
+  totalTokens: number;
+  totalCostUsd: number;
+}
+
+// Runtime status from the API — more granular than status (active/paused/error)
+export type AgentRuntimeStatus = 'thinking' | 'running' | 'waiting' | 'idle' | string;
+
 export interface Agent {
   // API returns numeric IDs; typed as string | number for robustness
   id: string | number;
@@ -34,6 +45,23 @@ export interface Agent {
   createdAt?: string;
   recentTasks?: AgentTask[];
   stats?: AgentStats;
+
+  // Runtime metrics — returned by both list and detail endpoints
+  runtimeStatus?: AgentRuntimeStatus;
+  llmTokensUsedToday?: number | null;
+  llmTokensLimit?: number | null;
+  pocScore?: number | null;
+  economicsEarnedToday?: number | null;
+  memorySizeEstimate?: number | null;
+  memorySizeLimit?: number | null;
+  enabledSkillNames?: string[];
+
+  // Detail-only fields — only populated on GET /v1/hosted-agents/:id
+  tokenCostUsd?: number | null;
+  celoBalance?: number | null;
+  holdingsUsd?: number | null;
+  uptimePercent?: number | null;
+  progressPercent?: number | null;
 }
 
 // Per API docs: straight | dry-wit | playful | sarcastic | absurdist

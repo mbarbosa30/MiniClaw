@@ -3,6 +3,7 @@ import { apiFetch } from '@/lib/api-client';
 import type {
   Agent,
   AgentStats,
+  AgentListSummary,
   AgentSettings,
   PersonaTemplate,
   SkillDef,
@@ -21,7 +22,7 @@ import type {
   TelegramSettingsPayload,
 } from '@/types';
 
-export type { Agent, PersonaTemplate, SkillDef };
+export type { Agent, AgentListSummary, PersonaTemplate, SkillDef };
 
 // Normalize ID to string for URL interpolation
 const sid = (id: string | number) => String(id);
@@ -31,31 +32,57 @@ const qid = (id: string | number | undefined) => (id != null ? String(id) : id);
 
 // --- AGENT CRUD ---
 
+export interface AgentListResult {
+  agents: Agent[];
+  summary?: AgentListSummary;
+}
+
 export function useAgents() {
-  return useQuery({
+  return useQuery<AgentListResult>({
     queryKey: ['agents'],
     queryFn: async () => {
-      // The live API returns { agents: [] } despite docs showing a plain array.
-      // This was verified empirically — keep the unwrap but tolerate both shapes.
-      const raw = await apiFetch<{ agents: Agent[] } | Agent[]>('/api/selfclaw/v1/hosted-agents');
-      return Array.isArray(raw) ? raw : (raw as { agents: Agent[] }).agents;
+      // The live API returns { agents: [], summary: {} } or a plain Agent[].
+      // Tolerate both shapes; extract summary when present.
+      const raw = await apiFetch<{ agents: Agent[]; summary?: AgentListSummary } | Agent[]>('/api/selfclaw/v1/hosted-agents');
+      if (Array.isArray(raw)) {
+        return { agents: raw };
+      }
+      const envelope = raw as { agents: Agent[]; summary?: AgentListSummary };
+      return { agents: envelope.agents ?? [], summary: envelope.summary };
     },
   });
 }
+
+type DetailEnvelope = {
+  agent: Agent;
+  stats?: AgentStats;
+  recentTasks?: Agent['recentTasks'];
+  tokenCostUsd?: number | null;
+  celoBalance?: number | null;
+  holdingsUsd?: number | null;
+  uptimePercent?: number | null;
+  progressPercent?: number | null;
+};
 
 export function useAgent(id: string | number | undefined) {
   return useQuery({
     queryKey: ['agents', qid(id)],
     queryFn: async () => {
-      const raw = await apiFetch<Agent | { agent: Agent; stats?: AgentStats; recentTasks?: Agent['recentTasks'] }>(
+      const raw = await apiFetch<Agent | DetailEnvelope>(
         `/api/selfclaw/v1/hosted-agents/${sid(id!)}`
       );
-      // Normalize: API may return { agent, stats, recentTasks } or a plain Agent object
+      // Normalize: API may return { agent, stats, recentTasks, ...detail } or a plain Agent object
       if ('agent' in raw && raw.agent && typeof raw.agent === 'object') {
         const agent = raw.agent as Agent;
-        const envelope = raw as { agent: Agent; stats?: AgentStats; recentTasks?: Agent['recentTasks'] };
+        const envelope = raw as DetailEnvelope;
         if (envelope.stats) agent.stats = envelope.stats;
         if (envelope.recentTasks) agent.recentTasks = envelope.recentTasks;
+        // Detail-only fields — copy onto agent when present
+        if (envelope.tokenCostUsd !== undefined) agent.tokenCostUsd = envelope.tokenCostUsd;
+        if (envelope.celoBalance !== undefined) agent.celoBalance = envelope.celoBalance;
+        if (envelope.holdingsUsd !== undefined) agent.holdingsUsd = envelope.holdingsUsd;
+        if (envelope.uptimePercent !== undefined) agent.uptimePercent = envelope.uptimePercent;
+        if (envelope.progressPercent !== undefined) agent.progressPercent = envelope.progressPercent;
         return agent;
       }
       return raw as Agent;

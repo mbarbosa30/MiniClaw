@@ -93,7 +93,8 @@ export function HomeView() {
   const t = useTheme();
   const push = useRouter((s) => s.push);
   const address = useAuthStore((s) => s.address);
-  const { data: agents = [], isLoading, isError } = useAgents();
+  const { data, isLoading, isError } = useAgents();
+  const agents = data?.agents ?? [];
 
   return (
     <div
