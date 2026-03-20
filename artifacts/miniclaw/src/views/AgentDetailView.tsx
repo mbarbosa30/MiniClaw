@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { useAgent, useConversations, useMessages } from '@/hooks/use-agents';
+import { useAgent, useConversations, useMessages, useAwareness } from '@/hooks/use-agents';
 import { useRouter } from '@/lib/store';
 import { useTheme } from '@/lib/theme';
 import { Button } from '@/components/ui';
@@ -27,6 +27,128 @@ const MONO = {
   fontWeight: 600,
   letterSpacing: '0.07em',
 } as const;
+
+// --- Phase colors ---
+
+const PHASE_COLOR: Record<string, string> = {
+  curious: '#555555',
+  developing: '#f59e0b',
+  confident: '#22c55e',
+};
+
+function phaseColor(phase: string): string {
+  return PHASE_COLOR[phase] ?? '#555555';
+}
+
+// --- Awareness section ---
+
+function AwarenessSection({ agentId }: { agentId: string }) {
+  const t = useTheme();
+  const { data, isLoading } = useAwareness(agentId);
+
+  if (isLoading) {
+    return (
+      <div style={{
+        flexShrink: 0,
+        padding: '10px 20px 12px',
+        borderBottom: `1px solid ${t.divider}`,
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+          <div style={{ height: 16, width: '28%', background: t.surface, borderRadius: 3 }} />
+          <div style={{ height: 9, width: '10%', background: t.surface, borderRadius: 2 }} />
+        </div>
+        <div style={{ height: 1.5, background: t.surface, borderRadius: 1, marginBottom: 8 }} />
+        <div style={{ display: 'flex', gap: 16 }}>
+          <div style={{ height: 9, width: '45%', background: t.surface, borderRadius: 2 }} />
+          <div style={{ height: 9, width: '35%', background: t.surface, borderRadius: 2 }} />
+        </div>
+      </div>
+    );
+  }
+
+  if (!data) return null;
+
+  const color = phaseColor(data.phase);
+  const pct = Math.min(Math.max(data.progress ?? 0, 0), 100);
+
+  const onchain = data.onChain ?? { wallet: false, token: false, identity: false };
+
+  const OnchainDot = ({ done, label }: { done: boolean; label: string }) => (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+      <div style={{
+        width: 6,
+        height: 6,
+        borderRadius: '50%',
+        background: done ? '#22c55e' : t.surface,
+        border: `1px solid ${done ? '#22c55e' : t.faint}`,
+        flexShrink: 0,
+      }} />
+      <span style={{
+        fontFamily: 'ui-monospace, Menlo, monospace',
+        fontSize: 9,
+        color: done ? t.label : t.faint,
+        letterSpacing: '0.04em',
+        textTransform: 'uppercase',
+      }}>
+        {label}
+      </span>
+    </div>
+  );
+
+  return (
+    <div style={{
+      flexShrink: 0,
+      padding: '10px 20px 12px',
+      borderBottom: `1px solid ${t.divider}`,
+    }}>
+      {/* Phase pill + percentage */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+        <span style={{
+          fontFamily: 'ui-monospace, Menlo, monospace',
+          fontSize: 8,
+          color,
+          letterSpacing: '0.07em',
+          textTransform: 'uppercase',
+          background: `${color}1a`,
+          border: `1px solid ${color}40`,
+          borderRadius: 3,
+          padding: '2px 5px',
+        }}>
+          {data.label || data.phase}
+        </span>
+        <span style={{
+          fontFamily: 'ui-monospace, Menlo, monospace',
+          fontSize: 9,
+          color: t.faint,
+          letterSpacing: '0.02em',
+        }}>
+          {pct}%
+        </span>
+      </div>
+
+      {/* Progress bar */}
+      <div style={{ height: 1.5, background: t.surface, borderRadius: 1, marginBottom: 8, overflow: 'hidden' }}>
+        <div style={{
+          height: '100%',
+          width: `${pct}%`,
+          background: color,
+          borderRadius: 1,
+          transition: 'width 0.6s ease',
+        }} />
+      </div>
+
+      {/* Onchain dots + stats */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+        <OnchainDot done={onchain.wallet} label="wallet" />
+        <OnchainDot done={onchain.token} label="token" />
+        <OnchainDot done={onchain.identity} label="identity" />
+        <span style={{ marginLeft: 'auto', fontFamily: 'ui-monospace, Menlo, monospace', fontSize: 9, color: t.faint, letterSpacing: '0.02em' }}>
+          {data.memoriesLearned ?? 0}m · {data.conversationCount ?? 0}c · {data.messageCount ?? 0}msg
+        </span>
+      </div>
+    </div>
+  );
+}
 
 // --- Quota bar ---
 
@@ -327,6 +449,7 @@ export function AgentDetailView() {
         onPending={() => push('tasks', { id })}
         quota={quota}
       />
+      <AwarenessSection agentId={id} />
       <div style={{ flex: 1, overflow: 'hidden' }}>
         <ChatTab
           agent={agent}

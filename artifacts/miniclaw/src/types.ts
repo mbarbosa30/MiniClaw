@@ -250,6 +250,22 @@ export interface QuotaInfo {
   percent: number;
 }
 
+// GET /:id/awareness — self-awareness composite score + onchain status
+export interface AgentAwareness {
+  messageCount: number;
+  memoriesLearned: number;
+  conversationCount: number;
+  phase: 'curious' | 'developing' | 'confident' | string;
+  label: string;
+  progress: number;
+  onChain: {
+    wallet: boolean;
+    token: boolean;
+    identity: boolean;
+    allComplete: boolean;
+  };
+}
+
 export interface TelegramStatus {
   connected: boolean;
   botUsername?: string;

@@ -4,6 +4,7 @@ import type {
   Agent,
   AgentStats,
   AgentListSummary,
+  AgentAwareness,
   AgentSettings,
   PersonaTemplate,
   SkillDef,
@@ -423,15 +424,16 @@ export function useActivity(agentId: string | number | undefined) {
   });
 }
 
-// --- AWARENESS (quota info etc.) ---
+// --- AWARENESS ---
 
 export function useAwareness(agentId: string | number | undefined) {
-  return useQuery({
+  return useQuery<AgentAwareness>({
     queryKey: ['awareness', qid(agentId)],
     queryFn: () =>
-      apiFetch<Record<string, unknown>>(
+      apiFetch<AgentAwareness>(
         `/api/selfclaw/v1/hosted-agents/${sid(agentId!)}/awareness`
       ),
     enabled: agentId != null && agentId !== '',
+    staleTime: 60_000,
   });
 }
