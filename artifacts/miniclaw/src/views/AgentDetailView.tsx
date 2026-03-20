@@ -2,10 +2,131 @@ import { useState, useRef, useEffect } from 'react';
 import { useAgent, useConversations, useMessages } from '@/hooks/use-agents';
 import { useRouter } from '@/lib/store';
 import { useTheme } from '@/lib/theme';
-import { ScreenHeader, Button } from '@/components/ui';
-import { MoreHorizontal, Plus } from 'lucide-react';
+import { Button } from '@/components/ui';
+import { MoreHorizontal } from 'lucide-react';
 import { apiFetchStream } from '@/lib/api-client';
+import { StateIndicator, agentVisualState, STATE_COLOR, STATE_LABEL } from '@/components/StateIndicator';
 import type { Agent, ChatMessage } from '@/types';
+
+function AgentHeader({ agent, onBack, onOptions }: { agent: Agent; onBack: () => void; onOptions: () => void }) {
+  const t = useTheme();
+  const state = agentVisualState(agent);
+  const color = STATE_COLOR[state];
+  const isIdle = state === 'idle' || state === 'pending';
+
+  const skills = agent.enabledSkills?.length ?? 0;
+  const interests = agent.interests?.length ?? 0;
+  const model = agent.premiumModel && agent.premiumModel !== 'none' ? agent.premiumModel : 'std';
+  const snippet = agent.description ? agent.description.slice(0, 42) : STATE_LABEL[state];
+  const hasMore = agent.description && agent.description.length > 42;
+
+  return (
+    <div style={{
+      flexShrink: 0,
+      borderBottom: `1px solid ${t.divider}`,
+      background: t.bg,
+      transition: 'background 0.3s ease',
+    }}>
+      {/* Top row: back + options */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: '10px 20px 0',
+      }}>
+        <button
+          onClick={onBack}
+          style={{
+            padding: 8,
+            marginLeft: -8,
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            color: t.label,
+            display: 'flex',
+            alignItems: 'center',
+          }}
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="m15 18-6-6 6-6"/>
+          </svg>
+        </button>
+        <button
+          onClick={onOptions}
+          style={{
+            padding: 8,
+            marginRight: -8,
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            color: t.label,
+            display: 'flex',
+            alignItems: 'center',
+          }}
+        >
+          <MoreHorizontal size={18} strokeWidth={1.5} />
+        </button>
+      </div>
+
+      {/* Content rows: name, status, metadata */}
+      <div style={{ padding: '6px 32px 18px' }}>
+        {/* Agent name */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: 7,
+        }}>
+          <span style={{
+            fontSize: 27,
+            fontWeight: 300,
+            letterSpacing: '-0.025em',
+            lineHeight: 1,
+            color: isIdle ? t.textDim : t.text,
+          }}>
+            {agent.name || 'Agent'}
+          </span>
+          <span style={{ display: 'flex', alignItems: 'center', height: 12 }}>
+            <StateIndicator state={state} />
+          </span>
+        </div>
+
+        {/* Status label + description snippet */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 }}>
+          <span style={{
+            fontSize: 9,
+            fontWeight: 600,
+            letterSpacing: '0.09em',
+            textTransform: 'uppercase',
+            color,
+          }}>
+            {STATE_LABEL[state]}
+          </span>
+          <span style={{ fontSize: 10, color: t.label, fontStyle: 'italic' }}>
+            {snippet}{hasMore ? '…' : ''}
+          </span>
+        </div>
+
+        {/* Metadata tags */}
+        <div style={{ display: 'flex', gap: 16 }}>
+          {[`${skills} skills`, `${interests} interests`, model].map((v) => (
+            <span
+              key={v}
+              style={{
+                fontFamily: 'ui-monospace, Menlo, monospace',
+                fontSize: 9,
+                color: t.faint,
+                letterSpacing: '0.03em',
+              }}
+            >
+              {v}
+            </span>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export function AgentDetailView() {
   const t = useTheme();
@@ -44,25 +165,10 @@ export function AgentDetailView() {
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: t.bg, transition: 'background 0.3s ease' }}>
-      <ScreenHeader
-        title={agentName}
+      <AgentHeader
+        agent={agent}
         onBack={pop}
-        rightAction={
-          <div style={{ display: 'flex', alignItems: 'center' }}>
-            <button
-              onClick={() => setNewChatTrigger(n => n + 1)}
-              style={{ padding: 8, background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: t.label }}
-            >
-              <Plus size={18} strokeWidth={1.5} />
-            </button>
-            <button
-              onClick={() => push('agent-options', { id })}
-              style={{ padding: 8, marginRight: -8, background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: t.label }}
-            >
-              <MoreHorizontal size={18} strokeWidth={1.5} />
-            </button>
-          </div>
-        }
+        onOptions={() => push('agent-options', { id })}
       />
       <div style={{ flex: 1, overflow: 'hidden' }}>
         <ChatTab agent={agent} agentName={agentName} newChatTrigger={newChatTrigger} />
