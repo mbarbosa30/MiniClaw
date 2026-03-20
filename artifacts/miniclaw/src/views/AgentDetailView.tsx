@@ -27,12 +27,12 @@ function AgentHeader({ agent, onBack, onOptions }: { agent: Agent; onBack: () =>
       background: t.bg,
       transition: 'background 0.3s ease',
     }}>
-      {/* Top row: back + options */}
+      {/* Top row: back + options — 32px horizontal padding, buttons offset to align with text */}
       <div style={{
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        padding: '10px 20px 0',
+        padding: '10px 24px 0',
       }}>
         <button
           onClick={onBack}
@@ -68,15 +68,10 @@ function AgentHeader({ agent, onBack, onOptions }: { agent: Agent; onBack: () =>
         </button>
       </div>
 
-      {/* Content rows: name, status, metadata */}
+      {/* Content rows: name, status+indicator, metadata */}
       <div style={{ padding: '6px 32px 18px' }}>
-        {/* Agent name */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          marginBottom: 7,
-        }}>
+        {/* Agent name row */}
+        <div style={{ marginBottom: 7 }}>
           <span style={{
             fontSize: 27,
             fontWeight: 300,
@@ -86,16 +81,17 @@ function AgentHeader({ agent, onBack, onOptions }: { agent: Agent; onBack: () =>
           }}>
             {agent.name || 'Agent'}
           </span>
+        </div>
+
+        {/* Status indicator + status label + description snippet */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 }}>
           <span style={{ display: 'flex', alignItems: 'center', height: 12 }}>
             <StateIndicator state={state} />
           </span>
-        </div>
-
-        {/* Status label + description snippet */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 }}>
           <span style={{
             fontSize: 9,
             fontWeight: 600,
+            fontFamily: 'ui-monospace, Menlo, monospace',
             letterSpacing: '0.09em',
             textTransform: 'uppercase',
             color,
@@ -107,9 +103,9 @@ function AgentHeader({ agent, onBack, onOptions }: { agent: Agent; onBack: () =>
           </span>
         </div>
 
-        {/* Metadata tags */}
+        {/* Metadata tags: model + skills count */}
         <div style={{ display: 'flex', gap: 16 }}>
-          {[`${skills} skills`, `${interests} interests`, model].map((v) => (
+          {[model, `${skills} skills`].map((v) => (
             <span
               key={v}
               style={{
