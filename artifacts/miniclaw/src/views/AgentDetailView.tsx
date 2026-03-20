@@ -226,7 +226,7 @@ function ChatTab({ agent }: { agent: Agent }) {
 
       {/* Conversation list dropdown */}
       {showConversations && conversations && conversations.length > 0 && (
-        <div className="absolute top-[52px] left-3 right-3 z-50 bg-white rounded-xl border border-neutral-100 shadow-lg overflow-hidden">
+        <div className="absolute top-[52px] left-3 right-3 z-50 bg-white rounded-xl border border-neutral-200 overflow-hidden">
           <div className="p-1.5 max-h-48 overflow-y-auto no-scrollbar">
             {conversations.map((conv) => (
               <button
@@ -289,7 +289,7 @@ function ChatTab({ agent }: { agent: Agent }) {
             rows={1}
           />
           <button
-            className={`p-2.5 m-0.5 rounded-lg transition-all ${input.trim() && !isStreaming ? 'bg-primary text-primary-foreground shadow-sm' : 'bg-neutral-200 text-neutral-400'}`}
+            className={`p-2.5 m-0.5 rounded-lg transition-all ${input.trim() && !isStreaming ? 'bg-primary text-primary-foreground' : 'bg-neutral-200 text-neutral-400'}`}
             onClick={handleSend}
             disabled={!input.trim() || isStreaming}
           >
@@ -413,7 +413,7 @@ function SettingsTab({ agent, onDeleted }: { agent: Agent; onDeleted: () => void
             <button
               key={style}
               type="button"
-              className={`px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all border ${form.humorStyle === style ? 'bg-primary text-primary-foreground border-primary/80 shadow-sm' : 'bg-white text-muted-foreground border-neutral-200 hover:border-neutral-300'}`}
+              className={`px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all border ${form.humorStyle === style ? 'bg-foreground text-background border-foreground' : 'bg-white text-muted-foreground border-neutral-200'}`}
               onClick={() => setForm(p => ({ ...p, humorStyle: style }))}
             >
               {HUMOR_LABELS[style]}

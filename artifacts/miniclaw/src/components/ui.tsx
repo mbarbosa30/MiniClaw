@@ -7,7 +7,7 @@ export const Button = React.forwardRef<HTMLButtonElement, React.ButtonHTMLAttrib
     const base = "inline-flex items-center justify-center font-semibold transition-all duration-150 active:scale-[0.97] disabled:opacity-45 disabled:pointer-events-none select-none";
 
     const variants = {
-      primary:     "bg-primary text-primary-foreground rounded-xl border border-primary/80 shadow-sm hover:opacity-90",
+      primary:     "bg-primary text-primary-foreground rounded-xl border border-primary/80 hover:opacity-90",
       secondary:   "bg-neutral-100 text-foreground rounded-xl border border-neutral-200 hover:bg-neutral-200/80",
       ghost:       "bg-transparent text-foreground rounded-xl hover:bg-black/[0.04]",
       destructive: "bg-transparent text-destructive rounded-xl border border-destructive/20 hover:bg-destructive/5",
@@ -61,7 +61,7 @@ export const Card = ({ className, children, ...props }: HTMLMotionProps<"div">) 
   <motion.div
     initial={{ opacity: 0, y: 8 }}
     animate={{ opacity: 1, y: 0 }}
-    className={cn("bg-white rounded-2xl border border-neutral-100 shadow-[0_1px_4px_rgba(0,0,0,0.06)]", className)}
+    className={cn("bg-white rounded-2xl border border-neutral-100", className)}
     {...props}
   >
     {children}
