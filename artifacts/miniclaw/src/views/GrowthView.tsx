@@ -63,13 +63,15 @@ function AgentGrowthFetcher({
   onData,
 }: {
   agentId: string | number;
-  onData: (id: string | number, data: GrowthSummary | undefined) => void;
+  onData: (id: string | number, data: GrowthSummary | undefined, isLoading: boolean) => void;
 }) {
-  const { data } = useGrowthSummary(agentId);
+  const { data, isLoading } = useGrowthSummary(agentId);
 
   useEffect(() => {
-    onData(agentId, data);
-  }, [data]);
+    if (!isLoading) {
+      onData(agentId, data, false);
+    }
+  }, [data, isLoading]);
 
   return null;
 }
@@ -79,19 +81,37 @@ function AgentGrowthFetcher({
 export function GrowthView() {
   const t = useTheme();
   const pop = useRouter(s => s.pop);
-  const { data, isLoading } = useAgents();
+  const { data, isLoading: agentsLoading } = useAgents();
   const agents = data?.agents ?? [];
 
   const [summaryByAgent, setSummaryByAgent] = useState<Record<string, GrowthSummary>>({});
+  const [resolvedAgents, setResolvedAgents] = useState<Set<string>>(new Set());
+
+  // Reset when the agent set changes (prune stale summaries)
+  const agentIdsKey = agents.map(a => String(a.id)).sort().join(',');
+  useEffect(() => {
+    setSummaryByAgent({});
+    setResolvedAgents(new Set());
+  }, [agentIdsKey]);
 
   const handleData = (id: string | number, summary: GrowthSummary | undefined) => {
-    if (!summary) return;
-    setSummaryByAgent(prev => {
-      const key = String(id);
-      if (prev[key] === summary) return prev;
-      return { ...prev, [key]: summary };
+    const key = String(id);
+    setResolvedAgents(prev => {
+      if (prev.has(key)) return prev;
+      const next = new Set(prev);
+      next.add(key);
+      return next;
     });
+    if (summary) {
+      setSummaryByAgent(prev => {
+        if (prev[key] === summary) return prev;
+        return { ...prev, [key]: summary };
+      });
+    }
   };
+
+  // Show skeletons until agents have loaded AND all per-agent summaries have resolved
+  const isLoading = agentsLoading || (agents.length > 0 && resolvedAgents.size < agents.length);
 
   const { combinedTotal, sortedCategories, maxStreak, totalActiveDays } = useMemo(() => {
     let total = 0;
@@ -161,8 +181,8 @@ export function GrowthView() {
             Actions approved this month
           </p>
 
-          {/* Streak + active days */}
-          {!isLoading && (maxStreak > 0 || totalActiveDays > 0) && (
+          {/* Streak + active days — always shown once loaded, faint at 0 */}
+          {!isLoading && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 16 }}>
               <p style={{
                 fontFamily: 'ui-monospace, Menlo, monospace',
