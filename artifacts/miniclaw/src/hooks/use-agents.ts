@@ -55,7 +55,7 @@ export function useAgent(id: string | number | undefined) {
         const agent = raw.agent as Agent;
         const envelope = raw as { agent: Agent; stats?: AgentStats; recentTasks?: Agent['recentTasks'] };
         if (envelope.stats) agent.stats = envelope.stats;
-        if (envelope.recentTasks && !agent.recentTasks) agent.recentTasks = envelope.recentTasks;
+        if (envelope.recentTasks) agent.recentTasks = envelope.recentTasks;
         return agent;
       }
       return raw as Agent;
