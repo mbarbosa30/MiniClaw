@@ -14,7 +14,7 @@ import { DashboardView } from "@/views/DashboardView";
 import { SettingsView } from "@/views/SettingsView";
 import { CreateAgentView } from "@/views/CreateAgentView";
 import { AgentDetailView } from "@/views/AgentDetailView";
-import { SkillsView, KnowledgeView, SoulView, MemoriesView, TasksView, TelegramView } from "@/views/AgentSubViews";
+import { SkillsView, KnowledgeView, SoulView, MemoriesView, TasksView, TelegramView, AgentOptionsView, AgentSettingsView } from "@/views/AgentSubViews";
 import { AppNav } from "@/components/AppNav";
 
 const queryClient = new QueryClient({
@@ -53,13 +53,15 @@ function ViewManager() {
 
   switch (view) {
     case 'create':       return <CreateAgentView />;
-    case 'agent-detail': return <AgentDetailView />;
-    case 'skills':       return <SkillsView />;
-    case 'knowledge':    return <KnowledgeView />;
-    case 'soul':         return <SoulView />;
-    case 'memories':     return <MemoriesView />;
-    case 'tasks':        return <TasksView />;
-    case 'telegram':     return <TelegramView />;
+    case 'agent-detail':   return <AgentDetailView />;
+    case 'agent-options':  return <AgentOptionsView />;
+    case 'agent-settings': return <AgentSettingsView />;
+    case 'skills':         return <SkillsView />;
+    case 'knowledge':      return <KnowledgeView />;
+    case 'soul':           return <SoulView />;
+    case 'memories':       return <MemoriesView />;
+    case 'tasks':          return <TasksView />;
+    case 'telegram':       return <TelegramView />;
     default:             return <ConnectView />;
   }
 }

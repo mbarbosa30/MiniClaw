@@ -1,11 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
-import { useAgent, useDeleteAgent, useUpdateAgent, useConversations, useMessages } from '@/hooks/use-agents';
+import { useAgent, useConversations, useMessages } from '@/hooks/use-agents';
 import { useRouter } from '@/lib/store';
 import { useTheme } from '@/lib/theme';
 import { ScreenHeader, Button } from '@/components/ui';
-import { Settings, MessageSquare, MoreHorizontal, Send, Trash2, Plus } from 'lucide-react';
+import { MoreHorizontal, Plus } from 'lucide-react';
 import { apiFetchStream } from '@/lib/api-client';
-import type { Agent, HumorStyle, PremiumModel, ChatMessage } from '@/types';
+import type { Agent, ChatMessage } from '@/types';
 
 export function AgentDetailView() {
   const t = useTheme();
@@ -14,14 +14,13 @@ export function AgentDetailView() {
   const push = useRouter(s => s.push);
   const id: string = currentView.params?.id ?? '';
   const { data: agent, isLoading } = useAgent(id);
-  const [tab, setTab] = useState<'chat' | 'settings' | 'more'>('chat');
   const [newChatTrigger, setNewChatTrigger] = useState(0);
 
   if (isLoading) {
     return (
       <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, background: t.bg }}>
         <div style={{ width: 28, height: 28, borderRadius: '50%', border: `3px solid ${t.divider}`, borderTopColor: t.text, animation: 'spin 0.8s linear infinite' }} />
-        <p style={{ fontSize: 12, color: t.faint }}>Loading agent…</p>
+        <p style={{ fontSize: 12, color: t.faint }}>Loading…</p>
         <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
       </div>
     );
@@ -43,63 +42,27 @@ export function AgentDetailView() {
       <ScreenHeader
         title={agentName}
         onBack={pop}
-        rightAction={tab === 'chat' ? (
-          <button
-            onClick={() => setNewChatTrigger(n => n + 1)}
-            style={{ padding: 8, marginRight: -8, background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: t.label }}
-          >
-            <Plus size={18} strokeWidth={1.5} />
-          </button>
-        ) : undefined}
+        rightAction={
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <button
+              onClick={() => setNewChatTrigger(n => n + 1)}
+              style={{ padding: 8, background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: t.label }}
+            >
+              <Plus size={18} strokeWidth={1.5} />
+            </button>
+            <button
+              onClick={() => push('agent-options', { id })}
+              style={{ padding: 8, marginRight: -8, background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: t.label }}
+            >
+              <MoreHorizontal size={18} strokeWidth={1.5} />
+            </button>
+          </div>
+        }
       />
-
       <div style={{ flex: 1, overflow: 'hidden' }}>
-        {tab === 'chat' && <ChatTab agent={agent} agentName={agentName} newChatTrigger={newChatTrigger} />}
-        {tab === 'settings' && <SettingsTab agent={agent} onDeleted={pop} />}
-        {tab === 'more' && <MoreTab agentId={id} onNavigate={(path) => push(path as Parameters<typeof push>[0], { id })} />}
-      </div>
-
-      {/* Bottom Tab Bar */}
-      <div style={{
-        display: 'flex',
-        paddingBottom: 20,
-        paddingTop: 12,
-        background: t.bg,
-        borderTop: `1px solid ${t.navBorder}`,
-        flexShrink: 0,
-        transition: 'background 0.3s ease, border-color 0.3s ease',
-      }}>
-        <NavButton icon={MessageSquare} active={tab === 'chat'} onClick={() => setTab('chat')} />
-        <NavButton icon={Settings} active={tab === 'settings'} onClick={() => setTab('settings')} />
-        <NavButton icon={MoreHorizontal} active={tab === 'more'} onClick={() => setTab('more')} />
+        <ChatTab agent={agent} agentName={agentName} newChatTrigger={newChatTrigger} />
       </div>
     </div>
-  );
-}
-
-function NavButton({ icon, active, onClick }: { icon: React.ElementType; active: boolean; onClick: () => void }) {
-  const t = useTheme();
-  const Icon = icon;
-  return (
-    <button
-      onClick={onClick}
-      style={{
-        flex: 1,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: 'none',
-        border: 'none',
-        cursor: 'pointer',
-        padding: '8px 0',
-      }}
-    >
-      <Icon
-        size={18}
-        strokeWidth={active ? 2.25 : 1.5}
-        color={active ? t.text : t.faint}
-      />
-    </button>
   );
 }
 
@@ -115,7 +78,6 @@ function fmtTime(ts?: number, iso?: string): string {
   }
 }
 
-// --- CHAT TAB ---
 function ChatTab({ agent, agentName, newChatTrigger }: { agent: Agent; agentName: string; newChatTrigger: number }) {
   const t = useTheme();
   const { data: conversations, refetch: refetchConversations } = useConversations(agent.id);
@@ -254,6 +216,8 @@ function ChatTab({ agent, agentName, newChatTrigger }: { agent: Agent; agentName
     }
   };
 
+  const agentLabel = agentName.toUpperCase();
+
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: t.bg }}>
       {/* Messages */}
@@ -264,7 +228,6 @@ function ChatTab({ agent, agentName, newChatTrigger }: { agent: Agent; agentName
         {messages.map((m, i) => {
           const timestamp = fmtTime(m._ts, m.createdAt);
           const isActiveStream = isStreaming && i === messages.length - 1 && m.role === 'assistant';
-          const roleLabel = m.role === 'user' ? 'YOU' : m.role === 'system' ? 'ERROR' : 'AGENT';
 
           if (m.role === 'system') {
             return (
@@ -280,9 +243,10 @@ function ChatTab({ agent, agentName, newChatTrigger }: { agent: Agent; agentName
             );
           }
 
+          const roleLabel = m.role === 'user' ? 'YOU' : agentLabel;
+
           return (
             <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              {/* Role + timestamp row */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
                 <span style={{
                   fontSize: 9,
@@ -306,7 +270,6 @@ function ChatTab({ agent, agentName, newChatTrigger }: { agent: Agent; agentName
                   </span>
                 )}
               </div>
-              {/* Message text */}
               <p style={{
                 fontSize: 14,
                 fontWeight: 300,
@@ -349,7 +312,6 @@ function ChatTab({ agent, agentName, newChatTrigger }: { agent: Agent; agentName
               color: t.text,
               fontFamily: 'inherit',
               lineHeight: 1.6,
-              opacity: 1,
             }}
             rows={1}
           />
@@ -381,262 +343,3 @@ function ChatTab({ agent, agentName, newChatTrigger }: { agent: Agent; agentName
     </div>
   );
 }
-
-// --- SETTINGS TAB HELPERS ---
-const HUMOR_OPTIONS: HumorStyle[] = ['straight', 'dry-wit', 'playful', 'sarcastic', 'absurdist'];
-const MODEL_OPTIONS: { value: PremiumModel; label: string }[] = [
-  { value: 'none', label: 'standard' },
-  { value: 'grok-4.20', label: 'grok 4.20' },
-  { value: 'gpt-5.4', label: 'gpt-5.4' },
-];
-
-function SLabel({ children }: { children: React.ReactNode }) {
-  const t = useTheme();
-  return (
-    <p style={{
-      fontSize: 9, fontWeight: 600, color: t.faint,
-      letterSpacing: '0.10em', textTransform: 'uppercase',
-      fontFamily: 'ui-monospace, Menlo, monospace',
-      paddingTop: 28, paddingBottom: 10,
-    }}>{children}</p>
-  );
-}
-
-function SRow({ label, children }: { label: string; children: React.ReactNode }) {
-  const t = useTheme();
-  return (
-    <div style={{
-      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-      paddingTop: 13, paddingBottom: 13,
-      borderBottom: `1px solid ${t.divider}`,
-    }}>
-      <span style={{ fontSize: 12, color: t.label, letterSpacing: '-0.01em' }}>{label}</span>
-      {children}
-    </div>
-  );
-}
-
-function STextRow({ label, value, onChange, placeholder }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string }) {
-  const t = useTheme();
-  return (
-    <div style={{ paddingTop: 13, paddingBottom: 13, borderBottom: `1px solid ${t.divider}` }}>
-      <p style={{ fontSize: 9, color: t.faint, letterSpacing: '0.06em', textTransform: 'uppercase', fontFamily: 'ui-monospace, Menlo, monospace', marginBottom: 6 }}>{label}</p>
-      <input
-        value={value}
-        onChange={e => onChange(e.target.value)}
-        placeholder={placeholder}
-        style={{
-          width: '100%', background: 'transparent', border: 'none', outline: 'none',
-          fontSize: 13, color: t.text, fontFamily: 'inherit', letterSpacing: '-0.01em',
-          padding: 0,
-        }}
-      />
-    </div>
-  );
-}
-
-function STextAreaRow({ label, value, onChange, placeholder }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string }) {
-  const t = useTheme();
-  return (
-    <div style={{ paddingTop: 13, paddingBottom: 13, borderBottom: `1px solid ${t.divider}` }}>
-      <p style={{ fontSize: 9, color: t.faint, letterSpacing: '0.06em', textTransform: 'uppercase', fontFamily: 'ui-monospace, Menlo, monospace', marginBottom: 6 }}>{label}</p>
-      <textarea
-        value={value}
-        onChange={e => onChange(e.target.value)}
-        placeholder={placeholder}
-        rows={2}
-        style={{
-          width: '100%', background: 'transparent', border: 'none', outline: 'none', resize: 'none',
-          fontSize: 13, color: t.text, fontFamily: 'inherit', letterSpacing: '-0.01em',
-          lineHeight: 1.6, padding: 0,
-        }}
-      />
-    </div>
-  );
-}
-
-function SPicker<T extends string>({ options, value, onChange, label }: { options: T[]; value: T; onChange: (v: T) => void; label: (v: T) => string }) {
-  const t = useTheme();
-  const i = options.indexOf(value);
-  return (
-    <button
-      onClick={() => onChange(options[(i + 1) % options.length])}
-      style={{
-        fontFamily: 'ui-monospace, Menlo, monospace', fontSize: 10, color: t.text,
-        letterSpacing: '0.02em', background: 'none', border: 'none', padding: 0,
-        cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4,
-      }}
-    >
-      {label(value)}
-      <span style={{ color: t.faint, fontSize: 8 }}>▼</span>
-    </button>
-  );
-}
-
-// --- SETTINGS TAB ---
-function SettingsTab({ agent, onDeleted }: { agent: Agent; onDeleted: () => void }) {
-  const t = useTheme();
-  const update = useUpdateAgent();
-  const remove = useDeleteAgent();
-
-  const [form, setForm] = useState({
-    name: agent.name ?? '',
-    description: agent.description ?? '',
-    interests: (agent.interests ?? []).join(', '),
-    topicsToWatch: (agent.topicsToWatch ?? []).join(', '),
-    humorStyle: (agent.humorStyle ?? 'straight') as HumorStyle,
-    premiumModel: (agent.premiumModel ?? 'none') as PremiumModel,
-    socialHandles: {
-      twitter: agent.socialHandles?.twitter ?? '',
-      telegram: agent.socialHandles?.telegram ?? '',
-      farcaster: agent.socialHandles?.farcaster ?? '',
-    },
-  });
-
-  const toArray = (s: string): string[] =>
-    s.split(',').map(x => x.trim()).filter(Boolean);
-
-  const handleSave = () => {
-    update.mutate({
-      id: agent.id,
-      data: {
-        name: form.name,
-        description: form.description,
-        interests: toArray(form.interests),
-        topicsToWatch: toArray(form.topicsToWatch),
-        humorStyle: form.humorStyle,
-        premiumModel: form.premiumModel,
-        socialHandles: {
-          twitter: form.socialHandles.twitter || undefined,
-          telegram: form.socialHandles.telegram || undefined,
-          farcaster: form.socialHandles.farcaster || undefined,
-        },
-      }
-    });
-  };
-
-  const handleDelete = () => {
-    if (confirm('Delete this agent? This action cannot be undone.')) {
-      remove.mutate(agent.id, { onSuccess: onDeleted });
-    }
-  };
-
-  return (
-    <div className="no-scrollbar" style={{ height: '100%', overflowY: 'auto', padding: '0 32px 80px' }}>
-      <SLabel>Identity</SLabel>
-      <STextRow label="Name" value={form.name} onChange={v => setForm(p => ({ ...p, name: v }))} placeholder="Agent name" />
-      <SRow label="Humor">
-        <SPicker
-          options={HUMOR_OPTIONS}
-          value={form.humorStyle}
-          onChange={v => setForm(p => ({ ...p, humorStyle: v }))}
-          label={v => v}
-        />
-      </SRow>
-      <SRow label="Model">
-        <SPicker
-          options={MODEL_OPTIONS.map(o => o.value)}
-          value={form.premiumModel}
-          onChange={v => setForm(p => ({ ...p, premiumModel: v }))}
-          label={v => MODEL_OPTIONS.find(o => o.value === v)?.label ?? v}
-        />
-      </SRow>
-
-      <SLabel>Content</SLabel>
-      <STextAreaRow label="Description" value={form.description} onChange={v => setForm(p => ({ ...p, description: v }))} placeholder="What this agent does…" />
-      <STextRow label="Interests" value={form.interests} onChange={v => setForm(p => ({ ...p, interests: v }))} placeholder="DeFi, NFTs, AI" />
-      <STextRow label="Topics to watch" value={form.topicsToWatch} onChange={v => setForm(p => ({ ...p, topicsToWatch: v }))} placeholder="Celo price, ETH news" />
-
-      <SLabel>Social</SLabel>
-      <STextRow label="Twitter / X" value={form.socialHandles.twitter} onChange={v => setForm(p => ({ ...p, socialHandles: { ...p.socialHandles, twitter: v } }))} placeholder="@username" />
-      <STextRow label="Telegram" value={form.socialHandles.telegram} onChange={v => setForm(p => ({ ...p, socialHandles: { ...p.socialHandles, telegram: v } }))} placeholder="@username" />
-      <STextRow label="Farcaster" value={form.socialHandles.farcaster} onChange={v => setForm(p => ({ ...p, socialHandles: { ...p.socialHandles, farcaster: v } }))} placeholder="@username" />
-
-      <SLabel>Actions</SLabel>
-      {update.isError && (
-        <p style={{ fontSize: 11, color: '#f87171', fontFamily: 'ui-monospace, Menlo, monospace', marginBottom: 8 }}>
-          {update.error instanceof Error ? update.error.message : 'Failed to save.'}
-        </p>
-      )}
-      {update.isSuccess && (
-        <p style={{ fontSize: 11, color: '#22c55e', fontFamily: 'ui-monospace, Menlo, monospace', marginBottom: 8 }}>Saved.</p>
-      )}
-      <div style={{ paddingTop: 13, paddingBottom: 13, borderBottom: `1px solid ${t.divider}` }}>
-        <button
-          onClick={handleSave}
-          disabled={update.isPending}
-          style={{ fontSize: 12, color: t.label, textDecoration: 'underline', textUnderlineOffset: 3, background: 'none', border: 'none', padding: 0, cursor: 'pointer', letterSpacing: '-0.01em', opacity: update.isPending ? 0.5 : 1 }}
-        >
-          {update.isPending ? 'Saving…' : 'Save changes'}
-        </button>
-      </div>
-      <div style={{ paddingTop: 13, paddingBottom: 13, borderBottom: `1px solid ${t.divider}` }}>
-        <button
-          onClick={handleDelete}
-          disabled={remove.isPending}
-          style={{ fontSize: 12, color: '#f87171', textDecoration: 'underline', textUnderlineOffset: 3, background: 'none', border: 'none', padding: 0, cursor: 'pointer', letterSpacing: '-0.01em', opacity: remove.isPending ? 0.5 : 1 }}
-        >
-          {remove.isPending ? 'Deleting…' : 'Delete agent'}
-        </button>
-      </div>
-    </div>
-  );
-}
-
-// --- MORE TAB ---
-function MoreTab({ agentId, onNavigate }: { agentId: string; onNavigate: (path: string) => void }) {
-  const t = useTheme();
-
-  const menu = [
-    { id: 'memories',  label: 'Memories',   meta: 'facts · conversations' },
-    { id: 'knowledge', label: 'Knowledge',   meta: 'docs · urls' },
-    { id: 'skills',    label: 'Skills',      meta: 'capabilities' },
-    { id: 'soul',      label: 'Soul',        meta: 'identity · directives' },
-    { id: 'tasks',     label: 'Tasks',       meta: 'pending approvals' },
-    { id: 'telegram',  label: 'Telegram',    meta: 'bot connection' },
-  ];
-
-  return (
-    <div className="no-scrollbar" style={{ height: '100%', overflowY: 'auto', padding: '0 32px 80px' }}>
-      {menu.map((item, i) => (
-        <button
-          key={item.id}
-          onClick={() => onNavigate(item.id)}
-          style={{
-            width: '100%',
-            textAlign: 'left',
-            paddingTop: 20,
-            paddingBottom: 20,
-            display: 'block',
-            background: 'none',
-            border: 'none',
-            borderBottom: i < menu.length - 1 ? `1px solid ${t.divider}` : 'none',
-            cursor: 'pointer',
-          }}
-        >
-          <span style={{
-            fontSize: 22,
-            fontWeight: 300,
-            letterSpacing: '-0.025em',
-            lineHeight: 1,
-            color: t.text,
-            display: 'block',
-          }}>
-            {item.label}
-          </span>
-          <span style={{
-            fontSize: 9,
-            color: t.faint,
-            fontFamily: 'ui-monospace, Menlo, monospace',
-            letterSpacing: '0.04em',
-            marginTop: 6,
-            display: 'block',
-          }}>
-            {item.meta}
-          </span>
-        </button>
-      ))}
-    </div>
-  );
-}
-

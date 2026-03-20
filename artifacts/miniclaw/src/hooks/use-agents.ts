@@ -45,7 +45,10 @@ export function useAgents() {
 export function useAgent(id: string | number | undefined) {
   return useQuery({
     queryKey: ['agents', qid(id)],
-    queryFn: () => apiFetch<Agent>(`/api/selfclaw/v1/hosted-agents/${sid(id!)}`),
+    queryFn: async () => {
+      const raw = await apiFetch<Agent | { agent: Agent }>(`/api/selfclaw/v1/hosted-agents/${sid(id!)}`);
+      return ('agent' in raw && raw.agent && typeof raw.agent === 'object') ? raw.agent : raw as Agent;
+    },
     enabled: id != null && id !== '',
   });
 }

@@ -9,6 +9,8 @@ export type ViewName =
   | 'settings'
   | 'create'
   | 'agent-detail'
+  | 'agent-options'
+  | 'agent-settings'
   | 'memories'
   | 'knowledge'
   | 'skills'

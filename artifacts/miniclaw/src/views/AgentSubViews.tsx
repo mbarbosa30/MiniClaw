@@ -9,6 +9,7 @@ import {
   useMemories, useUpdateMemory, useDeleteMemory,
   useTasks, useResolveTask,
   useTelegramStatus, useUpdateTelegramSettings,
+  useUpdateAgent, useDeleteAgent,
 } from '@/hooks/use-agents';
 import { apiFetch } from '@/lib/api-client';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -16,7 +17,7 @@ import {
   Trash2, Link as LinkIcon, FileText, Check, X, Send,
   Zap, BookOpen, Brain, CircleCheck, Bot,
 } from 'lucide-react';
-import type { Memory, TelegramNotificationLevel } from '@/types';
+import type { Agent, HumorStyle, PremiumModel, Memory, TelegramNotificationLevel } from '@/types';
 
 function SubScreenLayout({ title, children }: { title: string; children: React.ReactNode }) {
   const t = useTheme();
@@ -543,6 +544,236 @@ export function TelegramView() {
         </div>
       )}
     </SubScreenLayout>
+  );
+}
+
+// --- AGENT OPTIONS VIEW ---
+export function AgentOptionsView() {
+  const t = useTheme();
+  const pop = useRouter(s => s.pop);
+  const push = useRouter(s => s.push);
+  const agentId: string = useRouter(s => s.currentView.params?.id ?? '');
+
+  const menu = [
+    { id: 'agent-settings', label: 'Settings',  meta: 'configure · identity' },
+    { id: 'memories',       label: 'Memories',   meta: 'facts · conversations' },
+    { id: 'knowledge',      label: 'Knowledge',  meta: 'docs · urls' },
+    { id: 'skills',         label: 'Skills',     meta: 'capabilities' },
+    { id: 'soul',           label: 'Soul',       meta: 'identity · directives' },
+    { id: 'tasks',          label: 'Tasks',      meta: 'pending approvals' },
+    { id: 'telegram',       label: 'Telegram',   meta: 'bot connection' },
+  ];
+
+  return (
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: t.bg, transition: 'background 0.3s ease' }}>
+      <ScreenHeader title="Options" onBack={pop} />
+      <div className="no-scrollbar" style={{ flex: 1, overflowY: 'auto', padding: '0 32px 80px' }}>
+        {menu.map((item, i) => (
+          <button
+            key={item.id}
+            onClick={() => push(item.id as Parameters<typeof push>[0], { id: agentId })}
+            style={{
+              width: '100%',
+              textAlign: 'left',
+              paddingTop: 20,
+              paddingBottom: 20,
+              display: 'block',
+              background: 'none',
+              border: 'none',
+              borderBottom: i < menu.length - 1 ? `1px solid ${t.divider}` : 'none',
+              cursor: 'pointer',
+            }}
+          >
+            <span style={{ fontSize: 22, fontWeight: 300, letterSpacing: '-0.025em', lineHeight: 1, color: t.text, display: 'block' }}>
+              {item.label}
+            </span>
+            <span style={{ fontSize: 9, color: t.faint, fontFamily: 'ui-monospace, Menlo, monospace', letterSpacing: '0.04em', marginTop: 6, display: 'block' }}>
+              {item.meta}
+            </span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// --- AGENT SETTINGS VIEW (helpers) ---
+const HUMOR_OPTIONS: HumorStyle[] = ['straight', 'dry-wit', 'playful', 'sarcastic', 'absurdist'];
+const MODEL_OPTIONS: { value: PremiumModel; label: string }[] = [
+  { value: 'none', label: 'standard' },
+  { value: 'grok-4.20', label: 'grok 4.20' },
+  { value: 'gpt-5.4', label: 'gpt-5.4' },
+];
+
+function SLabel({ children }: { children: React.ReactNode }) {
+  const t = useTheme();
+  return (
+    <p style={{ fontSize: 9, fontWeight: 600, color: t.faint, letterSpacing: '0.10em', textTransform: 'uppercase', fontFamily: 'ui-monospace, Menlo, monospace', paddingTop: 28, paddingBottom: 10 }}>
+      {children}
+    </p>
+  );
+}
+
+function SRow({ label, children }: { label: string; children: React.ReactNode }) {
+  const t = useTheme();
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 13, paddingBottom: 13, borderBottom: `1px solid ${t.divider}` }}>
+      <span style={{ fontSize: 12, color: t.label, letterSpacing: '-0.01em' }}>{label}</span>
+      {children}
+    </div>
+  );
+}
+
+function STextRow({ label, value, onChange, placeholder }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string }) {
+  const t = useTheme();
+  return (
+    <div style={{ paddingTop: 13, paddingBottom: 13, borderBottom: `1px solid ${t.divider}` }}>
+      <p style={{ fontSize: 9, color: t.faint, letterSpacing: '0.06em', textTransform: 'uppercase', fontFamily: 'ui-monospace, Menlo, monospace', marginBottom: 6 }}>{label}</p>
+      <input value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder}
+        style={{ width: '100%', background: 'transparent', border: 'none', outline: 'none', fontSize: 13, color: t.text, fontFamily: 'inherit', letterSpacing: '-0.01em', padding: 0 }} />
+    </div>
+  );
+}
+
+function STextAreaRow({ label, value, onChange, placeholder }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string }) {
+  const t = useTheme();
+  return (
+    <div style={{ paddingTop: 13, paddingBottom: 13, borderBottom: `1px solid ${t.divider}` }}>
+      <p style={{ fontSize: 9, color: t.faint, letterSpacing: '0.06em', textTransform: 'uppercase', fontFamily: 'ui-monospace, Menlo, monospace', marginBottom: 6 }}>{label}</p>
+      <textarea value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} rows={2}
+        style={{ width: '100%', background: 'transparent', border: 'none', outline: 'none', resize: 'none', fontSize: 13, color: t.text, fontFamily: 'inherit', letterSpacing: '-0.01em', lineHeight: 1.6, padding: 0 }} />
+    </div>
+  );
+}
+
+function SPicker<T extends string>({ options, value, onChange, label }: { options: T[]; value: T; onChange: (v: T) => void; label: (v: T) => string }) {
+  const t = useTheme();
+  const i = options.indexOf(value);
+  return (
+    <button onClick={() => onChange(options[(i + 1) % options.length])}
+      style={{ fontFamily: 'ui-monospace, Menlo, monospace', fontSize: 10, color: t.text, letterSpacing: '0.02em', background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+      {label(value)}
+      <span style={{ color: t.faint, fontSize: 8 }}>▼</span>
+    </button>
+  );
+}
+
+function SettingsForm({ agent, onDeleted }: { agent: Agent; onDeleted: () => void }) {
+  const t = useTheme();
+  const update = useUpdateAgent();
+  const remove = useDeleteAgent();
+
+  const [form, setForm] = useState({
+    name: agent.name ?? '',
+    description: agent.description ?? '',
+    interests: (agent.interests ?? []).join(', '),
+    topicsToWatch: (agent.topicsToWatch ?? []).join(', '),
+    humorStyle: (agent.humorStyle ?? 'straight') as HumorStyle,
+    premiumModel: (agent.premiumModel ?? 'none') as PremiumModel,
+    socialHandles: {
+      twitter: agent.socialHandles?.twitter ?? '',
+      telegram: agent.socialHandles?.telegram ?? '',
+      farcaster: agent.socialHandles?.farcaster ?? '',
+    },
+  });
+
+  const toArray = (s: string): string[] => s.split(',').map(x => x.trim()).filter(Boolean);
+
+  const handleSave = () => {
+    update.mutate({
+      id: agent.id,
+      data: {
+        name: form.name,
+        description: form.description,
+        interests: toArray(form.interests),
+        topicsToWatch: toArray(form.topicsToWatch),
+        humorStyle: form.humorStyle,
+        premiumModel: form.premiumModel,
+        socialHandles: {
+          twitter: form.socialHandles.twitter || undefined,
+          telegram: form.socialHandles.telegram || undefined,
+          farcaster: form.socialHandles.farcaster || undefined,
+        },
+      }
+    });
+  };
+
+  const handleDelete = () => {
+    if (confirm('Delete this agent? This action cannot be undone.')) {
+      remove.mutate(agent.id, { onSuccess: onDeleted });
+    }
+  };
+
+  return (
+    <div className="no-scrollbar" style={{ height: '100%', overflowY: 'auto', padding: '0 32px 80px' }}>
+      <SLabel>Identity</SLabel>
+      <STextRow label="Name" value={form.name} onChange={v => setForm(p => ({ ...p, name: v }))} placeholder="Agent name" />
+      <SRow label="Humor">
+        <SPicker options={HUMOR_OPTIONS} value={form.humorStyle} onChange={v => setForm(p => ({ ...p, humorStyle: v }))} label={v => v} />
+      </SRow>
+      <SRow label="Model">
+        <SPicker options={MODEL_OPTIONS.map(o => o.value)} value={form.premiumModel} onChange={v => setForm(p => ({ ...p, premiumModel: v }))} label={v => MODEL_OPTIONS.find(o => o.value === v)?.label ?? v} />
+      </SRow>
+
+      <SLabel>Content</SLabel>
+      <STextAreaRow label="Description" value={form.description} onChange={v => setForm(p => ({ ...p, description: v }))} placeholder="What this agent does…" />
+      <STextRow label="Interests" value={form.interests} onChange={v => setForm(p => ({ ...p, interests: v }))} placeholder="DeFi, NFTs, AI" />
+      <STextRow label="Topics to watch" value={form.topicsToWatch} onChange={v => setForm(p => ({ ...p, topicsToWatch: v }))} placeholder="Celo price, ETH news" />
+
+      <SLabel>Social</SLabel>
+      <STextRow label="Twitter / X" value={form.socialHandles.twitter} onChange={v => setForm(p => ({ ...p, socialHandles: { ...p.socialHandles, twitter: v } }))} placeholder="@username" />
+      <STextRow label="Telegram" value={form.socialHandles.telegram} onChange={v => setForm(p => ({ ...p, socialHandles: { ...p.socialHandles, telegram: v } }))} placeholder="@username" />
+      <STextRow label="Farcaster" value={form.socialHandles.farcaster} onChange={v => setForm(p => ({ ...p, socialHandles: { ...p.socialHandles, farcaster: v } }))} placeholder="@username" />
+
+      <SLabel>Actions</SLabel>
+      {update.isError && <p style={{ fontSize: 11, color: '#f87171', fontFamily: 'ui-monospace, Menlo, monospace', marginBottom: 8 }}>{update.error instanceof Error ? update.error.message : 'Failed to save.'}</p>}
+      {update.isSuccess && <p style={{ fontSize: 11, color: '#22c55e', fontFamily: 'ui-monospace, Menlo, monospace', marginBottom: 8 }}>Saved.</p>}
+      <div style={{ paddingTop: 13, paddingBottom: 13, borderBottom: `1px solid ${t.divider}` }}>
+        <button onClick={handleSave} disabled={update.isPending}
+          style={{ fontSize: 12, color: t.label, textDecoration: 'underline', textUnderlineOffset: 3, background: 'none', border: 'none', padding: 0, cursor: 'pointer', letterSpacing: '-0.01em', opacity: update.isPending ? 0.5 : 1 }}>
+          {update.isPending ? 'Saving…' : 'Save changes'}
+        </button>
+      </div>
+      <div style={{ paddingTop: 13, paddingBottom: 13, borderBottom: `1px solid ${t.divider}` }}>
+        <button onClick={handleDelete} disabled={remove.isPending}
+          style={{ fontSize: 12, color: '#f87171', textDecoration: 'underline', textUnderlineOffset: 3, background: 'none', border: 'none', padding: 0, cursor: 'pointer', letterSpacing: '-0.01em', opacity: remove.isPending ? 0.5 : 1 }}>
+          {remove.isPending ? 'Deleting…' : 'Delete agent'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+export function AgentSettingsView() {
+  const t = useTheme();
+  const pop = useRouter(s => s.pop);
+  const reset = useRouter(s => s.reset);
+  const agentId: string = useRouter(s => s.currentView.params?.id ?? '');
+  const { data: agent, isLoading } = useAgent(agentId);
+
+  if (isLoading) {
+    return (
+      <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: t.bg }}>
+        <ScreenHeader title="Settings" onBack={pop} />
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ width: 28, height: 28, borderRadius: '50%', border: `3px solid ${t.divider}`, borderTopColor: t.text, animation: 'spin 0.8s linear infinite' }} />
+          <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: t.bg, transition: 'background 0.3s ease' }}>
+      <ScreenHeader title="Settings" onBack={pop} />
+      {agent ? (
+        <SettingsForm agent={agent} onDeleted={() => reset('home')} />
+      ) : (
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <p style={{ fontSize: 13, color: t.faint }}>Agent not found</p>
+        </div>
+      )}
+    </div>
   );
 }
 
