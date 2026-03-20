@@ -32,22 +32,24 @@ export function useAutoConnect() {
 }
 
 /**
- * Installs the global 401 listener — if the API rejects the platform key,
- * send the user back to the connect screen.
+ * Installs the global 401 listener. Reads the specific error message from
+ * the platform and stores it so ConnectView can display a meaningful reason.
  */
 export function useRestoreSession() {
-  const { logout } = useAuthStore();
+  const { logout, setAuthError } = useAuthStore();
   const resetRoute = useRouter(s => s.reset);
 
   useEffect(() => {
-    const handle = () => {
+    const handle = (event: Event) => {
+      const message = (event as CustomEvent<{ message?: string }>).detail?.message;
       setWalletAddress(null);
+      setAuthError(message ?? null);
       logout();
       resetRoute('connect');
     };
     apiEvents.addEventListener('unauthorized', handle);
     return () => apiEvents.removeEventListener('unauthorized', handle);
-  }, [logout, resetRoute]);
+  }, [logout, setAuthError, resetRoute]);
 }
 
 export function useLogout() {

@@ -22,6 +22,20 @@ function buildHeaders(extra?: HeadersInit, body?: BodyInit | null): Headers {
   return headers;
 }
 
+async function dispatchUnauthorized(response: Response): Promise<void> {
+  let message: string | undefined;
+  try {
+    const cloned = response.clone();
+    const data = await cloned.json();
+    message = data.error || data.message;
+  } catch {
+    // fall through — message stays undefined
+  }
+  apiEvents.dispatchEvent(
+    new CustomEvent('unauthorized', { detail: { message } }),
+  );
+}
+
 /**
  * Raw fetch for SSE streaming — includes auth headers, returns raw Response.
  */
@@ -29,7 +43,7 @@ export async function apiFetchStream(path: string, options?: RequestInit): Promi
   const headers = buildHeaders(options?.headers, options?.body);
   const response = await fetch(`${BASE_URL}${path}`, { ...options, headers });
   if (response.status === 401) {
-    apiEvents.dispatchEvent(new Event('unauthorized'));
+    await dispatchUnauthorized(response);
     throw new Error('Unauthorized');
   }
   return response;
@@ -40,7 +54,7 @@ export async function apiFetch<T>(path: string, options?: RequestInit): Promise<
   const response = await fetch(`${BASE_URL}${path}`, { ...options, headers });
 
   if (response.status === 401) {
-    apiEvents.dispatchEvent(new Event('unauthorized'));
+    await dispatchUnauthorized(response);
     throw new Error('Unauthorized');
   }
 

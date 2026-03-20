@@ -56,15 +56,19 @@ export const useRouter = create<RouterStore>((set) => ({
 interface AuthStore {
   isAuthenticated: boolean;
   address: string | null;
+  authError: string | null;
   setAuthenticated: (address: string) => void;
   setAddress: (address: string) => void;
+  setAuthError: (msg: string | null) => void;
   logout: () => void;
 }
 
 export const useAuthStore = create<AuthStore>((set) => ({
   isAuthenticated: false,
   address: null,
-  setAuthenticated: (address) => set({ isAuthenticated: true, address }),
+  authError: null,
+  setAuthenticated: (address) => set({ isAuthenticated: true, address, authError: null }),
   setAddress: (address) => set({ address }),
+  setAuthError: (msg) => set({ authError: msg }),
   logout: () => set({ isAuthenticated: false, address: null }),
 }));

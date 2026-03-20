@@ -25,7 +25,8 @@ export type { Agent, PersonaTemplate, SkillDef };
 export function useAgents() {
   return useQuery({
     queryKey: ['agents'],
-    queryFn: () => apiFetch<Agent[]>('/api/selfclaw/v1/hosted-agents')
+    queryFn: () =>
+      apiFetch<{ agents: Agent[] }>('/api/selfclaw/v1/hosted-agents').then(r => r.agents),
   });
 }
 
