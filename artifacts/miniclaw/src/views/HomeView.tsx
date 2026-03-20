@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Plus, MoreHorizontal } from 'lucide-react';
 import { useTheme } from '@/lib/theme';
@@ -146,6 +147,16 @@ export function HomeView() {
   const address = useAuthStore((s) => s.address);
   const { data, isLoading, isError } = useAgents();
   const agents = data?.agents ?? [];
+
+  useEffect(() => {
+    if (!isLoading && !isError && agents.length === 0) {
+      push('create');
+    }
+  }, [isLoading, isError, agents.length, push]);
+
+  if (!isLoading && !isError && agents.length === 0) {
+    return null;
+  }
 
   return (
     <div

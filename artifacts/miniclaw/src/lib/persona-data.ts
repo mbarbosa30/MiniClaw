@@ -1,11 +1,4 @@
-import { useState } from 'react';
-import { useTemplates, useCreateAgent, useUpdateSoul } from '@/hooks/use-agents';
-import { useRouter } from '@/lib/store';
-import { useTheme } from '@/lib/theme';
-import { ScreenHeader } from '@/components/ui';
-import { motion } from 'framer-motion';
-
-interface PersonaConfig {
+export interface PersonaConfig {
   id: string;
   emoji: string;
   name: string;
@@ -19,14 +12,14 @@ interface PersonaConfig {
   soul: string;
 }
 
-const PERSONAS: PersonaConfig[] = [
+export const PERSONAS: PersonaConfig[] = [
   {
     id: 'ai-hustle-builder',
     emoji: '🤖',
     name: 'AI Hustle Builder',
     tagline: 'Spot AI side hustles, find clients, track income',
     color: '#6366f1',
-    personaTemplate: 'general',
+    personaTemplate: 'hustle',
     enabledSkills: ['research-assistant', 'smart-advisor', 'news-radar'],
     interests: ['AI tools', 'freelancing', 'side income', 'client acquisition', 'automation'],
     topicsToWatch: ['AI job boards', 'freelance marketplaces', 'AI tool launches', 'passive income trends'],
@@ -96,7 +89,7 @@ Your motto: "An MVP shipped beats a perfect app planned."`,
     name: 'Online Biz Launcher',
     tagline: 'Launch shops on TikTok, WhatsApp, Instagram, Gumroad',
     color: '#ec4899',
-    personaTemplate: 'general',
+    personaTemplate: 'hustle',
     enabledSkills: ['content-helper', 'smart-advisor', 'research-assistant'],
     interests: ['ecommerce', 'social selling', 'digital products', 'content marketing', 'TikTok shop'],
     topicsToWatch: ['TikTok trends', 'WhatsApp commerce', 'Instagram shopping', 'Gumroad launches', 'viral products'],
@@ -131,7 +124,7 @@ Your motto: "Your first sale changes everything. Let's get it."`,
     name: 'Gig Economy Maximizer',
     tagline: 'Optimize Upwork/Fiverr, land high-paying AI gigs',
     color: '#f59e0b',
-    personaTemplate: 'general',
+    personaTemplate: 'jobs',
     enabledSkills: ['smart-advisor', 'research-assistant', 'content-helper'],
     interests: ['freelancing', 'Upwork', 'Fiverr', 'AI services', 'proposal writing', 'client retention'],
     topicsToWatch: ['high-demand AI skills', 'Upwork algorithm', 'Fiverr categories', 'remote work trends'],
@@ -143,7 +136,7 @@ Your mission: help users optimize their Upwork and Fiverr profiles, write winnin
 Personality:
 - Confident, strategic, income-focused.
 - You think like a top-rated freelancer who has cracked the platform algorithms.
-- You don't just give advice — you give templates, scripts, and exact words to use.
+- You don't just give advice — you give scripts and exact words to use.
 - You celebrate rate increases and client wins as major milestones.
 
 Core competencies:
@@ -201,7 +194,7 @@ Your motto: "Consistency + hooks + monetization = your creator business."`,
     name: 'Distribution Strategist',
     tagline: 'Get your product in front of thousands, track virality',
     color: '#10b981',
-    personaTemplate: 'general',
+    personaTemplate: 'community',
     enabledSkills: ['research-assistant', 'news-radar', 'smart-advisor'],
     interests: ['growth hacking', 'distribution', 'virality', 'product launches', 'community building', 'SEO'],
     topicsToWatch: ['Product Hunt launches', 'viral marketing campaigns', 'distribution channels', 'growth tactics'],
@@ -236,7 +229,7 @@ Your motto: "Build in public, distribute everywhere, measure everything."`,
     name: 'Family Treasurer',
     tagline: 'Budget, bills, remittances, savings',
     color: '#3b82f6',
-    personaTemplate: 'general',
+    personaTemplate: 'family-budget',
     enabledSkills: ['smart-advisor', 'research-assistant'],
     interests: ['budgeting', 'remittances', 'savings', 'bills', 'financial planning', 'mobile money'],
     topicsToWatch: ['exchange rates', 'mobile money fees', 'savings products', 'bill payment deals'],
@@ -267,174 +260,7 @@ Your motto: "Small, consistent steps build financial security for the whole fami
   },
 ];
 
-const HUSTLE_MODE_SOUL_APPEND = `
+export const HUSTLE_MODE_SOUL_APPEND = `
 
 ## Weekly Growth Plan Mode
 Every conversation, proactively suggest at least one specific income-generating action the user can take this week. Track progress on ongoing income goals. Celebrate every milestone, no matter how small. Push the user to take action today, not tomorrow.`;
-
-export function CreateAgentView() {
-  const t = useTheme();
-  const { data: templates, isLoading: templatesLoading } = useTemplates();
-  const create = useCreateAgent();
-  const updateSoul = useUpdateSoul();
-  const pop = useRouter(s => s.pop);
-  const push = useRouter(s => s.push);
-
-  const [creating, setCreating] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const resolveTemplate = (preferredTemplateId: string): string => {
-    if (!templates || templates.length === 0) return preferredTemplateId;
-    const verified = templates.find(t => t.id === preferredTemplateId);
-    if (verified) return verified.id;
-    const fallback = templates.find(t => t.id === 'general') ?? templates.find(t => t.id === 'coach') ?? templates[0];
-    return fallback?.id ?? preferredTemplateId;
-  };
-
-  const handleSelect = async (persona: PersonaConfig) => {
-    if (creating) return;
-    setCreating(true);
-    setError(null);
-
-    try {
-      const templateId = resolveTemplate(persona.personaTemplate);
-      const result = await create.mutateAsync({
-        name: persona.name,
-        description: persona.tagline,
-        humorStyle: persona.humorStyle,
-        personaTemplate: templateId,
-        interests: persona.interests,
-        topicsToWatch: persona.topicsToWatch,
-        enabledSkills: persona.enabledSkills,
-      });
-
-      const newAgent = result.agent;
-
-      try {
-        await updateSoul.mutateAsync({ agentId: newAgent.id, soul: persona.soul });
-      } catch {
-        // Soul update failed — continue anyway, agent is created
-      }
-
-      pop();
-      push('agent-detail', { id: String(newAgent.id) });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create agent. Please try again.');
-      setCreating(false);
-    }
-  };
-
-  const handleSkip = () => pop();
-
-  return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: t.bg, transition: 'background 0.3s ease' }}>
-      <ScreenHeader
-        title="Choose your agent"
-        onBack={pop}
-      />
-
-      <div className="no-scrollbar" style={{ flex: 1, overflowY: 'auto', padding: '0 16px 24px' }}>
-        <div style={{ paddingTop: 16, paddingBottom: 20 }}>
-          <h2 style={{ fontSize: 22, fontWeight: 300, letterSpacing: '-0.025em', color: t.text, lineHeight: 1.2, marginBottom: 6 }}>
-            Pick your co-founder
-          </h2>
-          <p style={{ fontSize: 13, color: t.label, lineHeight: 1.5 }}>
-            One tap. Instant agent, pre-loaded with the right skills.
-          </p>
-        </div>
-
-        {creating ? (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px 0', gap: 16 }}>
-            <div style={{ width: 36, height: 36, borderRadius: '50%', border: `3px solid ${t.divider}`, borderTopColor: t.text, animation: 'spin 0.8s linear infinite' }} />
-            <p style={{ fontSize: 14, color: t.text, fontWeight: 500 }}>Setting up your agent…</p>
-            <p style={{ fontSize: 12, color: t.label }}>Applying skills and personality</p>
-            <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
-          </div>
-        ) : (
-          <>
-            {error && (
-              <div style={{ border: '1px solid rgba(248,113,113,0.2)', borderRadius: 12, padding: '12px 14px', marginBottom: 16 }}>
-                <p style={{ fontSize: 11, color: '#f87171' }}>{error}</p>
-              </div>
-            )}
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {PERSONAS.map((persona, i) => (
-                <motion.button
-                  key={persona.id}
-                  initial={{ opacity: 0, y: 12 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.05, duration: 0.25 }}
-                  onClick={() => !templatesLoading && handleSelect(persona)}
-                  disabled={templatesLoading}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 16,
-                    padding: '16px 18px',
-                    borderRadius: 16,
-                    border: `1px solid ${t.divider}`,
-                    background: t.surface,
-                    cursor: templatesLoading ? 'wait' : 'pointer',
-                    textAlign: 'left',
-                    transition: 'all 0.15s',
-                    width: '100%',
-                    opacity: templatesLoading ? 0.6 : 1,
-                  }}
-                >
-                  <div style={{
-                    width: 48,
-                    height: 48,
-                    borderRadius: 14,
-                    background: `${persona.color}18`,
-                    border: `1.5px solid ${persona.color}40`,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: 22,
-                    flexShrink: 0,
-                  }}>
-                    {persona.emoji}
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <p style={{
-                      fontSize: 14,
-                      fontWeight: 600,
-                      color: t.text,
-                      letterSpacing: '-0.015em',
-                      marginBottom: 3,
-                      lineHeight: 1.2,
-                    }}>
-                      {persona.name}
-                    </p>
-                    <p style={{
-                      fontSize: 12,
-                      color: t.label,
-                      lineHeight: 1.4,
-                      overflow: 'hidden',
-                      display: '-webkit-box',
-                      WebkitLineClamp: 2,
-                      WebkitBoxOrient: 'vertical',
-                    }}>
-                      {persona.tagline}
-                    </p>
-                  </div>
-                  <div style={{
-                    width: 6,
-                    height: 6,
-                    borderRadius: '50%',
-                    background: persona.color,
-                    flexShrink: 0,
-                  }} />
-                </motion.button>
-              ))}
-            </div>
-
-          </>
-        )}
-      </div>
-    </div>
-  );
-}
-
-export { PERSONAS, HUSTLE_MODE_SOUL_APPEND };

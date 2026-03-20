@@ -15,9 +15,10 @@ import { apiFetch } from '@/lib/api-client';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Trash2, Link as LinkIcon, FileText, Check, X, Send,
-  Zap, BookOpen, Brain, CircleCheck, Bot,
+  Zap, BookOpen, Brain, CircleCheck,
 } from 'lucide-react';
 import type { Agent, HumorStyle, PremiumModel, Memory, TelegramNotificationLevel } from '@/types';
+import { HUSTLE_MODE_SOUL_APPEND } from './CreateAgentView';
 
 function SubScreenLayout({ title, children }: { title: string; children: React.ReactNode }) {
   const t = useTheme();
@@ -184,50 +185,6 @@ export function KnowledgeView() {
           ))}
         </div>
       )}
-    </SubScreenLayout>
-  );
-}
-
-// --- SOUL VIEW ---
-export function SoulView() {
-  const t = useTheme();
-  const agentId: string = useRouter(s => s.currentView.params?.id ?? '');
-  const { data: soul, isLoading } = useSoul(agentId);
-  const update = useUpdateSoul();
-  const [soulText, setSoulText] = useState('');
-
-  useEffect(() => {
-    if (soul?.soul) setSoulText(soul.soul);
-  }, [soul?.soul]);
-
-  return (
-    <SubScreenLayout title="Soul Document">
-      <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 14 }}>
-        <p style={{ fontSize: 11, color: t.label, lineHeight: 1.6, background: t.surface, border: `1px solid ${t.divider}`, borderRadius: 10, padding: '10px 14px' }}>
-          The Soul document defines your agent's core identity, tone, and behavior. Edit with care.
-        </p>
-        {isLoading ? <LoadingState /> : (
-          <>
-            <Textarea
-              style={{ minHeight: 320, fontFamily: 'ui-monospace, Menlo, monospace', fontSize: 13 }}
-              value={soulText}
-              onChange={e => setSoulText(e.target.value)}
-              placeholder="System prompt and identity directives…"
-            />
-            {update.isError && (
-              <p style={{ fontSize: 11, color: '#f87171' }}>
-                {update.error instanceof Error ? update.error.message : 'Failed to save.'}
-              </p>
-            )}
-            {update.isSuccess && (
-              <p style={{ fontSize: 11, color: t.label }}>Soul document saved.</p>
-            )}
-            <Button style={{ width: '100%' }} onClick={() => update.mutate({ agentId, soul: soulText })} disabled={update.isPending}>
-              {update.isPending ? 'Saving…' : 'Save Soul Document'}
-            </Button>
-          </>
-        )}
-      </div>
     </SubScreenLayout>
   );
 }
@@ -676,40 +633,112 @@ function SettingsForm({ agent, onDeleted }: { agent: Agent; onDeleted: () => voi
   const t = useTheme();
   const update = useUpdateAgent();
   const remove = useDeleteAgent();
+  const { data: soul, isLoading: soulLoading } = useSoul(agent.id);
+  const updateSoul = useUpdateSoul();
+  const addKnowledge = useAddKnowledge();
 
-  const [form, setForm] = useState({
-    name: agent.name ?? '',
-    description: agent.description ?? '',
-    interests: (agent.interests ?? []).join(', '),
-    topicsToWatch: (agent.topicsToWatch ?? []).join(', '),
-    humorStyle: (agent.humorStyle ?? 'straight') as HumorStyle,
-    premiumModel: (agent.premiumModel ?? 'none') as PremiumModel,
-    socialHandles: {
-      twitter: agent.socialHandles?.twitter ?? '',
-      telegram: agent.socialHandles?.telegram ?? '',
-      farcaster: agent.socialHandles?.farcaster ?? '',
-    },
-  });
+  const [mainSkill, setMainSkill] = useState('');
+  const [platforms, setPlatforms] = useState('');
+  const [country, setCountry] = useState('');
+  const [agentName, setAgentName] = useState(agent.name ?? '');
+  const [hustleMode, setHustleMode] = useState(false);
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [profileSaved, setProfileSaved] = useState(false);
+  const [profileError, setProfileError] = useState<string | null>(null);
+  const [resetting, setResetting] = useState(false);
+  const [resetDone, setResetDone] = useState(false);
+  const [resetError, setResetError] = useState<string | null>(null);
 
-  const toArray = (s: string): string[] => s.split(',').map(x => x.trim()).filter(Boolean);
+  const baseSoul = soul?.soul ?? '';
 
-  const handleSave = () => {
-    update.mutate({
-      id: agent.id,
-      data: {
-        name: form.name,
-        description: form.description,
-        interests: toArray(form.interests),
-        topicsToWatch: toArray(form.topicsToWatch),
-        humorStyle: form.humorStyle,
-        premiumModel: form.premiumModel,
-        socialHandles: {
-          twitter: form.socialHandles.twitter || undefined,
-          telegram: form.socialHandles.telegram || undefined,
-          farcaster: form.socialHandles.farcaster || undefined,
-        },
+  useEffect(() => {
+    if (!soul?.soul) return;
+    setHustleMode(soul.soul.includes(HUSTLE_MODE_SOUL_APPEND.trim()));
+  }, [soul?.soul]);
+
+  const handleHustleToggle = async (enabled: boolean) => {
+    setHustleMode(enabled);
+    let newSoul = baseSoul;
+    if (enabled && !newSoul.includes(HUSTLE_MODE_SOUL_APPEND.trim())) {
+      newSoul = newSoul + HUSTLE_MODE_SOUL_APPEND;
+    } else if (!enabled) {
+      newSoul = newSoul.replace(HUSTLE_MODE_SOUL_APPEND, '').trimEnd();
+    }
+    try {
+      await updateSoul.mutateAsync({ agentId: agent.id, soul: newSoul });
+    } catch {
+      setHustleMode(!enabled);
+    }
+  };
+
+  const handleResetToDefaults = async () => {
+    setResetting(true);
+    setResetDone(false);
+    setResetError(null);
+    try {
+      const defaultSoul = await apiFetch<{ soul?: string; template?: { soul?: string } }>(
+        `/api/selfclaw/v1/hosted-agents/templates`
+      ).catch(() => null);
+
+      let soulText = '';
+      if (defaultSoul && !Array.isArray(defaultSoul)) {
+        soulText = (defaultSoul as { soul?: string }).soul ?? '';
       }
-    });
+
+      if (!soulText) {
+        soulText = baseSoul.replace(HUSTLE_MODE_SOUL_APPEND, '').trimEnd();
+      }
+
+      await updateSoul.mutateAsync({ agentId: agent.id, soul: soulText });
+      setHustleMode(false);
+      setResetDone(true);
+    } catch (err) {
+      setResetError(err instanceof Error ? err.message : 'Reset failed.');
+    } finally {
+      setResetting(false);
+    }
+  };
+
+  const handleSaveProfile = async () => {
+    if (!mainSkill.trim() && !platforms.trim() && !country.trim() && agentName === (agent.name ?? '')) return;
+    setSavingProfile(true);
+    setProfileSaved(false);
+    setProfileError(null);
+    try {
+      const tasks: Promise<unknown>[] = [];
+
+      if (agentName.trim() && agentName !== agent.name) {
+        tasks.push(update.mutateAsync({ id: agent.id, data: { name: agentName.trim() } }));
+      }
+      if (mainSkill.trim()) {
+        tasks.push(addKnowledge.mutateAsync({
+          agentId: agent.id,
+          data: { title: 'Main skill', content: mainSkill.trim() }
+        }));
+      }
+      if (platforms.trim()) {
+        tasks.push(addKnowledge.mutateAsync({
+          agentId: agent.id,
+          data: { title: 'Platforms I use', content: platforms.trim() }
+        }));
+      }
+      if (country.trim()) {
+        tasks.push(addKnowledge.mutateAsync({
+          agentId: agent.id,
+          data: { title: 'Country', content: country.trim() }
+        }));
+      }
+
+      await Promise.all(tasks);
+      setProfileSaved(true);
+      setMainSkill('');
+      setPlatforms('');
+      setCountry('');
+    } catch (err) {
+      setProfileError(err instanceof Error ? err.message : 'Save failed.');
+    } finally {
+      setSavingProfile(false);
+    }
   };
 
   const handleDelete = () => {
@@ -720,34 +749,70 @@ function SettingsForm({ agent, onDeleted }: { agent: Agent; onDeleted: () => voi
 
   return (
     <div className="no-scrollbar" style={{ height: '100%', overflowY: 'auto', padding: '0 32px 80px' }}>
-      <SLabel>Identity</SLabel>
-      <STextRow label="Name" value={form.name} onChange={v => setForm(p => ({ ...p, name: v }))} placeholder="Agent name" />
-      <SRow label="Humor">
-        <SPicker options={HUMOR_OPTIONS} value={form.humorStyle} onChange={v => setForm(p => ({ ...p, humorStyle: v }))} label={v => v} />
-      </SRow>
-      <SRow label="Model">
-        <SPicker options={MODEL_OPTIONS.map(o => o.value)} value={form.premiumModel} onChange={v => setForm(p => ({ ...p, premiumModel: v }))} label={v => MODEL_OPTIONS.find(o => o.value === v)?.label ?? v} />
-      </SRow>
+      <SLabel>Profile</SLabel>
+      <STextRow
+        label="Agent name"
+        value={agentName}
+        onChange={setAgentName}
+        placeholder={agent.name ?? 'Agent name'}
+      />
+      <STextRow
+        label="What's your main skill?"
+        value={mainSkill}
+        onChange={setMainSkill}
+        placeholder="e.g. Video editing, prompt engineering"
+      />
+      <STextRow
+        label="Which platforms do you use?"
+        value={platforms}
+        onChange={setPlatforms}
+        placeholder="e.g. TikTok, Upwork, Gumroad"
+      />
+      <STextRow
+        label="Your country"
+        value={country}
+        onChange={setCountry}
+        placeholder="e.g. Nigeria, Kenya, Brazil"
+      />
 
-      <SLabel>Content</SLabel>
-      <STextAreaRow label="Description" value={form.description} onChange={v => setForm(p => ({ ...p, description: v }))} placeholder="What this agent does…" />
-      <STextRow label="Interests" value={form.interests} onChange={v => setForm(p => ({ ...p, interests: v }))} placeholder="DeFi, NFTs, AI" />
-      <STextRow label="Topics to watch" value={form.topicsToWatch} onChange={v => setForm(p => ({ ...p, topicsToWatch: v }))} placeholder="Celo price, ETH news" />
+      {profileError && <p style={{ fontSize: 11, color: '#f87171', fontFamily: 'ui-monospace, Menlo, monospace', marginTop: 8 }}>{profileError}</p>}
+      {profileSaved && <p style={{ fontSize: 11, color: '#22c55e', fontFamily: 'ui-monospace, Menlo, monospace', marginTop: 8 }}>Profile saved to knowledge base.</p>}
 
-      <SLabel>Social</SLabel>
-      <STextRow label="Twitter / X" value={form.socialHandles.twitter} onChange={v => setForm(p => ({ ...p, socialHandles: { ...p.socialHandles, twitter: v } }))} placeholder="@username" />
-      <STextRow label="Telegram" value={form.socialHandles.telegram} onChange={v => setForm(p => ({ ...p, socialHandles: { ...p.socialHandles, telegram: v } }))} placeholder="@username" />
-      <STextRow label="Farcaster" value={form.socialHandles.farcaster} onChange={v => setForm(p => ({ ...p, socialHandles: { ...p.socialHandles, farcaster: v } }))} placeholder="@username" />
-
-      <SLabel>Actions</SLabel>
-      {update.isError && <p style={{ fontSize: 11, color: '#f87171', fontFamily: 'ui-monospace, Menlo, monospace', marginBottom: 8 }}>{update.error instanceof Error ? update.error.message : 'Failed to save.'}</p>}
-      {update.isSuccess && <p style={{ fontSize: 11, color: '#22c55e', fontFamily: 'ui-monospace, Menlo, monospace', marginBottom: 8 }}>Saved.</p>}
       <div style={{ paddingTop: 13, paddingBottom: 13, borderBottom: `1px solid ${t.divider}` }}>
-        <button onClick={handleSave} disabled={update.isPending}
-          style={{ fontSize: 12, color: t.label, textDecoration: 'underline', textUnderlineOffset: 3, background: 'none', border: 'none', padding: 0, cursor: 'pointer', letterSpacing: '-0.01em', opacity: update.isPending ? 0.5 : 1 }}>
-          {update.isPending ? 'Saving…' : 'Save changes'}
+        <button
+          onClick={handleSaveProfile}
+          disabled={savingProfile || (!mainSkill.trim() && !platforms.trim() && !country.trim() && agentName === (agent.name ?? ''))}
+          style={{ fontSize: 12, color: t.label, textDecoration: 'underline', textUnderlineOffset: 3, background: 'none', border: 'none', padding: 0, cursor: 'pointer', letterSpacing: '-0.01em', opacity: savingProfile ? 0.5 : 1 }}
+        >
+          {savingProfile ? 'Saving…' : 'Save profile'}
         </button>
       </div>
+
+      <SLabel>Hustle Mode</SLabel>
+      <SRow label="Weekly growth plan">
+        <Switch
+          checked={hustleMode}
+          onChange={(c) => handleHustleToggle(c)}
+        />
+      </SRow>
+      <p style={{ fontSize: 11, color: t.faint, lineHeight: 1.5, paddingTop: 8, paddingBottom: 4 }}>
+        When on, your agent proactively suggests income-generating actions every conversation.
+      </p>
+
+      <SLabel>Reset</SLabel>
+      {resetError && <p style={{ fontSize: 11, color: '#f87171', fontFamily: 'ui-monospace, Menlo, monospace', marginBottom: 8 }}>{resetError}</p>}
+      {resetDone && <p style={{ fontSize: 11, color: '#22c55e', fontFamily: 'ui-monospace, Menlo, monospace', marginBottom: 8 }}>Reset to defaults.</p>}
+      <div style={{ paddingTop: 13, paddingBottom: 13, borderBottom: `1px solid ${t.divider}` }}>
+        <button
+          onClick={handleResetToDefaults}
+          disabled={resetting || soulLoading}
+          style={{ fontSize: 12, color: t.label, textDecoration: 'underline', textUnderlineOffset: 3, background: 'none', border: 'none', padding: 0, cursor: 'pointer', letterSpacing: '-0.01em', opacity: resetting ? 0.5 : 1 }}
+        >
+          {resetting ? 'Resetting…' : 'Reset to defaults'}
+        </button>
+      </div>
+
+      <SLabel>Danger</SLabel>
       <div style={{ paddingTop: 13, paddingBottom: 13, borderBottom: `1px solid ${t.divider}` }}>
         <button onClick={handleDelete} disabled={remove.isPending}
           style={{ fontSize: 12, color: '#f87171', textDecoration: 'underline', textUnderlineOffset: 3, background: 'none', border: 'none', padding: 0, cursor: 'pointer', letterSpacing: '-0.01em', opacity: remove.isPending ? 0.5 : 1 }}>

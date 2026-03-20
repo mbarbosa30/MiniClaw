@@ -81,8 +81,12 @@ export interface PersonaTemplate {
   name: string;
   description: string;
   emoji: string;
+  tagline?: string;
   defaultSkills?: string[];
   defaultInterests?: string[];
+  defaultTopicsToWatch?: string[];
+  voiceDirective?: string;
+  expertiseFocus?: string;
 }
 
 export interface SkillDef {
