@@ -7,13 +7,13 @@ import { useAuthStore, useRouter } from '@/lib/store';
 /**
  * Auto-connect to the injected MiniPay wallet on page load.
  * As soon as the wallet address is available, navigate straight to home.
- * No signing required — platform key + wallet address is sufficient.
+ * No signing required — platform key + wallet address is sufficient auth.
  */
 export function useAutoConnect() {
   const connectors = useConnectors();
   const { connect } = useConnect();
   const { address } = useAccount();
-  const { setAuthenticated, setAddress } = useAuthStore();
+  const { setAuthenticated } = useAuthStore();
   const resetRoute = useRouter(s => s.reset);
 
   useEffect(() => {
@@ -28,12 +28,12 @@ export function useAutoConnect() {
       setAuthenticated(address);
       resetRoute('home');
     }
-  }, [address, setAuthenticated, setAddress, resetRoute]);
+  }, [address, setAuthenticated, resetRoute]);
 }
 
 /**
  * Installs the global 401 listener — if the API rejects the platform key,
- * send the user back to the connect/loading screen.
+ * send the user back to the connect screen.
  */
 export function useRestoreSession() {
   const { logout } = useAuthStore();

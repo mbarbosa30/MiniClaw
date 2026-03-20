@@ -1,71 +1,40 @@
 export const BASE_URL = 'https://selfclaw.ai';
 
-// Platform key — identifies the MiniClaw app to SelfClaw (set via VITE_SELFCLAW_KEY env var)
 const PLATFORM_KEY = import.meta.env.VITE_SELFCLAW_KEY as string | undefined;
 
 export const apiEvents = new EventTarget();
 
-// Current wallet address — set by useAutoConnect, injected into every request
 let _walletAddress: string | null = null;
 export function setWalletAddress(addr: string | null) {
   _walletAddress = addr;
 }
 
-/**
- * Raw fetch for SSE streaming — includes all auth headers but returns the Response directly.
- * Use this instead of raw `fetch` for chat streaming so auth headers are always present.
- */
-export async function apiFetchStream(path: string, options?: RequestInit): Promise<Response> {
-  const url = `${BASE_URL}${path}`;
-
-  const headers = new Headers(options?.headers);
-
-  if (!headers.has('Content-Type') && !(options?.body instanceof FormData)) {
+function buildHeaders(extra?: HeadersInit, body?: BodyInit | null): Headers {
+  const headers = new Headers(extra);
+  if (!headers.has('Content-Type') && !(body instanceof FormData)) {
     headers.set('Content-Type', 'application/json');
   }
+  if (PLATFORM_KEY) headers.set('Authorization', `Bearer ${PLATFORM_KEY}`);
+  if (_walletAddress) headers.set('X-Wallet-Address', _walletAddress);
+  return headers;
+}
 
-  if (PLATFORM_KEY) {
-    headers.set('Authorization', `Bearer ${PLATFORM_KEY}`);
-  }
-
-  if (_walletAddress) {
-    headers.set('X-Wallet-Address', _walletAddress);
-  }
-
-  const response = await fetch(url, {
-    ...options,
-    headers,
-  });
-
+/**
+ * Raw fetch for SSE streaming — includes auth headers, returns raw Response.
+ */
+export async function apiFetchStream(path: string, options?: RequestInit): Promise<Response> {
+  const headers = buildHeaders(options?.headers, options?.body);
+  const response = await fetch(`${BASE_URL}${path}`, { ...options, headers });
   if (response.status === 401) {
     apiEvents.dispatchEvent(new Event('unauthorized'));
     throw new Error('Unauthorized');
   }
-
   return response;
 }
 
 export async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
-  const url = `${BASE_URL}${path}`;
-
-  const headers = new Headers(options?.headers);
-
-  if (!headers.has('Content-Type') && !(options?.body instanceof FormData)) {
-    headers.set('Content-Type', 'application/json');
-  }
-
-  if (PLATFORM_KEY) {
-    headers.set('Authorization', `Bearer ${PLATFORM_KEY}`);
-  }
-
-  if (_walletAddress) {
-    headers.set('X-Wallet-Address', _walletAddress);
-  }
-
-  const response = await fetch(url, {
-    ...options,
-    headers,
-  });
+  const headers = buildHeaders(options?.headers, options?.body);
+  const response = await fetch(`${BASE_URL}${path}`, { ...options, headers });
 
   if (response.status === 401) {
     apiEvents.dispatchEvent(new Event('unauthorized'));
@@ -75,17 +44,15 @@ export async function apiFetch<T>(path: string, options?: RequestInit): Promise<
   if (!response.ok) {
     let errorMessage = 'An error occurred';
     try {
-      const errorData = await response.json();
-      errorMessage = errorData.message || errorData.error || response.statusText;
+      const data = await response.json();
+      errorMessage = data.message || data.error || response.statusText;
     } catch {
       errorMessage = response.statusText;
     }
     throw new Error(errorMessage);
   }
 
-  if (response.status === 204) {
-    return {} as T;
-  }
+  if (response.status === 204) return {} as T;
 
   return response.json();
 }
