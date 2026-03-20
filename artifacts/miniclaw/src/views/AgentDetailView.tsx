@@ -35,9 +35,11 @@ export function AgentDetailView() {
     );
   }
 
+  const agentName = agent.name || 'Agent';
+
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: t.bg, transition: 'background 0.3s ease' }}>
-      <ScreenHeader title={agent.name} onBack={pop} />
+      <ScreenHeader title={agentName} onBack={pop} />
 
       <div style={{ flex: 1, overflow: 'hidden' }}>
         {tab === 'chat' && <ChatTab agent={agent} />}
