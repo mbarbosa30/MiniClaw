@@ -263,8 +263,23 @@ function ChatTab({ agent, agentName, newChatTrigger }: { agent: Agent; agentName
       >
         {messages.map((m, i) => {
           const timestamp = fmtTime(m._ts, m.createdAt);
-          const isLastStreaming = m.content === '' && m.role === 'assistant' && isStreaming && i === messages.length - 1;
-          const roleLabel = m.role === 'user' ? 'you' : m.role === 'system' ? 'error' : agentName.toLowerCase();
+          const isActiveStream = isStreaming && i === messages.length - 1 && m.role === 'assistant';
+          const roleLabel = m.role === 'user' ? 'YOU' : m.role === 'system' ? 'ERROR' : 'AGENT';
+
+          if (m.role === 'system') {
+            return (
+              <p key={i} style={{
+                fontSize: 11,
+                fontFamily: 'ui-monospace, Menlo, monospace',
+                color: '#f87171',
+                margin: 0,
+                lineHeight: 1.6,
+              }}>
+                {m.content}
+              </p>
+            );
+          }
+
           return (
             <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               {/* Role + timestamp row */}
@@ -275,7 +290,7 @@ function ChatTab({ agent, agentName, newChatTrigger }: { agent: Agent; agentName
                   fontWeight: 600,
                   letterSpacing: '0.09em',
                   textTransform: 'uppercase',
-                  color: m.role === 'system' ? '#f87171' : t.faint,
+                  color: t.faint,
                 }}>
                   {roleLabel}
                 </span>
@@ -295,15 +310,15 @@ function ChatTab({ agent, agentName, newChatTrigger }: { agent: Agent; agentName
               <p style={{
                 fontSize: 14,
                 fontWeight: 300,
-                lineHeight: 1.7,
-                color: m.role === 'system' ? '#f87171' : t.text,
+                lineHeight: 1.6,
+                color: t.text,
                 margin: 0,
                 whiteSpace: 'pre-wrap',
-                fontFamily: m.role === 'system' ? 'ui-monospace, Menlo, monospace' : 'inherit',
               }}>
-                {isLastStreaming
-                  ? <span style={{ borderRight: `1px solid ${t.label}`, animation: 'blink 1s step-end infinite', paddingRight: 1 }}>&nbsp;</span>
-                  : m.content}
+                {m.content}
+                {isActiveStream && (
+                  <span style={{ borderRight: `1px solid ${t.label}`, animation: 'blink 1s step-end infinite', marginLeft: 1, paddingRight: 1 }}>&nbsp;</span>
+                )}
               </p>
             </div>
           );
