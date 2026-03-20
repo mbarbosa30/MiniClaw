@@ -18,7 +18,6 @@ function statusDotColor(status: string): string {
 
 function statusFallback(status: string): string {
   if (status === 'active') return 'active';
-  if (status === 'error') return 'error';
   return 'paused';
 }
 
@@ -97,7 +96,6 @@ function AgentHeader({
                 fontFamily: 'ui-monospace, Menlo, monospace',
                 fontWeight: 600,
                 letterSpacing: '0.07em',
-                textTransform: 'uppercase' as const,
                 color: t.label,
                 lineHeight: 1.4,
               }}
