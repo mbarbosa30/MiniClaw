@@ -22,7 +22,7 @@ export function ConnectView() {
         initial={{ scale: 0.80, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ type: 'spring', bounce: 0.35, duration: 0.55 }}
-        className="w-20 h-20 bg-white rounded-[1.5rem] border border-neutral-150 shadow-[0_4px_20px_rgba(0,0,0,0.08)] flex items-center justify-center select-none mb-6"
+        className="w-20 h-20 bg-white rounded-[1.5rem] border border-neutral-200 flex items-center justify-center select-none mb-6"
       >
         <span className="text-4xl">🦀</span>
       </motion.div>
