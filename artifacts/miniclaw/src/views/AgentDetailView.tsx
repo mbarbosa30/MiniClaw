@@ -4,7 +4,7 @@ import { useRouter } from '@/lib/store';
 import { useTheme } from '@/lib/theme';
 import { Button } from '@/components/ui';
 import { MoreHorizontal } from 'lucide-react';
-import { apiFetchStream, apiFetch } from '@/lib/api-client';
+import { apiFetchStream, apiFetch, ApiError } from '@/lib/api-client';
 import type { Agent, ChatMessage } from '@/types';
 
 const DOT_COLOR: Record<string, string> = {
@@ -269,7 +269,7 @@ export function AgentDetailView() {
   const id: string = currentView.params?.id ?? '';
   const newChatAt: string | undefined = currentView.params?.newChatAt;
   const briefContext: string | undefined = currentView.params?.briefContext;
-  const { data: agent, isLoading } = useAgent(id);
+  const { data: agent, isLoading, isError, error, refetch } = useAgent(id);
   const [newChatTrigger, setNewChatTrigger] = useState(0);
   const [quota, setQuota] = useState<QuotaState | null>(null);
 
@@ -283,6 +283,26 @@ export function AgentDetailView() {
         <div style={{ width: 28, height: 28, borderRadius: '50%', border: `3px solid ${t.divider}`, borderTopColor: t.text, animation: 'spin 0.8s linear infinite' }} />
         <p style={{ fontSize: 12, color: t.faint }}>Loading…</p>
         <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+      </div>
+    );
+  }
+
+  if (isError) {
+    const is404 = error instanceof ApiError && error.status === 404;
+    if (is404) {
+      return (
+        <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, padding: 32, textAlign: 'center', background: t.bg }}>
+          <p style={{ fontSize: 14, fontWeight: 600, color: t.text }}>Agent not found</p>
+          <Button variant="ghost" size="sm" onClick={pop}>Go Back</Button>
+        </div>
+      );
+    }
+    return (
+      <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, padding: 32, textAlign: 'center', background: t.bg }}>
+        <p style={{ fontSize: 14, fontWeight: 600, color: t.text }}>Couldn't load agent</p>
+        <p style={{ fontSize: 12, color: t.faint }}>A network error occurred. Please try again.</p>
+        <Button variant="ghost" size="sm" onClick={() => refetch()}>Retry</Button>
+        <Button variant="ghost" size="sm" onClick={pop}>Go Back</Button>
       </div>
     );
   }

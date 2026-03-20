@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useTemplates, useCreateAgent, useUpdateSoul } from '@/hooks/use-agents';
+import { apiFetch } from '@/lib/api-client';
 import { useRouter } from '@/lib/store';
 import { useTheme } from '@/lib/theme';
 import { ScreenHeader } from '@/components/ui';
@@ -314,6 +315,26 @@ export function CreateAgentView() {
         await updateSoul.mutateAsync({ agentId: newAgent.id, soul: persona.soul });
       } catch {
         // Soul update failed — continue anyway, agent is created
+      }
+
+      // Wait for the agent to be fetchable before navigating (up to 5 retries)
+      let agentReady = false;
+      for (let attempt = 0; attempt < 5; attempt++) {
+        try {
+          await apiFetch(`/api/selfclaw/v1/hosted-agents/${newAgent.id}`);
+          agentReady = true;
+          break;
+        } catch {
+          if (attempt < 4) {
+            await new Promise(resolve => setTimeout(resolve, 600));
+          }
+        }
+      }
+
+      if (!agentReady) {
+        setError('Agent created but couldn\'t load — please go back and tap the agent to open it.');
+        setCreating(false);
+        return;
       }
 
       pop();

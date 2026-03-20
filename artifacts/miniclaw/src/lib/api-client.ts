@@ -3,6 +3,15 @@
 // to selfclaw.ai server-side, avoiding any browser CORS restrictions.
 export const BASE_URL = '';
 
+export class ApiError extends Error {
+  status: number;
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+  }
+}
+
 const PLATFORM_KEY = import.meta.env.VITE_SELFCLAW_KEY as string | undefined;
 
 export const apiEvents = new EventTarget();
@@ -66,7 +75,7 @@ export async function apiFetch<T>(path: string, options?: RequestInit): Promise<
     } catch {
       errorMessage = response.statusText;
     }
-    throw new Error(errorMessage);
+    throw new ApiError(errorMessage, response.status);
   }
 
   if (response.status === 204) return {} as T;

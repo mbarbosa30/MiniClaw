@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiFetch } from '@/lib/api-client';
+import { apiFetch, ApiError } from '@/lib/api-client';
 import type {
   Agent,
   AgentStats,
@@ -89,6 +89,11 @@ export function useAgent(id: string | number | undefined) {
       return raw as Agent;
     },
     enabled: id != null && id !== '',
+    retry: (failureCount, err) => {
+      if (err instanceof ApiError && err.status === 404) return false;
+      return failureCount < 3;
+    },
+    retryDelay: 800,
   });
 }
 
