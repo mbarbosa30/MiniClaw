@@ -1,12 +1,14 @@
 import { useState, useRef, useEffect } from 'react';
 import { useAgent, useDeleteAgent, useUpdateAgent, useConversations, useMessages } from '@/hooks/use-agents';
 import { useRouter } from '@/lib/store';
-import { ScreenHeader, Button, Input, Textarea, Card, Switch } from '@/components/ui';
-import { Settings, MessageSquare, Menu, Send, Trash2, Plus } from 'lucide-react';
+import { useTheme } from '@/lib/theme';
+import { ScreenHeader, Button, Input, Textarea } from '@/components/ui';
+import { Settings, MessageSquare, Menu, Send, Trash2, Plus, Bot, Brain, BookOpen, Zap, ScrollText, CircleCheck } from 'lucide-react';
 import { apiFetchStream } from '@/lib/api-client';
 import type { Agent, HumorStyle, PremiumModel, ChatMessage, Conversation } from '@/types';
 
 export function AgentDetailView() {
+  const t = useTheme();
   const currentView = useRouter(s => s.currentView);
   const pop = useRouter(s => s.pop);
   const push = useRouter(s => s.push);
@@ -16,62 +18,81 @@ export function AgentDetailView() {
 
   if (isLoading) {
     return (
-      <div className="h-full flex flex-col items-center justify-center gap-2.5">
-        <div className="w-8 h-8 border-[3px] border-neutral-200 border-t-primary rounded-full animate-spin" />
-        <p className="text-sm text-muted-foreground">Loading agent…</p>
+      <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, background: t.bg }}>
+        <div style={{ width: 28, height: 28, borderRadius: '50%', border: `3px solid ${t.divider}`, borderTopColor: t.text, animation: 'spin 0.8s linear infinite' }} />
+        <p style={{ fontSize: 12, color: t.faint }}>Loading agent…</p>
+        <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
       </div>
     );
   }
+
   if (!agent) {
     return (
-      <div className="h-full flex flex-col items-center justify-center gap-3 p-8 text-center">
-        <p className="text-[15px] font-semibold">Agent not found</p>
+      <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, padding: 32, textAlign: 'center', background: t.bg }}>
+        <p style={{ fontSize: 14, fontWeight: 600, color: t.text }}>Agent not found</p>
         <Button variant="ghost" size="sm" onClick={pop}>Go Back</Button>
       </div>
     );
   }
 
   return (
-    <div className="h-full flex flex-col bg-background">
-      <ScreenHeader
-        title={agent.name}
-        onBack={pop}
-        rightAction={<span className="text-xl select-none">{agent.emoji}</span>}
-      />
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: t.bg, transition: 'background 0.3s ease' }}>
+      <ScreenHeader title={agent.name} onBack={pop} />
 
-      <div className="flex-1 overflow-hidden">
+      <div style={{ flex: 1, overflow: 'hidden' }}>
         {tab === 'chat' && <ChatTab agent={agent} />}
         {tab === 'settings' && <SettingsTab agent={agent} onDeleted={pop} />}
         {tab === 'more' && <MoreTab agentId={id} onNavigate={(path) => push(path as Parameters<typeof push>[0], { id })} />}
       </div>
 
       {/* Bottom Tab Bar */}
-      <div className="bg-white border-t border-neutral-100 pb-safe pt-1.5 pb-2.5 flex justify-around items-center">
-        <NavButton icon={<MessageSquare size={20} />} label="Chat" active={tab === 'chat'} onClick={() => setTab('chat')} />
-        <NavButton icon={<Settings size={20} />} label="Settings" active={tab === 'settings'} onClick={() => setTab('settings')} />
-        <NavButton icon={<Menu size={20} />} label="More" active={tab === 'more'} onClick={() => setTab('more')} />
+      <div style={{
+        display: 'flex',
+        paddingBottom: 20,
+        paddingTop: 8,
+        background: t.bg,
+        borderTop: `1px solid ${t.divider}`,
+        flexShrink: 0,
+        transition: 'background 0.3s ease',
+      }}>
+        <NavButton icon={<MessageSquare size={19} />} label="Chat" active={tab === 'chat'} onClick={() => setTab('chat')} t={t} />
+        <NavButton icon={<Settings size={19} />} label="Settings" active={tab === 'settings'} onClick={() => setTab('settings')} t={t} />
+        <NavButton icon={<Menu size={19} />} label="More" active={tab === 'more'} onClick={() => setTab('more')} t={t} />
       </div>
     </div>
   );
 }
 
-function NavButton({ icon, label, active, onClick }: { icon: React.ReactNode; label: string; active: boolean; onClick: () => void }) {
+function NavButton({ icon, label, active, onClick, t }: { icon: React.ReactNode; label: string; active: boolean; onClick: () => void; t: ReturnType<typeof useTheme> }) {
   return (
     <button
       onClick={onClick}
-      className={`flex flex-col items-center justify-center gap-0.5 min-w-[72px] py-1 transition-colors ${active ? 'text-primary' : 'text-muted-foreground'}`}
+      style={{
+        flex: 1,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 2,
+        padding: '4px 0',
+        background: 'none',
+        border: 'none',
+        cursor: 'pointer',
+        color: active ? t.text : t.faint,
+      }}
     >
-      <div className="p-1.5">
-        {icon}
-      </div>
-      <span className={`text-[10px] font-semibold tracking-wide ${active ? 'text-primary' : 'text-muted-foreground'}`}>{label}</span>
-      {active && <span className="w-4 h-0.5 bg-primary rounded-full mt-0.5" />}
+      <div style={{ padding: 6 }}>{icon}</div>
+      <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.03em', color: active ? t.text : t.faint }}>
+        {label}
+      </span>
+      {active && <span style={{ width: 16, height: 1.5, background: t.text, borderRadius: 1, marginTop: 2 }} />}
     </button>
   );
 }
 
 // --- CHAT TAB ---
 function ChatTab({ agent }: { agent: Agent }) {
+  const t = useTheme();
   const { data: conversations, refetch: refetchConversations } = useConversations(agent.id);
   const [activeConversationId, setActiveConversationId] = useState<string | undefined>();
   const [showConversations, setShowConversations] = useState(false);
@@ -79,7 +100,7 @@ function ChatTab({ agent }: { agent: Agent }) {
   const [historyLoaded, setHistoryLoaded] = useState(false);
 
   const [messages, setMessages] = useState<ChatMessage[]>([
-    { role: 'assistant', content: `Hi! I'm ${agent.name} ${agent.emoji}. How can I help you today?` }
+    { role: 'assistant', content: `Hi! I'm ${agent.name}. How can I help you today?` }
   ]);
   const [input, setInput] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
@@ -206,37 +227,84 @@ function ChatTab({ agent }: { agent: Agent }) {
   };
 
   return (
-    <div className="h-full flex flex-col bg-background relative">
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: t.bg, position: 'relative' }}>
       {/* Conversation selector bar */}
-      <div className="flex items-center gap-2 px-3 py-2 bg-white border-b border-neutral-100">
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: t.bg, borderBottom: `1px solid ${t.divider}`, flexShrink: 0 }}>
         <button
-          className="flex-1 text-left px-3 py-1.5 rounded-lg bg-neutral-100 text-xs text-muted-foreground font-medium truncate"
+          style={{
+            flex: 1,
+            textAlign: 'left',
+            padding: '6px 12px',
+            borderRadius: 8,
+            background: t.surface,
+            border: 'none',
+            fontSize: 11,
+            color: t.label,
+            cursor: 'pointer',
+            fontFamily: 'ui-monospace, Menlo, monospace',
+            letterSpacing: '0.02em',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}
           onClick={() => setShowConversations(!showConversations)}
         >
-          {activeConversationId ? `Conversation #${activeConversationId.slice(-6)}` : 'New conversation'}
+          {activeConversationId ? `conv-${activeConversationId.slice(-6)}` : 'new-conversation'}
         </button>
         <button
-          className="p-2 rounded-lg bg-primary/10 text-primary"
+          style={{
+            padding: 8,
+            borderRadius: 8,
+            background: t.surface,
+            border: 'none',
+            color: t.text,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+          }}
           onClick={startNewConversation}
           title="New conversation"
         >
-          <Plus size={15} />
+          <Plus size={14} />
         </button>
       </div>
 
       {/* Conversation list dropdown */}
       {showConversations && conversations && conversations.length > 0 && (
-        <div className="absolute top-[52px] left-3 right-3 z-50 bg-white rounded-xl border border-neutral-200 overflow-hidden">
-          <div className="p-1.5 max-h-48 overflow-y-auto no-scrollbar">
+        <div style={{
+          position: 'absolute',
+          top: 52,
+          left: 12,
+          right: 12,
+          zIndex: 50,
+          background: t.bg,
+          borderRadius: 12,
+          border: `1px solid ${t.divider}`,
+          overflow: 'hidden',
+        }}>
+          <div className="no-scrollbar" style={{ padding: 6, maxHeight: 192, overflowY: 'auto' }}>
             {conversations.map((conv) => (
               <button
                 key={conv.id}
-                className={`w-full text-left px-3 py-2.5 rounded-lg hover:bg-neutral-50 transition-colors text-sm ${activeConversationId === String(conv.id) ? 'bg-primary/5 text-primary font-medium' : ''}`}
+                style={{
+                  width: '100%',
+                  textAlign: 'left',
+                  padding: '10px 12px',
+                  borderRadius: 8,
+                  background: activeConversationId === String(conv.id) ? t.surface : 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontSize: 12,
+                  fontFamily: 'ui-monospace, Menlo, monospace',
+                  color: t.text,
+                }}
                 onClick={() => selectConversation(conv)}
               >
-                <p className="font-medium truncate">{conv.title || `Conversation ${String(conv.id).slice(-6)}`}</p>
+                <p style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {conv.title || `conv-${String(conv.id).slice(-6)}`}
+                </p>
                 {conv.updatedAt && (
-                  <p className="text-xs text-muted-foreground mt-0.5">
+                  <p style={{ fontSize: 10, color: t.faint, marginTop: 2 }}>
                     {new Date(conv.updatedAt).toLocaleDateString()}
                   </p>
                 )}
@@ -247,29 +315,66 @@ function ChatTab({ agent }: { agent: Agent }) {
       )}
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3 no-scrollbar" onClick={() => setShowConversations(false)}>
+      <div
+        className="no-scrollbar"
+        style={{ flex: 1, overflowY: 'auto', padding: '16px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}
+        onClick={() => setShowConversations(false)}
+      >
         {messages.map((m, i) => (
-          <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+          <div key={i} style={{ display: 'flex', justifyContent: m.role === 'user' ? 'flex-end' : 'flex-start' }}>
             {m.role === 'assistant' && (
-              <div className="w-7 h-7 rounded-full bg-neutral-100 border border-neutral-200 flex items-center justify-center text-sm mr-2 mt-0.5 shrink-0 self-start">
-                {agent.emoji}
+              <div style={{
+                width: 28, height: 28,
+                borderRadius: '50%',
+                background: t.surface,
+                border: `1px solid ${t.divider}`,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: t.label,
+                marginRight: 8,
+                marginTop: 2,
+                flexShrink: 0,
+                alignSelf: 'flex-start',
+              }}>
+                <Bot size={14} />
               </div>
             )}
-            <div className={`max-w-[80%] rounded-2xl px-3.5 py-2.5 text-[14.5px] leading-relaxed ${
-              m.role === 'user'
-                ? 'bg-foreground text-background rounded-tr-sm'
+            <div style={{
+              maxWidth: '80%',
+              borderRadius: m.role === 'user' ? '18px 18px 4px 18px' : '4px 18px 18px 18px',
+              padding: '10px 14px',
+              fontSize: 14,
+              lineHeight: 1.6,
+              background: m.role === 'user'
+                ? t.text
                 : m.role === 'system'
-                ? 'bg-destructive/8 text-destructive text-sm px-3 py-2 rounded-xl border border-destructive/15'
-                : 'bg-white border border-neutral-100 rounded-tl-sm'
-            }`}>
+                ? 'rgba(248,113,113,0.08)'
+                : t.surface,
+              color: m.role === 'user'
+                ? t.bg
+                : m.role === 'system'
+                ? '#f87171'
+                : t.text,
+              border: m.role === 'system'
+                ? '1px solid rgba(248,113,113,0.2)'
+                : m.role === 'assistant'
+                ? `1px solid ${t.divider}`
+                : 'none',
+            }}>
               {m.content === '' && m.role === 'assistant' && isStreaming && i === messages.length - 1 ? (
-                <span className="flex gap-1 items-center h-5">
-                  <span className="w-1.5 h-1.5 bg-muted-foreground/40 rounded-full animate-bounce [animation-delay:0ms]" />
-                  <span className="w-1.5 h-1.5 bg-muted-foreground/40 rounded-full animate-bounce [animation-delay:150ms]" />
-                  <span className="w-1.5 h-1.5 bg-muted-foreground/40 rounded-full animate-bounce [animation-delay:300ms]" />
+                <span style={{ display: 'flex', gap: 4, alignItems: 'center', height: 20 }}>
+                  {[0, 1, 2].map((j) => (
+                    <span key={j} style={{
+                      width: 5, height: 5,
+                      borderRadius: '50%',
+                      background: t.faint,
+                      animation: `bounce 1.2s ease-in-out ${j * 0.15}s infinite`,
+                    }} />
+                  ))}
                 </span>
               ) : (
-                <span className="whitespace-pre-wrap">{m.content}</span>
+                <span style={{ whiteSpace: 'pre-wrap' }}>{m.content}</span>
               )}
             </div>
           </div>
@@ -278,30 +383,67 @@ function ChatTab({ agent }: { agent: Agent }) {
       </div>
 
       {/* Input */}
-      <div className="px-3 pb-3 pt-2 bg-white border-t border-neutral-100">
-        <div className="flex items-end gap-2 bg-neutral-50 rounded-xl border border-neutral-200 focus-within:border-primary/40 transition-colors p-1">
+      <div style={{ padding: '8px 12px 12px', background: t.bg, borderTop: `1px solid ${t.divider}`, flexShrink: 0 }}>
+        <div style={{
+          display: 'flex',
+          alignItems: 'flex-end',
+          gap: 8,
+          background: t.surface,
+          borderRadius: 14,
+          border: `1px solid ${t.divider}`,
+          padding: '4px 4px 4px 12px',
+        }}>
           <textarea
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
             placeholder="Message…"
-            className="flex-1 max-h-32 min-h-[40px] bg-transparent resize-none outline-none py-2 px-2.5 text-[15px] placeholder:text-muted-foreground"
+            className="no-scrollbar"
+            style={{
+              flex: 1,
+              maxHeight: 120,
+              minHeight: 40,
+              background: 'transparent',
+              resize: 'none',
+              outline: 'none',
+              border: 'none',
+              padding: '8px 0',
+              fontSize: 14,
+              color: t.text,
+              fontFamily: 'inherit',
+              lineHeight: 1.5,
+            }}
             rows={1}
           />
           <button
-            className={`p-2.5 m-0.5 rounded-lg transition-all ${input.trim() && !isStreaming ? 'bg-primary text-primary-foreground' : 'bg-neutral-200 text-neutral-400'}`}
+            style={{
+              padding: '9px 10px',
+              borderRadius: 10,
+              background: input.trim() && !isStreaming ? t.text : t.divider,
+              color: input.trim() && !isStreaming ? t.bg : t.label,
+              border: 'none',
+              cursor: input.trim() && !isStreaming ? 'pointer' : 'not-allowed',
+              display: 'flex',
+              alignItems: 'center',
+              flexShrink: 0,
+              transition: 'all 0.15s',
+            }}
             onClick={handleSend}
             disabled={!input.trim() || isStreaming}
           >
-            <Send size={16} />
+            <Send size={15} />
           </button>
         </div>
       </div>
+
+      <style>{`
+        @keyframes bounce { 0%, 100% { transform: translateY(0); opacity: 0.4; } 50% { transform: translateY(-4px); opacity: 1; } }
+      `}</style>
     </div>
   );
 }
 
-// Humor style display labels
+// --- SETTINGS TAB ---
 const HUMOR_LABELS: Record<HumorStyle, string> = {
   straight: 'Straight',
   'dry-wit': 'Dry Wit',
@@ -310,14 +452,13 @@ const HUMOR_LABELS: Record<HumorStyle, string> = {
   absurdist: 'Absurdist',
 };
 
-// --- SETTINGS TAB ---
 function SettingsTab({ agent, onDeleted }: { agent: Agent; onDeleted: () => void }) {
+  const t = useTheme();
   const update = useUpdateAgent();
   const remove = useDeleteAgent();
 
   const [form, setForm] = useState({
     name: agent.name ?? '',
-    emoji: agent.emoji ?? '🤖',
     description: agent.description ?? '',
     interests: (agent.interests ?? []).join(', '),
     topicsToWatch: (agent.topicsToWatch ?? []).join(', '),
@@ -338,7 +479,6 @@ function SettingsTab({ agent, onDeleted }: { agent: Agent; onDeleted: () => void
       id: agent.id,
       data: {
         name: form.name,
-        emoji: form.emoji,
         description: form.description,
         interests: toArray(form.interests),
         topicsToWatch: toArray(form.topicsToWatch),
@@ -359,73 +499,61 @@ function SettingsTab({ agent, onDeleted }: { agent: Agent; onDeleted: () => void
     }
   };
 
+  const fieldGap = 14;
+
   return (
-    <div className="h-full overflow-y-auto px-4 py-4 space-y-4 no-scrollbar pb-24">
+    <div className="no-scrollbar" style={{ height: '100%', overflowY: 'auto', padding: '16px 20px 96px', display: 'flex', flexDirection: 'column', gap: fieldGap }}>
+      <FieldBlock label="Name" t={t}>
+        <Input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} />
+      </FieldBlock>
 
-      {/* Emoji + Name */}
-      <div className="flex items-center gap-3">
-        <div className="w-14 h-14 bg-neutral-100 rounded-xl flex items-center justify-center text-2xl shrink-0 border border-neutral-200">
-          {form.emoji}
-        </div>
-        <div className="flex-1">
-          <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest">Emoji</label>
-          <Input value={form.emoji} onChange={e => setForm(p => ({ ...p, emoji: e.target.value }))} className="mt-1" maxLength={4} />
-        </div>
-      </div>
+      <FieldBlock label="Description" t={t}>
+        <Textarea value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} rows={3} />
+      </FieldBlock>
 
-      <div>
-        <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest">Name</label>
-        <Input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} className="mt-1.5" />
-      </div>
-
-      <div>
-        <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest">Description</label>
-        <Textarea value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} className="mt-1.5" rows={3} />
-      </div>
-
-      <div>
-        <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest">Interests</label>
+      <FieldBlock label="Interests" hint="Separate topics with commas" t={t}>
         <Input
           value={form.interests}
           onChange={e => setForm(p => ({ ...p, interests: e.target.value }))}
-          className="mt-1.5"
-          placeholder="DeFi, NFTs, AI (comma-separated)"
+          placeholder="DeFi, NFTs, AI"
         />
-        <p className="text-xs text-muted-foreground mt-1">Separate topics with commas</p>
-      </div>
+      </FieldBlock>
 
-      <div>
-        <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest">Topics to Watch</label>
+      <FieldBlock label="Topics to Watch" hint="Separate topics with commas" t={t}>
         <Input
           value={form.topicsToWatch}
           onChange={e => setForm(p => ({ ...p, topicsToWatch: e.target.value }))}
-          className="mt-1.5"
-          placeholder="Celo price, ETH news (comma-separated)"
+          placeholder="Celo price, ETH news"
         />
-        <p className="text-xs text-muted-foreground mt-1">Separate topics with commas</p>
-      </div>
+      </FieldBlock>
 
-      {/* Humor Style */}
-      <div>
-        <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest mb-2 block">Humor Style</label>
-        <div className="flex flex-wrap gap-1.5">
+      <FieldBlock label="Humor Style" t={t}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
           {(Object.keys(HUMOR_LABELS) as HumorStyle[]).map(style => (
             <button
               key={style}
               type="button"
-              className={`px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all border ${form.humorStyle === style ? 'bg-foreground text-background border-foreground' : 'bg-white text-muted-foreground border-neutral-200'}`}
+              style={{
+                padding: '6px 14px',
+                borderRadius: 8,
+                fontSize: 12,
+                fontWeight: 500,
+                cursor: 'pointer',
+                transition: 'all 0.15s',
+                background: form.humorStyle === style ? t.text : t.surface,
+                color: form.humorStyle === style ? t.bg : t.label,
+                border: `1px solid ${form.humorStyle === style ? t.text : t.divider}`,
+              }}
               onClick={() => setForm(p => ({ ...p, humorStyle: style }))}
             >
               {HUMOR_LABELS[style]}
             </button>
           ))}
         </div>
-      </div>
+      </FieldBlock>
 
-      {/* Model tier */}
-      <div>
-        <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest mb-2 block">AI Model Tier</label>
-        <div className="space-y-2">
+      <FieldBlock label="AI Model Tier" t={t}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {([
             { value: 'none', label: 'Standard', description: 'Default model included in your plan' },
             { value: 'grok-4.20', label: 'Grok 4.20', description: 'xAI advanced reasoning model' },
@@ -434,70 +562,74 @@ function SettingsTab({ agent, onDeleted }: { agent: Agent; onDeleted: () => void
             <button
               key={value}
               type="button"
-              className={`w-full text-left px-3.5 py-3 rounded-xl border transition-all ${form.premiumModel === value ? 'border-primary/50 bg-primary/4' : 'border-neutral-200 bg-white'}`}
+              style={{
+                width: '100%',
+                textAlign: 'left',
+                padding: '12px 14px',
+                borderRadius: 12,
+                cursor: 'pointer',
+                transition: 'all 0.15s',
+                background: form.premiumModel === value ? t.surface : 'transparent',
+                border: `1px solid ${form.premiumModel === value ? t.text : t.divider}`,
+              }}
               onClick={() => setForm(p => ({ ...p, premiumModel: value }))}
             >
-              <div className="flex items-center justify-between">
-                <span className="font-semibold text-sm">{label}</span>
-                <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors ${form.premiumModel === value ? 'border-primary bg-primary' : 'border-neutral-300'}`}>
-                  {form.premiumModel === value && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ fontSize: 13, fontWeight: 600, color: t.text }}>{label}</span>
+                <div style={{
+                  width: 16, height: 16, borderRadius: '50%',
+                  border: `2px solid ${form.premiumModel === value ? t.text : t.divider}`,
+                  background: form.premiumModel === value ? t.text : 'transparent',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  {form.premiumModel === value && <div style={{ width: 5, height: 5, borderRadius: '50%', background: t.bg }} />}
                 </div>
               </div>
-              <p className="text-xs text-muted-foreground mt-0.5">{description}</p>
+              <p style={{ fontSize: 11, color: t.label, marginTop: 2 }}>{description}</p>
             </button>
           ))}
         </div>
-      </div>
+      </FieldBlock>
 
-      {/* Social Handles */}
-      <div className="space-y-3">
-        <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest block">Social Handles</label>
-        <div>
-          <label className="text-xs text-muted-foreground mb-1 block">Twitter / X</label>
-          <Input
-            value={form.socialHandles.twitter}
-            onChange={e => setForm(p => ({ ...p, socialHandles: { ...p.socialHandles, twitter: e.target.value } }))}
-            placeholder="@username"
-          />
+      <FieldBlock label="Social Handles" t={t}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {[
+            { key: 'twitter', label: 'Twitter / X' },
+            { key: 'telegram', label: 'Telegram' },
+            { key: 'farcaster', label: 'Farcaster' },
+          ].map(({ key, label }) => (
+            <div key={key}>
+              <p style={{ fontSize: 11, color: t.label, marginBottom: 4 }}>{label}</p>
+              <Input
+                value={form.socialHandles[key as keyof typeof form.socialHandles]}
+                onChange={e => setForm(p => ({ ...p, socialHandles: { ...p.socialHandles, [key]: e.target.value } }))}
+                placeholder="@username"
+              />
+            </div>
+          ))}
         </div>
-        <div>
-          <label className="text-xs text-muted-foreground mb-1 block">Telegram</label>
-          <Input
-            value={form.socialHandles.telegram}
-            onChange={e => setForm(p => ({ ...p, socialHandles: { ...p.socialHandles, telegram: e.target.value } }))}
-            placeholder="@username"
-          />
-        </div>
-        <div>
-          <label className="text-xs text-muted-foreground mb-1 block">Farcaster</label>
-          <Input
-            value={form.socialHandles.farcaster}
-            onChange={e => setForm(p => ({ ...p, socialHandles: { ...p.socialHandles, farcaster: e.target.value } }))}
-            placeholder="@username"
-          />
-        </div>
-      </div>
+      </FieldBlock>
 
       {update.isError && (
-        <div className="bg-destructive/8 border border-destructive/15 rounded-xl p-3.5">
-          <p className="text-xs text-destructive">
+        <div style={{ background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.2)', borderRadius: 12, padding: '12px 14px' }}>
+          <p style={{ fontSize: 11, color: '#f87171' }}>
             {update.error instanceof Error ? update.error.message : 'Failed to save. Please try again.'}
           </p>
         </div>
       )}
 
       {update.isSuccess && (
-        <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3.5">
-          <p className="text-xs text-emerald-700">Settings saved successfully.</p>
+        <div style={{ background: 'rgba(34,197,94,0.06)', border: '1px solid rgba(34,197,94,0.2)', borderRadius: 12, padding: '12px 14px' }}>
+          <p style={{ fontSize: 11, color: '#22c55e' }}>Settings saved successfully.</p>
         </div>
       )}
 
-      <Button className="w-full" onClick={handleSave} disabled={update.isPending}>
+      <Button style={{ width: '100%' }} onClick={handleSave} disabled={update.isPending}>
         {update.isPending ? 'Saving…' : 'Save Changes'}
       </Button>
 
-      <div className="pt-2 border-t border-neutral-100">
-        <Button variant="destructive" className="w-full flex gap-2" onClick={handleDelete} disabled={remove.isPending}>
+      <div style={{ paddingTop: 8, borderTop: `1px solid ${t.divider}` }}>
+        <Button variant="destructive" style={{ width: '100%', display: 'flex', gap: 8 }} onClick={handleDelete} disabled={remove.isPending}>
           <Trash2 size={15} />
           {remove.isPending ? 'Deleting…' : 'Delete Agent'}
         </Button>
@@ -506,39 +638,73 @@ function SettingsTab({ agent, onDeleted }: { agent: Agent; onDeleted: () => void
   );
 }
 
+function FieldBlock({ label, hint, children, t }: { label: string; hint?: string; children: React.ReactNode; t: ReturnType<typeof useTheme> }) {
+  return (
+    <div>
+      <p style={{ fontSize: 9, fontWeight: 600, color: t.faint, letterSpacing: '0.10em', textTransform: 'uppercase', fontFamily: 'ui-monospace, Menlo, monospace', marginBottom: 8 }}>
+        {label}
+      </p>
+      {children}
+      {hint && <p style={{ fontSize: 10, color: t.faint, marginTop: 4 }}>{hint}</p>}
+    </div>
+  );
+}
+
 // --- MORE TAB ---
 function MoreTab({ agentId, onNavigate }: { agentId: string; onNavigate: (path: string) => void }) {
+  const t = useTheme();
+
   const menu = [
-    { id: 'memories', label: 'Memories', icon: '🧠', desc: 'Facts learned from conversations' },
-    { id: 'knowledge', label: 'Knowledge Base', icon: '📚', desc: 'Custom docs & URLs' },
-    { id: 'skills', label: 'Skills', icon: '⚡', desc: 'Enable capabilities' },
-    { id: 'soul', label: 'Soul Document', icon: '✨', desc: 'Core identity & directives' },
-    { id: 'tasks', label: 'Pending Tasks', icon: '✅', desc: 'Approve autonomous actions' },
-    { id: 'telegram', label: 'Telegram Bot', icon: '✈️', desc: 'Connect to Telegram' },
+    { id: 'memories',  label: 'Memories',       icon: <Brain size={18} />,       desc: 'Facts learned from conversations' },
+    { id: 'knowledge', label: 'Knowledge Base',  icon: <BookOpen size={18} />,    desc: 'Custom docs & URLs' },
+    { id: 'skills',    label: 'Skills',          icon: <Zap size={18} />,         desc: 'Enable capabilities' },
+    { id: 'soul',      label: 'Soul Document',   icon: <ScrollText size={18} />,  desc: 'Core identity & directives' },
+    { id: 'tasks',     label: 'Pending Tasks',   icon: <CircleCheck size={18} />, desc: 'Approve autonomous actions' },
+    { id: 'telegram',  label: 'Telegram Bot',    icon: <Send size={18} />,        desc: 'Connect to Telegram' },
   ];
 
   return (
-    <div className="h-full overflow-y-auto no-scrollbar pb-20">
-      <div className="divide-y divide-neutral-100">
-        {menu.map(item => (
-          <button
-            key={item.id}
-            className="w-full text-left px-5 py-4 flex items-center gap-3.5 active:bg-neutral-50 transition-colors"
-            onClick={() => onNavigate(item.id)}
-          >
-            <span className="text-xl w-7 text-center shrink-0">{item.icon}</span>
-            <div className="flex-1 min-w-0">
-              <p className="font-semibold text-[14px] tracking-tight">{item.label}</p>
-              <p className="text-xs text-muted-foreground mt-0.5">{item.desc}</p>
-            </div>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" className="text-neutral-300 shrink-0">
-              <path d="m9 18 6-6-6-6" />
-            </svg>
-          </button>
+    <div className="no-scrollbar" style={{ height: '100%', overflowY: 'auto', paddingBottom: 80 }}>
+      <div>
+        {menu.map((item, i) => (
+          <div key={item.id}>
+            <button
+              style={{
+                width: '100%',
+                textAlign: 'left',
+                padding: '16px 20px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 14,
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+              }}
+              onClick={() => onNavigate(item.id)}
+            >
+              <div style={{
+                width: 36, height: 36, borderRadius: 10,
+                background: t.surface,
+                border: `1px solid ${t.divider}`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: t.label,
+                flexShrink: 0,
+              }}>
+                {item.icon}
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ fontSize: 13, fontWeight: 600, color: t.text, letterSpacing: '-0.01em' }}>{item.label}</p>
+                <p style={{ fontSize: 11, color: t.label, marginTop: 2 }}>{item.desc}</p>
+              </div>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" style={{ color: t.divider, flexShrink: 0 }}>
+                <path d="m9 18 6-6-6-6" />
+              </svg>
+            </button>
+            {i < menu.length - 1 && <div style={{ height: 1, background: t.divider, marginLeft: 70 }} />}
+          </div>
         ))}
       </div>
     </div>
   );
 }
 
-export { Card };

@@ -56,7 +56,7 @@ function AgentRow({ agent, index, onPress }: { agent: Agent; index: number; onPr
         </span>
       </div>
       <div style={{ display: 'flex', gap: 16, marginTop: 5 }}>
-        {[`${skills} skills`, `${interests} interests`, model, agent.emoji || '—'].map((v) => (
+        {[`${skills} skills`, `${interests} interests`, model].map((v) => (
           <span
             key={v}
             style={{

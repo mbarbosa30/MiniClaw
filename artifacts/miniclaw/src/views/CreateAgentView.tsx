@@ -1,15 +1,14 @@
 import { useState } from 'react';
 import { useTemplates, useCreateAgent, useSkillDefs, useAddKnowledge, useToggleSkill } from '@/hooks/use-agents';
 import { useRouter } from '@/lib/store';
+import { useTheme } from '@/lib/theme';
 import { ScreenHeader, Button, Input, Textarea, Switch } from '@/components/ui';
 import { motion, AnimatePresence } from 'framer-motion';
-import EmojiPicker from 'emoji-picker-react';
 import { Trash2, Link as LinkIcon, FileText, Plus } from 'lucide-react';
 import type { HumorStyle } from '@/types';
 
 interface FormData {
   name: string;
-  emoji: string;
   description: string;
   humorStyle: HumorStyle;
   personaTemplate: string;
@@ -30,7 +29,16 @@ const HUMOR_LABELS: Record<HumorStyle, string> = {
 
 const TOTAL_STEPS = 4;
 
+function MonoLabel({ children, t }: { children: React.ReactNode; t: ReturnType<typeof useTheme> }) {
+  return (
+    <p style={{ fontSize: 9, fontWeight: 600, color: t.faint, letterSpacing: '0.10em', textTransform: 'uppercase', fontFamily: 'ui-monospace, Menlo, monospace', marginBottom: 8 }}>
+      {children}
+    </p>
+  );
+}
+
 export function CreateAgentView() {
+  const t = useTheme();
   const { data: templates, isLoading: templatesLoading } = useTemplates();
   const { data: skillDefs, isLoading: skillsLoading } = useSkillDefs();
   const create = useCreateAgent();
@@ -42,16 +50,15 @@ export function CreateAgentView() {
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState<FormData>({
     name: '',
-    emoji: '🤖',
     description: '',
     humorStyle: 'straight',
-    personaTemplate: ''
+    personaTemplate: '',
   });
-  const [showEmoji, setShowEmoji] = useState(false);
   const [selectedSkills, setSelectedSkills] = useState<Set<string>>(new Set());
   const [knowledgeEntries, setKnowledgeEntries] = useState<KnowledgeEntry[]>([]);
   const [knowledgeTitle, setKnowledgeTitle] = useState('');
   const [knowledgeContent, setKnowledgeContent] = useState('');
+  const [postCreateErrors, setPostCreateErrors] = useState<string[]>([]);
 
   const toggleSkill = (skillId: string) => {
     setSelectedSkills(prev => {
@@ -73,14 +80,11 @@ export function CreateAgentView() {
     setKnowledgeEntries(prev => prev.filter((_, i) => i !== index));
   };
 
-  const [postCreateErrors, setPostCreateErrors] = useState<string[]>([]);
-
   const handleCreate = async () => {
     setPostCreateErrors([]);
 
     const result = await create.mutateAsync({
       name: formData.name,
-      emoji: formData.emoji,
       description: formData.description,
       humorStyle: formData.humorStyle,
       personaTemplate: formData.personaTemplate,
@@ -111,128 +115,149 @@ export function CreateAgentView() {
     push('agent-detail', { id: String(newAgent.id) });
   };
 
+  const stepSlide = { initial: { x: 32, opacity: 0 }, animate: { x: 0, opacity: 1 }, exit: { x: -32, opacity: 0 } };
+
+  const fallbackTemplates = [
+    { id: 'general',   name: 'General Assistant',   description: 'Helpful all-round AI' },
+    { id: 'research',  name: 'Research Analyst',    description: 'Deep dives & summaries' },
+    { id: 'defi',      name: 'DeFi Trader',         description: 'Crypto-native market intel' },
+    { id: 'community', name: 'Community Manager',   description: 'Engagement & moderation' },
+    { id: 'coach',     name: 'Personal Coach',      description: 'Motivation & accountability' },
+    { id: 'support',   name: 'Support Agent',       description: 'Help desk & troubleshooting' },
+  ];
+
+  const fallbackSkills = [
+    { id: 'wallet-monitor',     name: 'Wallet Monitor',       description: 'Track wallet activity & balances' },
+    { id: 'price-watcher',      name: 'Price Watcher',        description: 'Monitor token prices in real time' },
+    { id: 'economics-tracker',  name: 'Economics Tracker',    description: 'DeFi economics & yield data' },
+    { id: 'news-radar',         name: 'News Radar',           description: 'Crypto news & social signals' },
+    { id: 'research-assistant', name: 'Research Assistant',   description: 'Deep research on any topic' },
+    { id: 'smart-advisor',      name: 'Smart Advisor',        description: 'Personalized recommendations' },
+    { id: 'content-helper',     name: 'Content Helper',       description: 'Draft & schedule content' },
+    { id: 'reputation-monitor', name: 'Reputation Monitor',   description: 'Track on-chain reputation' },
+  ];
+
   return (
-    <div className="h-full flex flex-col bg-background">
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: t.bg, transition: 'background 0.3s ease' }}>
       <ScreenHeader
         title="Create Agent"
         onBack={pop}
         rightAction={
-          <span className="text-[12px] font-semibold text-muted-foreground">
+          <span style={{ fontSize: 11, fontWeight: 600, color: t.faint, fontFamily: 'ui-monospace, Menlo, monospace' }}>
             {step}/{TOTAL_STEPS}
           </span>
         }
       />
 
       {/* Progress bar */}
-      <div className="px-4 pt-3 pb-0.5 flex gap-1">
+      <div style={{ padding: '10px 20px 0', display: 'flex', gap: 4, flexShrink: 0 }}>
         {Array.from({ length: TOTAL_STEPS }, (_, i) => (
           <div
             key={i}
-            className={`h-0.5 flex-1 rounded-full transition-all duration-300 ${i < step ? 'bg-primary' : 'bg-neutral-200'}`}
+            style={{
+              height: 2,
+              flex: 1,
+              borderRadius: 1,
+              background: i < step ? t.text : t.divider,
+              transition: 'background 0.3s ease',
+            }}
           />
         ))}
       </div>
 
-      <div className="flex-1 overflow-y-auto px-4 pb-6 no-scrollbar">
+      <div className="no-scrollbar" style={{ flex: 1, overflowY: 'auto', padding: '0 20px 24px' }}>
         <AnimatePresence mode="wait">
 
           {/* STEP 1: Choose template */}
           {step === 1 && (
-            <motion.div key="step1" initial={{ x: 32, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -32, opacity: 0 }} className="pt-5">
-              <h2 className="text-[22px] font-bold tracking-tight mb-1">Choose a template</h2>
-              <p className="text-sm text-muted-foreground mb-5">This sets the base personality for your agent.</p>
+            <motion.div key="step1" {...stepSlide} style={{ paddingTop: 20 }}>
+              <h2 style={{ fontSize: 27, fontWeight: 300, letterSpacing: '-0.025em', color: t.text, lineHeight: 1, marginBottom: 6 }}>
+                Choose a template
+              </h2>
+              <p style={{ fontSize: 13, color: t.label, marginBottom: 20, lineHeight: 1.5 }}>
+                This sets the base personality for your agent.
+              </p>
 
               {templatesLoading ? (
-                <div className="grid grid-cols-2 gap-2.5">
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                   {[1,2,3,4,5,6].map(i => (
-                    <div key={i} className="h-28 bg-neutral-100 rounded-xl animate-pulse" />
+                    <div key={i} style={{ height: 88, background: t.surface, borderRadius: 12, animation: 'pulse 1.5s ease-in-out infinite' }} />
                   ))}
                 </div>
               ) : (
-                <div className="grid grid-cols-2 gap-2.5">
-                  {(templates || [
-                    { id: 'general',   name: 'General Assistant',   description: 'Helpful all-round AI',           emoji: '👋' },
-                    { id: 'research',  name: 'Research Analyst',    description: 'Deep dives & summaries',         emoji: '🔬' },
-                    { id: 'defi',      name: 'DeFi Trader',         description: 'Crypto-native market intel',     emoji: '📈' },
-                    { id: 'community', name: 'Community Manager',   description: 'Engagement & moderation',        emoji: '🤝' },
-                    { id: 'coach',     name: 'Personal Coach',      description: 'Motivation & accountability',    emoji: '💪' },
-                    { id: 'support',   name: 'Support Agent',       description: 'Help desk & troubleshooting',   emoji: '🛟' },
-                  ]).map(t => (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                  {(templates || fallbackTemplates).map(tmpl => (
                     <button
-                      key={t.id}
-                      className={`text-center p-4 rounded-xl border-2 transition-all bg-white active:scale-[0.97] ${formData.personaTemplate === t.id ? 'border-primary/50 bg-primary/4' : 'border-neutral-100'}`}
-                      onClick={() => { setFormData(p => ({ ...p, personaTemplate: t.id })); setStep(2); }}
+                      key={tmpl.id}
+                      style={{
+                        textAlign: 'left',
+                        padding: '14px 14px',
+                        borderRadius: 12,
+                        border: `1px solid ${formData.personaTemplate === tmpl.id ? t.text : t.divider}`,
+                        background: formData.personaTemplate === tmpl.id ? t.surface : 'transparent',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s',
+                      }}
+                      onClick={() => { setFormData(p => ({ ...p, personaTemplate: tmpl.id })); setStep(2); }}
                     >
-                      <div className="text-2xl mb-2">{t.emoji}</div>
-                      <div className="font-semibold text-[13px] leading-tight mb-1">{t.name}</div>
-                      <div className="text-[11px] text-muted-foreground line-clamp-2 leading-relaxed">{t.description}</div>
+                      <p style={{ fontSize: 12, fontWeight: 600, color: t.text, letterSpacing: '-0.01em', marginBottom: 3, lineHeight: 1.3 }}>{tmpl.name}</p>
+                      <p style={{ fontSize: 10, color: t.label, lineHeight: 1.5, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{tmpl.description}</p>
                     </button>
                   ))}
                 </div>
               )}
+              <style>{`@keyframes pulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 0.7; } }`}</style>
             </motion.div>
           )}
 
           {/* STEP 2: Identity */}
           {step === 2 && (
-            <motion.div key="step2" initial={{ x: 32, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -32, opacity: 0 }} className="pt-5 space-y-4">
+            <motion.div key="step2" {...stepSlide} style={{ paddingTop: 20, display: 'flex', flexDirection: 'column', gap: 16 }}>
               <div>
-                <h2 className="text-[22px] font-bold tracking-tight mb-1">Give it an identity</h2>
-                <p className="text-sm text-muted-foreground">Name your agent and choose its personality.</p>
-              </div>
-
-              {/* Emoji + Name */}
-              <div className="flex gap-3 items-start">
-                <div className="relative">
-                  <button
-                    className="w-14 h-14 bg-neutral-100 border border-neutral-200 rounded-xl text-2xl flex items-center justify-center focus:border-primary/40 transition-colors"
-                    onClick={() => setShowEmoji(!showEmoji)}
-                    type="button"
-                  >
-                    {formData.emoji}
-                  </button>
-                  {showEmoji && (
-                    <div className="absolute top-[60px] left-0 z-50 shadow-xl rounded-xl overflow-hidden border border-neutral-200">
-                      <EmojiPicker
-                        onEmojiClick={(e) => { setFormData(p => ({ ...p, emoji: e.emoji })); setShowEmoji(false); }}
-                        height={360}
-                        searchDisabled={false}
-                      />
-                    </div>
-                  )}
-                </div>
-                <div className="flex-1">
-                  <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest">Name *</label>
-                  <Input
-                    placeholder="e.g. ClawBot"
-                    value={formData.name}
-                    onChange={e => setFormData(p => ({ ...p, name: e.target.value }))}
-                    className="mt-1.5"
-                    autoFocus
-                  />
-                </div>
+                <h2 style={{ fontSize: 27, fontWeight: 300, letterSpacing: '-0.025em', color: t.text, lineHeight: 1, marginBottom: 6 }}>
+                  Give it an identity
+                </h2>
+                <p style={{ fontSize: 13, color: t.label, lineHeight: 1.5 }}>Name your agent and choose its personality.</p>
               </div>
 
               <div>
-                <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest">Description</label>
+                <MonoLabel t={t}>Name *</MonoLabel>
+                <Input
+                  placeholder="e.g. ClawBot"
+                  value={formData.name}
+                  onChange={e => setFormData(p => ({ ...p, name: e.target.value }))}
+                  autoFocus
+                />
+              </div>
+
+              <div>
+                <MonoLabel t={t}>Description</MonoLabel>
                 <Textarea
                   placeholder="What is this agent for? (optional)"
                   rows={3}
                   value={formData.description}
                   onChange={e => setFormData(p => ({ ...p, description: e.target.value }))}
-                  className="mt-1.5"
                 />
               </div>
 
-              {/* Humor Style */}
               <div>
-                <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest mb-2 block">Humor Style</label>
-                <div className="flex flex-wrap gap-1.5">
+                <MonoLabel t={t}>Humor Style</MonoLabel>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                   {(Object.keys(HUMOR_LABELS) as HumorStyle[]).map(style => (
                     <button
                       key={style}
                       type="button"
-                      className={`px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all border ${formData.humorStyle === style ? 'bg-foreground text-background border-foreground' : 'bg-white text-muted-foreground border-neutral-200'}`}
+                      style={{
+                        padding: '6px 14px',
+                        borderRadius: 8,
+                        fontSize: 12,
+                        fontWeight: 500,
+                        cursor: 'pointer',
+                        transition: 'all 0.15s',
+                        background: formData.humorStyle === style ? t.text : t.surface,
+                        color: formData.humorStyle === style ? t.bg : t.label,
+                        border: `1px solid ${formData.humorStyle === style ? t.text : t.divider}`,
+                      }}
                       onClick={() => setFormData(p => ({ ...p, humorStyle: style }))}
                     >
                       {HUMOR_LABELS[style]}
@@ -241,9 +266,9 @@ export function CreateAgentView() {
                 </div>
               </div>
 
-              <div className="flex gap-2 pt-1">
-                <Button variant="ghost" className="flex-1" onClick={() => setStep(1)}>Back</Button>
-                <Button className="flex-1" onClick={() => setStep(3)} disabled={!formData.name.trim()}>
+              <div style={{ display: 'flex', gap: 8, paddingTop: 4 }}>
+                <Button variant="ghost" style={{ flex: 1 }} onClick={() => setStep(1)}>Back</Button>
+                <Button style={{ flex: 1 }} onClick={() => setStep(3)} disabled={!formData.name.trim()}>
                   Next: Skills
                 </Button>
               </div>
@@ -252,32 +277,25 @@ export function CreateAgentView() {
 
           {/* STEP 3: Skills */}
           {step === 3 && (
-            <motion.div key="step3" initial={{ x: 32, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -32, opacity: 0 }} className="pt-5 space-y-4">
+            <motion.div key="step3" {...stepSlide} style={{ paddingTop: 20, display: 'flex', flexDirection: 'column', gap: 16 }}>
               <div>
-                <h2 className="text-[22px] font-bold tracking-tight mb-1">Enable skills</h2>
-                <p className="text-sm text-muted-foreground">Choose which capabilities to give your agent.</p>
+                <h2 style={{ fontSize: 27, fontWeight: 300, letterSpacing: '-0.025em', color: t.text, lineHeight: 1, marginBottom: 6 }}>
+                  Enable skills
+                </h2>
+                <p style={{ fontSize: 13, color: t.label, lineHeight: 1.5 }}>Choose which capabilities to give your agent.</p>
               </div>
 
               {skillsLoading ? (
-                <div className="space-y-2.5">
-                  {[1,2,3,4].map(i => <div key={i} className="h-14 bg-neutral-100 rounded-xl animate-pulse" />)}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {[1,2,3,4].map(i => <div key={i} style={{ height: 56, background: t.surface, borderRadius: 12, animation: 'pulse 1.5s ease-in-out infinite' }} />)}
                 </div>
               ) : (
-                <div className="border border-neutral-100 rounded-xl overflow-hidden divide-y divide-neutral-100">
-                  {(skillDefs || [
-                    { id: 'wallet-monitor',     name: 'Wallet Monitor',       description: 'Track wallet activity & balances' },
-                    { id: 'price-watcher',      name: 'Price Watcher',        description: 'Monitor token prices in real time' },
-                    { id: 'economics-tracker',  name: 'Economics Tracker',    description: 'DeFi economics & yield data' },
-                    { id: 'news-radar',         name: 'News Radar',           description: 'Crypto news & social signals' },
-                    { id: 'research-assistant', name: 'Research Assistant',   description: 'Deep research on any topic' },
-                    { id: 'smart-advisor',      name: 'Smart Advisor',        description: 'Personalized recommendations' },
-                    { id: 'content-helper',     name: 'Content Helper',       description: 'Draft & schedule content' },
-                    { id: 'reputation-monitor', name: 'Reputation Monitor',   description: 'Track on-chain reputation' },
-                  ]).map(skill => (
-                    <div key={skill.id} className="bg-white px-4 py-3.5 flex items-center justify-between">
-                      <div className="flex-1 pr-4">
-                        <h4 className="font-semibold text-sm">{skill.name}</h4>
-                        <p className="text-xs text-muted-foreground mt-0.5">{skill.description}</p>
+                <div style={{ border: `1px solid ${t.divider}`, borderRadius: 12, overflow: 'hidden' }}>
+                  {(skillDefs || fallbackSkills).map((skill, i, arr) => (
+                    <div key={skill.id} style={{ background: t.surface, padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: i < arr.length - 1 ? `1px solid ${t.divider}` : 'none' }}>
+                      <div style={{ flex: 1, paddingRight: 16 }}>
+                        <p style={{ fontSize: 13, fontWeight: 600, color: t.text, letterSpacing: '-0.01em' }}>{skill.name}</p>
+                        <p style={{ fontSize: 11, color: t.label, marginTop: 2 }}>{skill.description}</p>
                       </div>
                       <Switch
                         checked={selectedSkills.has(skill.id)}
@@ -288,9 +306,9 @@ export function CreateAgentView() {
                 </div>
               )}
 
-              <div className="flex gap-2 pt-1">
-                <Button variant="ghost" className="flex-1" onClick={() => setStep(2)}>Back</Button>
-                <Button className="flex-1" onClick={() => setStep(4)}>
+              <div style={{ display: 'flex', gap: 8, paddingTop: 4 }}>
+                <Button variant="ghost" style={{ flex: 1 }} onClick={() => setStep(2)}>Back</Button>
+                <Button style={{ flex: 1 }} onClick={() => setStep(4)}>
                   Next: Knowledge
                 </Button>
               </div>
@@ -299,49 +317,49 @@ export function CreateAgentView() {
 
           {/* STEP 4: Knowledge + Confirm */}
           {step === 4 && (
-            <motion.div key="step4" initial={{ x: 32, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -32, opacity: 0 }} className="pt-5 space-y-4">
+            <motion.div key="step4" {...stepSlide} style={{ paddingTop: 20, display: 'flex', flexDirection: 'column', gap: 16 }}>
               <div>
-                <h2 className="text-[22px] font-bold tracking-tight mb-1">Add knowledge</h2>
-                <p className="text-sm text-muted-foreground">Teach your agent specific topics. You can also add more later.</p>
+                <h2 style={{ fontSize: 27, fontWeight: 300, letterSpacing: '-0.025em', color: t.text, lineHeight: 1, marginBottom: 6 }}>
+                  Add knowledge
+                </h2>
+                <p style={{ fontSize: 13, color: t.label, lineHeight: 1.5 }}>
+                  Teach your agent specific topics. You can also add more later.
+                </p>
               </div>
 
               {/* Add entry */}
-              <div className="border border-neutral-100 rounded-xl px-4 py-4 space-y-3">
+              <div style={{ border: `1px solid ${t.divider}`, borderRadius: 12, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
                 <div>
-                  <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest mb-1.5 block">Title *</label>
-                  <Input
-                    placeholder="e.g. Tokenomics overview"
-                    value={knowledgeTitle}
-                    onChange={e => setKnowledgeTitle(e.target.value)}
-                  />
+                  <MonoLabel t={t}>Title *</MonoLabel>
+                  <Input placeholder="e.g. Tokenomics overview" value={knowledgeTitle} onChange={e => setKnowledgeTitle(e.target.value)} />
                 </div>
                 <div>
-                  <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest mb-1.5 block">Content *</label>
+                  <MonoLabel t={t}>Content *</MonoLabel>
                   <Textarea rows={2} placeholder="Paste text or URL…" value={knowledgeContent} onChange={e => setKnowledgeContent(e.target.value)} />
                 </div>
                 <Button
                   variant="secondary"
-                  className="w-full flex gap-2"
+                  style={{ width: '100%', display: 'flex', gap: 8 }}
                   onClick={addKnowledgeEntry}
                   disabled={!knowledgeTitle.trim() || !knowledgeContent.trim() || knowledgeEntries.length >= 20}
                 >
-                  <Plus size={15} /> Add Entry
+                  <Plus size={14} /> Add Entry
                 </Button>
               </div>
 
               {/* Listed entries */}
               {knowledgeEntries.length > 0 && (
-                <div className="border border-neutral-100 rounded-xl overflow-hidden divide-y divide-neutral-100">
+                <div style={{ border: `1px solid ${t.divider}`, borderRadius: 12, overflow: 'hidden' }}>
                   {knowledgeEntries.map((entry, i) => (
-                    <div key={i} className="px-4 py-3 flex items-start gap-3 bg-white">
-                      <div className="text-muted-foreground/40 mt-0.5 shrink-0">
+                    <div key={i} style={{ padding: '12px 14px', display: 'flex', alignItems: 'flex-start', gap: 10, background: t.surface, borderBottom: i < knowledgeEntries.length - 1 ? `1px solid ${t.divider}` : 'none' }}>
+                      <div style={{ color: t.faint, marginTop: 2, flexShrink: 0 }}>
                         {entry.content.startsWith('http') ? <LinkIcon size={13} /> : <FileText size={13} />}
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold truncate">{entry.title}</p>
-                        <p className="text-xs text-muted-foreground mt-0.5 break-all leading-relaxed line-clamp-2">{entry.content}</p>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p style={{ fontSize: 13, fontWeight: 600, color: t.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{entry.title}</p>
+                        <p style={{ fontSize: 11, color: t.label, marginTop: 2, wordBreak: 'break-all', lineHeight: 1.5 }}>{entry.content}</p>
                       </div>
-                      <button className="text-muted-foreground/40 hover:text-destructive transition-colors shrink-0 p-1" onClick={() => removeKnowledgeEntry(i)}>
+                      <button style={{ color: t.faint, background: 'none', border: 'none', cursor: 'pointer', padding: 4, flexShrink: 0 }} onClick={() => removeKnowledgeEntry(i)}>
                         <Trash2 size={13} />
                       </button>
                     </div>
@@ -350,43 +368,46 @@ export function CreateAgentView() {
               )}
 
               {/* Summary */}
-              <div className="border border-neutral-100 rounded-xl px-4 py-4 bg-neutral-50">
-                <div className="flex items-center gap-3 mb-2">
-                  <span className="text-2xl">{formData.emoji}</span>
-                  <div>
-                    <p className="font-bold text-[15px]">{formData.name}</p>
-                    <p className="text-xs text-muted-foreground capitalize">
-                      {formData.personaTemplate} · {HUMOR_LABELS[formData.humorStyle]} humor
-                    </p>
-                  </div>
-                </div>
-                <div className="flex gap-4 text-xs text-muted-foreground">
-                  <span>{selectedSkills.size} skills enabled</span>
-                  <span>{knowledgeEntries.length} knowledge entries</span>
+              <div style={{ border: `1px solid ${t.divider}`, borderRadius: 12, padding: '14px 16px', background: t.surface }}>
+                <p style={{ fontSize: 27, fontWeight: 300, letterSpacing: '-0.025em', color: t.text, lineHeight: 1, marginBottom: 4 }}>
+                  {formData.name}
+                </p>
+                <p style={{ fontSize: 11, color: t.label, marginBottom: 10 }}>
+                  {formData.personaTemplate} · {HUMOR_LABELS[formData.humorStyle]} humor
+                </p>
+                <div style={{ display: 'flex', gap: 16 }}>
+                  {[
+                    { label: 'skills', value: selectedSkills.size },
+                    { label: 'knowledge', value: knowledgeEntries.length },
+                  ].map(({ label, value }) => (
+                    <span key={label} style={{ fontSize: 9, fontFamily: 'ui-monospace, Menlo, monospace', color: t.faint, letterSpacing: '0.05em' }}>
+                      {value} {label}
+                    </span>
+                  ))}
                 </div>
               </div>
 
               {create.isError && (
-                <div className="border border-destructive/20 rounded-xl p-3.5">
-                  <p className="text-xs text-destructive">
+                <div style={{ border: '1px solid rgba(248,113,113,0.2)', borderRadius: 12, padding: '12px 14px' }}>
+                  <p style={{ fontSize: 11, color: '#f87171' }}>
                     {create.error instanceof Error ? create.error.message : 'Failed to create agent. Please try again.'}
                   </p>
                 </div>
               )}
 
               {postCreateErrors.length > 0 && (
-                <div className="border border-neutral-200 rounded-xl p-3.5">
-                  <p className="text-xs font-semibold text-foreground mb-1">Agent created, but some extras failed:</p>
+                <div style={{ border: `1px solid ${t.divider}`, borderRadius: 12, padding: '12px 14px' }}>
+                  <p style={{ fontSize: 11, fontWeight: 600, color: t.text, marginBottom: 4 }}>Agent created, but some extras failed:</p>
                   {postCreateErrors.map((e, i) => (
-                    <p key={i} className="text-xs text-muted-foreground">• {e}</p>
+                    <p key={i} style={{ fontSize: 11, color: t.label }}>• {e}</p>
                   ))}
                 </div>
               )}
 
-              <div className="flex gap-2">
-                <Button variant="ghost" className="flex-1" onClick={() => setStep(3)} disabled={create.isPending}>Back</Button>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <Button variant="ghost" style={{ flex: 1 }} onClick={() => setStep(3)} disabled={create.isPending}>Back</Button>
                 <Button
-                  className="flex-1"
+                  style={{ flex: 1 }}
                   onClick={handleCreate}
                   disabled={create.isPending || addKnowledge.isPending || toggleSkillMutation.isPending}
                 >

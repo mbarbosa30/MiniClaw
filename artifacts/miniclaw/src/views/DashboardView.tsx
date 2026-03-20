@@ -67,7 +67,7 @@ function AgentCard({ agent, i }: { agent: Agent; i: number }) {
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <span style={{ fontSize: 14, fontWeight: 500, color: t.text, letterSpacing: '-0.01em' }}>
-              {agent.emoji ? `${agent.emoji} ` : ''}{agent.name}
+              {agent.name}
             </span>
             <StateIndicator state={state} />
           </div>

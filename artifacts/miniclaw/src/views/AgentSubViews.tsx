@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from '@/lib/store';
-import { ScreenHeader, Card, Switch, Button, Input, Textarea } from '@/components/ui';
+import { useTheme } from '@/lib/theme';
+import { ScreenHeader, Switch, Button, Input, Textarea } from '@/components/ui';
 import {
   useSkillDefs, useAgent, useToggleSkill,
   useKnowledge, useAddKnowledge, useDeleteKnowledge,
@@ -11,13 +12,17 @@ import {
 } from '@/hooks/use-agents';
 import { apiFetch } from '@/lib/api-client';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Trash2, Link as LinkIcon, FileText, Check, X, Send } from 'lucide-react';
+import {
+  Trash2, Link as LinkIcon, FileText, Check, X, Send,
+  Zap, BookOpen, Brain, CircleCheck, Bot,
+} from 'lucide-react';
 import type { Memory, TelegramNotificationLevel } from '@/types';
 
 function SubScreenLayout({ title, children }: { title: string; children: React.ReactNode }) {
+  const t = useTheme();
   const pop = useRouter(s => s.pop);
   return (
-    <div className="h-full flex flex-col bg-background">
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: t.bg, transition: 'background 0.3s ease' }}>
       <ScreenHeader title={title} onBack={pop} />
       <div className="flex-1 overflow-y-auto no-scrollbar pb-8">
         {children}
@@ -27,26 +32,46 @@ function SubScreenLayout({ title, children }: { title: string; children: React.R
 }
 
 function LoadingState() {
+  const t = useTheme();
   return (
-    <div className="flex flex-col items-center justify-center py-16 gap-2.5">
-      <div className="w-7 h-7 border-[3px] border-neutral-200 border-t-primary rounded-full animate-spin" />
-      <p className="text-sm text-muted-foreground">Loading…</p>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '64px 0', gap: 10 }}>
+      <div style={{ width: 28, height: 28, borderRadius: '50%', border: `3px solid ${t.divider}`, borderTopColor: t.text, animation: 'spin 0.8s linear infinite' }} />
+      <p style={{ fontSize: 12, color: t.faint }}>Loading…</p>
+      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }
 
-function EmptyState({ icon, title, description }: { icon: string; title: string; description: string }) {
+function EmptyState({ icon, title, description }: { icon: React.ReactNode; title: string; description: string }) {
+  const t = useTheme();
   return (
-    <div className="flex flex-col items-center justify-center py-16 text-center gap-3 px-6">
-      <div className="w-14 h-14 bg-neutral-100 rounded-full flex items-center justify-center text-2xl">{icon}</div>
-      <h3 className="font-semibold text-[15px]">{title}</h3>
-      <p className="text-sm text-muted-foreground max-w-[220px] leading-relaxed">{description}</p>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '64px 24px', textAlign: 'center', gap: 12 }}>
+      <div style={{ width: 52, height: 52, borderRadius: '50%', background: t.surface, border: `1px solid ${t.divider}`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: t.faint }}>
+        {icon}
+      </div>
+      <p style={{ fontWeight: 600, fontSize: 14, color: t.text, letterSpacing: '-0.01em' }}>{title}</p>
+      <p style={{ fontSize: 12, color: t.label, maxWidth: 220, lineHeight: 1.6 }}>{description}</p>
     </div>
+  );
+}
+
+function Divider() {
+  const t = useTheme();
+  return <div style={{ height: 1, background: t.divider }} />;
+}
+
+function MonoLabel({ children }: { children: React.ReactNode }) {
+  const t = useTheme();
+  return (
+    <p style={{ fontSize: 9, fontWeight: 600, color: t.faint, letterSpacing: '0.10em', textTransform: 'uppercase', fontFamily: 'ui-monospace, Menlo, monospace', marginBottom: 8 }}>
+      {children}
+    </p>
   );
 }
 
 // --- SKILLS VIEW ---
 export function SkillsView() {
+  const t = useTheme();
   const agentId: string = useRouter(s => s.currentView.params?.id ?? '');
   const { data: skillDefs, isLoading: skillsLoading } = useSkillDefs();
   const { data: agent, isLoading: agentLoading } = useAgent(agentId);
@@ -59,19 +84,22 @@ export function SkillsView() {
   return (
     <SubScreenLayout title="Skills">
       {isLoading ? <LoadingState /> : !skills.length ? (
-        <EmptyState icon="⚡" title="No skills available" description="Skills will appear here once the API returns them." />
+        <EmptyState icon={<Zap size={22} />} title="No skills available" description="Skills will appear here once the API returns them." />
       ) : (
-        <div className="divide-y divide-neutral-100">
-          {skills.map(skill => (
-            <div key={skill.id} className="px-5 py-4 flex items-center justify-between">
-              <div className="pr-4 flex-1">
-                <h4 className="font-semibold text-sm">{skill.name}</h4>
-                <p className="text-xs text-muted-foreground leading-relaxed mt-0.5">{skill.description}</p>
+        <div>
+          {skills.map((skill, i) => (
+            <div key={skill.id}>
+              <div style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ flex: 1, paddingRight: 16 }}>
+                  <p style={{ fontSize: 13, fontWeight: 600, color: t.text, letterSpacing: '-0.01em' }}>{skill.name}</p>
+                  <p style={{ fontSize: 11, color: t.label, marginTop: 2, lineHeight: 1.5 }}>{skill.description}</p>
+                </div>
+                <Switch
+                  checked={skill.enabled}
+                  onChange={(c) => toggle.mutate({ agentId, skillId: skill.id, enable: c })}
+                />
               </div>
-              <Switch
-                checked={skill.enabled}
-                onChange={(c) => toggle.mutate({ agentId, skillId: skill.id, enable: c })}
-              />
+              {i < skills.length - 1 && <Divider />}
             </div>
           ))}
         </div>
@@ -82,6 +110,7 @@ export function SkillsView() {
 
 // --- KNOWLEDGE VIEW ---
 export function KnowledgeView() {
+  const t = useTheme();
   const agentId: string = useRouter(s => s.currentView.params?.id ?? '');
   const { data: knowledge, isLoading } = useKnowledge(agentId);
   const add = useAddKnowledge();
@@ -101,18 +130,17 @@ export function KnowledgeView() {
 
   return (
     <SubScreenLayout title="Knowledge Base">
-      {/* Add form */}
-      <div className="px-5 py-4 border-b border-neutral-100 space-y-3">
-        <div>
-          <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest mb-1.5 block">Title *</label>
+      <div style={{ padding: '16px 20px 20px', borderBottom: `1px solid ${t.divider}` }}>
+        <div style={{ marginBottom: 12 }}>
+          <MonoLabel>Title *</MonoLabel>
           <Input placeholder="e.g. Company overview" value={title} onChange={e => setTitle(e.target.value)} />
         </div>
-        <div>
-          <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest mb-1.5 block">Content *</label>
+        <div style={{ marginBottom: 12 }}>
+          <MonoLabel>Content *</MonoLabel>
           <Textarea rows={3} placeholder="Paste text or a URL…" value={content} onChange={e => setContent(e.target.value)} />
         </div>
         <Button
-          className="w-full"
+          style={{ width: '100%' }}
           onClick={handleAdd}
           disabled={add.isPending || !title.trim() || !content.trim() || used >= 20}
         >
@@ -120,33 +148,37 @@ export function KnowledgeView() {
         </Button>
       </div>
 
-      {/* Header row */}
-      <div className="flex items-center justify-between px-5 py-3 border-b border-neutral-100">
-        <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest">Saved Entries</span>
-        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full border ${used >= 20 ? 'bg-destructive/8 text-destructive border-destructive/15' : 'bg-neutral-100 text-muted-foreground border-neutral-200'}`}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 20px', borderBottom: `1px solid ${t.divider}` }}>
+        <span style={{ fontSize: 9, fontWeight: 600, color: t.faint, letterSpacing: '0.10em', textTransform: 'uppercase', fontFamily: 'ui-monospace, Menlo, monospace' }}>
+          Saved Entries
+        </span>
+        <span style={{ fontSize: 10, fontWeight: 600, fontFamily: 'ui-monospace, Menlo, monospace', color: used >= 20 ? '#f87171' : t.label }}>
           {used}/20
         </span>
       </div>
 
       {isLoading ? <LoadingState /> : !knowledge?.length ? (
-        <EmptyState icon="📚" title="No knowledge yet" description="Add entries to teach your agent about specific topics." />
+        <EmptyState icon={<BookOpen size={22} />} title="No knowledge yet" description="Add entries to teach your agent about specific topics." />
       ) : (
-        <div className="divide-y divide-neutral-100">
-          {knowledge.map(k => (
-            <div key={k.id} className="px-5 py-4 flex items-start gap-3">
-              <div className="mt-0.5 text-muted-foreground/40 shrink-0">
-                {k.content.startsWith('http') ? <LinkIcon size={13} /> : <FileText size={13} />}
+        <div>
+          {knowledge.map((k, i) => (
+            <div key={k.id}>
+              <div style={{ padding: '14px 20px', display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                <div style={{ marginTop: 2, color: t.faint, flexShrink: 0 }}>
+                  {k.content.startsWith('http') ? <LinkIcon size={13} /> : <FileText size={13} />}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ fontSize: 13, fontWeight: 600, color: t.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{k.title}</p>
+                  <p style={{ fontSize: 11, color: t.label, marginTop: 2, lineHeight: 1.5, wordBreak: 'break-all', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{k.content}</p>
+                </div>
+                <button
+                  style={{ color: t.faint, background: 'none', border: 'none', cursor: 'pointer', padding: 4, flexShrink: 0 }}
+                  onClick={() => remove.mutate({ agentId, id: k.id })}
+                >
+                  <Trash2 size={13} />
+                </button>
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold truncate">{k.title}</p>
-                <p className="text-xs text-muted-foreground mt-0.5 break-all leading-relaxed line-clamp-2">{k.content}</p>
-              </div>
-              <button
-                className="text-muted-foreground/40 hover:text-destructive transition-colors p-1 -mr-1 shrink-0"
-                onClick={() => remove.mutate({ agentId, id: k.id })}
-              >
-                <Trash2 size={13} />
-              </button>
+              {i < knowledge.length - 1 && <Divider />}
             </div>
           ))}
         </div>
@@ -157,6 +189,7 @@ export function KnowledgeView() {
 
 // --- SOUL VIEW ---
 export function SoulView() {
+  const t = useTheme();
   const agentId: string = useRouter(s => s.currentView.params?.id ?? '');
   const { data: soul, isLoading } = useSoul(agentId);
   const update = useUpdateSoul();
@@ -168,27 +201,27 @@ export function SoulView() {
 
   return (
     <SubScreenLayout title="Soul Document">
-      <div className="px-5 py-4 space-y-4">
-        <p className="text-xs text-muted-foreground leading-relaxed border border-neutral-100 rounded-xl px-3.5 py-3 bg-neutral-50">
+      <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <p style={{ fontSize: 11, color: t.label, lineHeight: 1.6, background: t.surface, border: `1px solid ${t.divider}`, borderRadius: 10, padding: '10px 14px' }}>
           The Soul document defines your agent's core identity, tone, and behavior. Edit with care.
         </p>
         {isLoading ? <LoadingState /> : (
           <>
             <Textarea
-              className="min-h-[320px] font-mono text-sm leading-relaxed"
+              style={{ minHeight: 320, fontFamily: 'ui-monospace, Menlo, monospace', fontSize: 13 }}
               value={soulText}
               onChange={e => setSoulText(e.target.value)}
               placeholder="System prompt and identity directives…"
             />
             {update.isError && (
-              <p className="text-xs text-destructive px-0.5">
+              <p style={{ fontSize: 11, color: '#f87171' }}>
                 {update.error instanceof Error ? update.error.message : 'Failed to save.'}
               </p>
             )}
             {update.isSuccess && (
-              <p className="text-xs text-muted-foreground px-0.5">Soul document saved.</p>
+              <p style={{ fontSize: 11, color: t.label }}>Soul document saved.</p>
             )}
-            <Button className="w-full" onClick={() => update.mutate({ agentId, soul: soulText })} disabled={update.isPending}>
+            <Button style={{ width: '100%' }} onClick={() => update.mutate({ agentId, soul: soulText })} disabled={update.isPending}>
               {update.isPending ? 'Saving…' : 'Save Soul Document'}
             </Button>
           </>
@@ -200,6 +233,7 @@ export function SoulView() {
 
 // --- MEMORIES VIEW ---
 export function MemoriesView() {
+  const t = useTheme();
   const agentId: string = useRouter(s => s.currentView.params?.id ?? '');
   const { data: memories, isLoading } = useMemories(agentId);
   const updateMemory = useUpdateMemory();
@@ -222,51 +256,54 @@ export function MemoriesView() {
   return (
     <SubScreenLayout title="Memories">
       {isLoading ? <LoadingState /> : !memories?.length ? (
-        <EmptyState icon="🧠" title="No memories yet" description="Your agent forms memories as you chat over time." />
+        <EmptyState icon={<Brain size={22} />} title="No memories yet" description="Your agent forms memories as you chat over time." />
       ) : (
-        <div className="divide-y divide-neutral-100">
-          {memories.map(memory => (
-            <div key={memory.id} className="px-5 py-4">
-              {editingId === memory.id ? (
-                <div className="space-y-2">
-                  <Textarea
-                    value={editContent}
-                    onChange={e => setEditContent(e.target.value)}
-                    rows={3}
-                    className="text-sm"
-                    autoFocus
-                  />
-                  <div className="flex gap-2">
-                    <Button size="sm" className="flex-1" onClick={() => handleSaveEdit(memory.id)} disabled={updateMemory.isPending}>Save</Button>
-                    <Button size="sm" variant="ghost" onClick={() => setEditingId(null)}>Cancel</Button>
+        <div>
+          {memories.map((memory, i) => (
+            <div key={memory.id}>
+              <div style={{ padding: '14px 20px' }}>
+                {editingId === memory.id ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <Textarea
+                      value={editContent}
+                      onChange={e => setEditContent(e.target.value)}
+                      rows={3}
+                      style={{ fontSize: 13 }}
+                      autoFocus
+                    />
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <Button size="sm" style={{ flex: 1 }} onClick={() => handleSaveEdit(memory.id)} disabled={updateMemory.isPending}>Save</Button>
+                      <Button size="sm" variant="ghost" onClick={() => setEditingId(null)}>Cancel</Button>
+                    </div>
                   </div>
-                </div>
-              ) : (
-                <>
-                  <p className="text-sm leading-relaxed text-foreground/80 mb-2.5">
-                    {memory.content ?? JSON.stringify(memory)}
-                  </p>
-                  <div className="flex items-center gap-2">
-                    {memory.category && (
-                      <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full capitalize border bg-neutral-100 text-muted-foreground border-neutral-200">
-                        {memory.category}
-                      </span>
-                    )}
-                    <button
-                      className="text-xs text-muted-foreground hover:text-foreground transition-colors ml-auto"
-                      onClick={() => handleEdit(memory)}
-                    >
-                      Edit
-                    </button>
-                    <button
-                      className="text-muted-foreground/40 hover:text-destructive transition-colors p-0.5"
-                      onClick={() => deleteMemory.mutate({ agentId, id: memory.id })}
-                    >
-                      <Trash2 size={13} />
-                    </button>
-                  </div>
-                </>
-              )}
+                ) : (
+                  <>
+                    <p style={{ fontSize: 13, lineHeight: 1.6, color: t.text, marginBottom: 10 }}>
+                      {memory.content ?? JSON.stringify(memory)}
+                    </p>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      {memory.category && (
+                        <span style={{ fontSize: 10, fontWeight: 600, fontFamily: 'ui-monospace, Menlo, monospace', padding: '2px 8px', borderRadius: 999, border: `1px solid ${t.divider}`, color: t.label, textTransform: 'capitalize' }}>
+                          {memory.category}
+                        </span>
+                      )}
+                      <button
+                        style={{ fontSize: 11, color: t.faint, background: 'none', border: 'none', cursor: 'pointer', marginLeft: 'auto' }}
+                        onClick={() => handleEdit(memory)}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        style={{ color: t.faint, background: 'none', border: 'none', cursor: 'pointer', padding: 2, display: 'flex', alignItems: 'center' }}
+                        onClick={() => deleteMemory.mutate({ agentId, id: memory.id })}
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+              {i < memories.length - 1 && <Divider />}
             </div>
           ))}
         </div>
@@ -277,6 +314,7 @@ export function MemoriesView() {
 
 // --- TASKS VIEW ---
 export function TasksView() {
+  const t = useTheme();
   const agentId: string = useRouter(s => s.currentView.params?.id ?? '');
   const [tab, setTab] = useState<'pending' | 'all'>('pending');
   const { data: tasks, isLoading } = useTasks(agentId, tab);
@@ -284,60 +322,74 @@ export function TasksView() {
 
   return (
     <SubScreenLayout title="Tasks">
-      {/* Tab switcher */}
-      <div className="flex border-b border-neutral-100">
-        {(['pending', 'all'] as const).map(t => (
+      <div style={{ display: 'flex', borderBottom: `1px solid ${t.divider}` }}>
+        {(['pending', 'all'] as const).map(tabId => (
           <button
-            key={t}
-            className={`flex-1 py-3 text-sm font-semibold transition-colors border-b-2 -mb-px ${tab === t ? 'border-primary text-primary' : 'border-transparent text-muted-foreground'}`}
-            onClick={() => setTab(t)}
+            key={tabId}
+            style={{
+              flex: 1,
+              padding: '12px 0',
+              fontSize: 13,
+              fontWeight: 600,
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              color: tab === tabId ? t.text : t.faint,
+              borderBottom: `2px solid ${tab === tabId ? t.text : 'transparent'}`,
+              marginBottom: -1,
+              letterSpacing: '-0.01em',
+            }}
+            onClick={() => setTab(tabId)}
           >
-            {t === 'pending' ? 'Needs Review' : 'All Tasks'}
+            {tabId === 'pending' ? 'Needs Review' : 'All Tasks'}
           </button>
         ))}
       </div>
 
       {isLoading ? <LoadingState /> : !tasks?.length ? (
         <EmptyState
-          icon="✅"
+          icon={<CircleCheck size={22} />}
           title={tab === 'pending' ? 'No pending tasks' : 'No tasks yet'}
           description={tab === 'pending' ? "No autonomous actions are waiting for your approval." : "Your agent hasn't started any tasks yet."}
         />
       ) : (
-        <div className="divide-y divide-neutral-100">
-          {tasks.map(task => (
-            <div key={task.id} className="px-5 py-4">
-              <div className="flex items-start justify-between gap-2 mb-1.5">
-                <p className="text-sm font-semibold flex-1 leading-snug">
-                  {task.title ?? task.description ?? task.action ?? 'Pending task'}
-                </p>
-                {task.status && (
-                  <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full border bg-neutral-100 text-muted-foreground border-neutral-200 shrink-0">
-                    {task.status}
-                  </span>
+        <div>
+          {tasks.map((task, i) => (
+            <div key={task.id}>
+              <div style={{ padding: '14px 20px' }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, marginBottom: 6 }}>
+                  <p style={{ fontSize: 13, fontWeight: 600, flex: 1, lineHeight: 1.4, color: t.text }}>
+                    {task.title ?? task.description ?? task.action ?? 'Pending task'}
+                  </p>
+                  {task.status && (
+                    <span style={{ fontSize: 10, fontWeight: 600, fontFamily: 'ui-monospace, Menlo, monospace', padding: '2px 8px', borderRadius: 999, border: `1px solid ${t.divider}`, color: t.label, flexShrink: 0 }}>
+                      {task.status}
+                    </span>
+                  )}
+                </div>
+                {task.description && task.title && (
+                  <p style={{ fontSize: 11, color: t.label, lineHeight: 1.5, marginBottom: 12 }}>{task.description}</p>
+                )}
+                {(task.status === 'pending' || tab === 'pending') && (
+                  <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+                    <button
+                      style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '8px 0', borderRadius: 10, background: t.text, color: t.bg, fontSize: 13, fontWeight: 600, border: 'none', cursor: 'pointer', opacity: resolve.isPending ? 0.5 : 1 }}
+                      onClick={() => resolve.mutate({ agentId, taskId: task.id, action: 'approve' })}
+                      disabled={resolve.isPending}
+                    >
+                      <Check size={13} /> Approve
+                    </button>
+                    <button
+                      style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '8px 0', borderRadius: 10, background: t.surface, color: t.label, fontSize: 13, fontWeight: 600, border: `1px solid ${t.divider}`, cursor: 'pointer', opacity: resolve.isPending ? 0.5 : 1 }}
+                      onClick={() => resolve.mutate({ agentId, taskId: task.id, action: 'reject' })}
+                      disabled={resolve.isPending}
+                    >
+                      <X size={13} /> Reject
+                    </button>
+                  </div>
                 )}
               </div>
-              {task.description && task.title && (
-                <p className="text-xs text-muted-foreground leading-relaxed mb-3">{task.description}</p>
-              )}
-              {(task.status === 'pending' || tab === 'pending') && (
-                <div className="flex gap-2 mt-3">
-                  <button
-                    className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg bg-neutral-900 text-white text-sm font-semibold active:opacity-80 transition-opacity"
-                    onClick={() => resolve.mutate({ agentId, taskId: task.id, action: 'approve' })}
-                    disabled={resolve.isPending}
-                  >
-                    <Check size={14} /> Approve
-                  </button>
-                  <button
-                    className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg border border-neutral-200 text-muted-foreground text-sm font-semibold active:bg-neutral-50 transition-colors"
-                    onClick={() => resolve.mutate({ agentId, taskId: task.id, action: 'reject' })}
-                    disabled={resolve.isPending}
-                  >
-                    <X size={14} /> Reject
-                  </button>
-                </div>
-              )}
+              {i < tasks.length - 1 && <Divider />}
             </div>
           ))}
         </div>
@@ -348,6 +400,7 @@ export function TasksView() {
 
 // --- TELEGRAM VIEW ---
 export function TelegramView() {
+  const t = useTheme();
   const agentId: string = useRouter(s => s.currentView.params?.id ?? '');
   const { data: status, isLoading } = useTelegramStatus(agentId);
   const updateSettings = useUpdateTelegramSettings();
@@ -357,9 +410,7 @@ export function TelegramView() {
   const [notificationLevel, setNotificationLevel] = useState<TelegramNotificationLevel>('all');
 
   useEffect(() => {
-    if (status?.notificationLevel) {
-      setNotificationLevel(status.notificationLevel);
-    }
+    if (status?.notificationLevel) setNotificationLevel(status.notificationLevel);
   }, [status?.notificationLevel]);
 
   const connect = useMutation({
@@ -378,27 +429,29 @@ export function TelegramView() {
   return (
     <SubScreenLayout title="Telegram Bot">
       {isLoading ? <LoadingState /> : (
-        <div className="px-5 py-4 space-y-4">
+        <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 16 }}>
           {/* Status row */}
-          <div className="flex items-center gap-3 py-3 border-b border-neutral-100">
-            <span className="text-xl">✈️</span>
-            <div className="flex-1">
-              <p className="font-semibold text-sm">{status?.connected ? 'Bot Connected' : 'Not Connected'}</p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, paddingBottom: 16, borderBottom: `1px solid ${t.divider}` }}>
+            <div style={{ width: 36, height: 36, borderRadius: '50%', background: t.surface, border: `1px solid ${t.divider}`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: t.label, flexShrink: 0 }}>
+              <Send size={16} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <p style={{ fontSize: 13, fontWeight: 600, color: t.text }}>{status?.connected ? 'Bot Connected' : 'Not Connected'}</p>
               {status?.connected && status.botUsername && (
-                <p className="text-xs text-muted-foreground">@{status.botUsername}</p>
+                <p style={{ fontSize: 11, color: t.label }}>@{status.botUsername}</p>
               )}
               {!status?.connected && (
-                <p className="text-xs text-muted-foreground">Connect a Telegram bot</p>
+                <p style={{ fontSize: 11, color: t.label }}>Connect a Telegram bot</p>
               )}
             </div>
-            {status?.connected && <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />}
+            {status?.connected && <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#22c55e', flexShrink: 0 }} />}
           </div>
 
           {!status?.connected ? (
             <>
-              <div className="space-y-3">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 <div>
-                  <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest mb-1.5 block">Bot Token</label>
+                  <MonoLabel>Bot Token</MonoLabel>
                   <Input
                     placeholder="1234567890:ABC…"
                     value={botToken}
@@ -407,12 +460,12 @@ export function TelegramView() {
                   />
                 </div>
                 {connect.isError && (
-                  <p className="text-xs text-destructive">
+                  <p style={{ fontSize: 11, color: '#f87171' }}>
                     {connect.error instanceof Error ? connect.error.message : 'Connection failed.'}
                   </p>
                 )}
                 <Button
-                  className="w-full flex gap-2"
+                  style={{ width: '100%', display: 'flex', gap: 8 }}
                   onClick={() => connect.mutate()}
                   disabled={!botToken.trim() || connect.isPending}
                 >
@@ -421,25 +474,37 @@ export function TelegramView() {
                 </Button>
               </div>
 
-              <div className="border border-neutral-100 rounded-xl px-4 py-3.5 bg-neutral-50">
-                <h4 className="font-semibold text-sm mb-2">How to create a bot</h4>
-                <ol className="text-xs text-muted-foreground space-y-1.5 list-decimal list-inside leading-relaxed">
-                  <li>Open Telegram and search for <strong>@BotFather</strong></li>
-                  <li>Send <code className="bg-white px-1 rounded border border-neutral-200">/newbot</code> and follow prompts</li>
+              <div style={{ background: t.surface, border: `1px solid ${t.divider}`, borderRadius: 12, padding: '14px 16px' }}>
+                <p style={{ fontSize: 13, fontWeight: 600, color: t.text, marginBottom: 8 }}>How to create a bot</p>
+                <ol style={{ fontSize: 11, color: t.label, lineHeight: 1.7, paddingLeft: 16 }}>
+                  <li>Open Telegram and search for <strong style={{ color: t.text }}>@BotFather</strong></li>
+                  <li>Send <code style={{ background: t.bg, padding: '1px 5px', borderRadius: 4, border: `1px solid ${t.divider}`, fontSize: 10 }}>/newbot</code> and follow prompts</li>
                   <li>Copy the API token BotFather gives you</li>
                   <li>Paste it above and tap Connect</li>
                 </ol>
               </div>
             </>
           ) : (
-            <div className="space-y-4">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div>
-                <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest mb-2 block">Notification Level</label>
-                <div className="flex gap-1.5">
+                <MonoLabel>Notification Level</MonoLabel>
+                <div style={{ display: 'flex', gap: 6 }}>
                   {(['all', 'important', 'none'] as TelegramNotificationLevel[]).map(level => (
                     <button
                       key={level}
-                      className={`flex-1 py-2 text-sm font-semibold rounded-lg capitalize transition-all border ${notificationLevel === level ? 'bg-foreground text-background border-foreground' : 'bg-white text-muted-foreground border-neutral-200'}`}
+                      style={{
+                        flex: 1,
+                        padding: '8px 0',
+                        fontSize: 12,
+                        fontWeight: 600,
+                        borderRadius: 10,
+                        textTransform: 'capitalize',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s',
+                        background: notificationLevel === level ? t.text : t.surface,
+                        color: notificationLevel === level ? t.bg : t.label,
+                        border: `1px solid ${notificationLevel === level ? t.text : t.divider}`,
+                      }}
                       onClick={() => setNotificationLevel(level)}
                     >
                       {level}
@@ -449,16 +514,16 @@ export function TelegramView() {
               </div>
 
               {updateSettings.isError && (
-                <p className="text-xs text-destructive">
+                <p style={{ fontSize: 11, color: '#f87171' }}>
                   {updateSettings.error instanceof Error ? updateSettings.error.message : 'Failed to save settings.'}
                 </p>
               )}
               {updateSettings.isSuccess && (
-                <p className="text-xs text-muted-foreground">Settings saved.</p>
+                <p style={{ fontSize: 11, color: t.label }}>Settings saved.</p>
               )}
 
               <Button
-                className="w-full"
+                style={{ width: '100%' }}
                 onClick={() => updateSettings.mutate({ agentId, data: { notificationLevel } })}
                 disabled={updateSettings.isPending}
               >
@@ -467,7 +532,7 @@ export function TelegramView() {
 
               <Button
                 variant="destructive"
-                className="w-full"
+                style={{ width: '100%' }}
                 onClick={() => { if (confirm('Disconnect Telegram bot?')) disconnect.mutate(); }}
                 disabled={disconnect.isPending}
               >
@@ -481,4 +546,3 @@ export function TelegramView() {
   );
 }
 
-export { Card };
