@@ -567,12 +567,15 @@ function ChatTab({
   const { data: history, refetch: refetchMessages } = useMessages(agent.id, activeConversationId);
   const [historyLoaded, setHistoryLoaded] = useState(false);
 
-  const makeGreeting = (name: string) => `Hi! I'm ${name}. How can I help you today?`;
+  const makeGreeting = (name: string, description?: string) =>
+    description
+      ? `I'm ${name} — ${description.endsWith('.') ? description.slice(0, -1).toLowerCase() : description.toLowerCase()}. What would you like to work on?`
+      : `Hi! I'm ${name}. How can I help you today?`;
 
   const cachedMsgs = getCachedMessages(agent.id);
   const initialMessages: LocalMessage[] = cachedMsgs.length > 0
     ? cachedMsgs
-    : [{ role: 'assistant', content: makeGreeting(agentName), _ts: Date.now() }];
+    : [{ role: 'assistant', content: makeGreeting(agentName, agent.description ?? undefined), _ts: Date.now() }];
 
   const [messages, setMessages] = useState<LocalMessage[]>(initialMessages);
   const [input, setInput] = useState('');
@@ -604,7 +607,7 @@ function ChatTab({
     if (newChatTrigger === 0) return;
     setActiveConversationId(undefined);
     setHistoryLoaded(false);
-    setMessages([{ role: 'assistant', content: makeGreeting(agentName), _ts: Date.now() }]);
+    setMessages([{ role: 'assistant', content: makeGreeting(agentName, agent.description ?? undefined), _ts: Date.now() }]);
   }, [newChatTrigger]);
 
   // Brief context — inject as first user message when provided
