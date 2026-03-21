@@ -1,0 +1,121 @@
+Agent spawning pipeline with Grok research and persona-adaptive onboarding
+What & Why
+When a user creates an agent, the agent currently starts with zero real knowledge about the user, their domain, or context. It only has raw text from personalContext. This leads to hallucination when the agent tries to help. This task builds a "spawning pipeline" — a research and training phase at creation time that uses Grok 4.20 reasoning (with real-time web access) to investigate the user's identity, public profile, domain, and context, then feeds structured results into the agent's knowledge base and pre-populates starter tasks aligned with the selected persona.
+
+The spawning process runs asynchronously after agent creation. The user sees a real-time "training" experience with progress updates while the research happens, making the agent feel like it's being purpose-built for them.
+
+Key design principle: adapt to information availability. The prompt dynamically adjusts based on what the user provides. Minimal input (just a name + persona) still produces useful research — Grok fills in the gaps. More data = more targeted output. When goals or challenges are not provided, Grok infers them from what it discovers about the person.
+
+Done looks like
+Onboarding Data Collection (creation form + API)
+New fields on the agent creation endpoint. The prompt builder uses whatever is available — nothing beyond ownerName and personaTemplate is strictly required.
+
+Required:
+
+ownerName (string) — The person's real name. Grok uses this to research who they are.
+personaTemplate (string) — Already required. Drives the research angle.
+Encouraged (strongly prompted in the UI but optional):
+
+xHandle (string) — Twitter/X username. Grok has native X data access — can analyze tweets, followers, interests, voice, network.
+linkedinUrl (string) — Professional background, industry, experience, role, connections.
+urls (array of strings) — Website, portfolio, shop, blog, project. Grok visits and extracts real facts.
+location (string — city/region/country) — Critical for farming (crops/climate), civic (local laws), health (local resources), market prices, remittance corridors, cost of living context.
+domain (string) — Their field/industry/area of focus in their own words. E.g. "Organic poultry farming in Western Kenya" or "Anxiety management for remote workers."
+Optional enrichment (if the user already knows):
+
+goals (array of strings, 1-3) — If they know what they want. If not provided, Grok infers likely goals from the person's profile + persona + domain and returns suggestedGoals.
+challenges (array of strings, 1-3) — If they know what they're stuck on. If not provided, Grok identifies what challenges someone in that position typically faces and returns anticipatedChallenges.
+targetAudience (string) — Who they're trying to reach/serve.
+experienceLevel (enum: beginner/intermediate/expert) — Calibrates starter task complexity.
+budget (enum: bootstrapping/small/moderate/established) — For business/hustle/trading personas.
+languages (array of strings) — Languages the user and their audience operate in.
+Already existing fields that feed into the prompt:
+
+description, personalContext, interests, topicsToWatch, socialHandles — all already collected.
+Backend: Research Pipeline
+New spawnAgentResearch(agentId) async function triggered after agent creation.
+Uses the Grok 4.20 reasoning variant (grok-4.20-0309-reasoning via xaiClient) with a persona-adaptive research prompt. Pricing: $2.00/M input, $6.00/M output. The reasoning model is used because spawning is a one-time deep analysis per agent — it needs to think through connections, evaluate sources critically, and produce high-quality structured output. The cost is justified since it only runs once at creation time. Add grok-4.20-0309-reasoning and its pricing to MODEL_PRICING. Also update the existing non-reasoning entry from grok-4.20-beta-0309-non-reasoning to the official ID grok-4.20-0309-non-reasoning (input: $2.00/M, output: $6.00/M).
+The prompt adapts dynamically to what data is available:
+If xHandle is provided → "Analyze their X/Twitter presence: recent tweets, interests, voice, follower network, engagement patterns."
+If linkedinUrl is provided → "Research their LinkedIn profile: professional background, industry, role, skills, connections."
+If urls are provided → "Visit these URLs and extract real facts about what they do: [urls]."
+If location is provided → "Factor in local context for [location]: relevant regulations, market conditions, climate, resources, community networks."
+If goals are provided → "The user has stated these goals: [goals]. Research how to achieve them."
+If goals are NOT provided → "Based on your research about this person and their domain, suggest 3-5 realistic goals they should consider."
+If challenges are provided → "The user is facing these challenges: [challenges]. Research solutions and context."
+If challenges are NOT provided → "Based on your research, identify 3-5 challenges someone in their position typically faces and should be aware of."
+If only ownerName + persona → Grok researches the person by name, infers domain/goals/challenges from whatever it finds.
+The prompt adapts based on the selected persona template category. There are 27 templates spanning diverse domains — the research must be relevant to ALL of them, not just tech/business:
+Social Media / Content (community, creator-coach, distribution-strategist): research competitor social accounts, content trends, hashtags, audience, posting patterns in the user's domain.
+Research / General (research, general): research the user's domain broadly — key sources, knowledge landscape, industry players, emerging trends.
+Trading / Finance (trading, family-budget, family-treasurer): research relevant markets, financial landscape, budgeting best practices, investment context relevant to the user.
+Business / Hustle (hustle, ai-hustle, biz-launcher, gig-maximizer, vibecoder, jobs): research market opportunity, pricing, go-to-market, competitors, distribution channels, freelance platforms.
+Health / Wellness (health): research the user's health interests, evidence-based wellness practices, relevant health topics, trusted sources in the user's area of focus.
+Coaching / Personal Development (coach, support): research the user's goals, relevant coaching frameworks, personal development context, motivational approaches aligned with the user's situation.
+Education / Tutoring (tutor, study-quiz): research the user's learning domain, key educational resources, curriculum context, study methodologies.
+Agriculture / Rural (farmer, market-prices): research local agricultural context, crop/livestock relevant info, market conditions, weather patterns, farming best practices.
+Civic / Legal (civic, legal-rights): research local governance context, relevant rights and regulations, civic engagement opportunities.
+Community Finance (chama-manager, remittance-advisor): research relevant financial services, group savings models, remittance corridors, relevant regulations.
+Trade / Artisan (artisan, transport-operator, language-bridge): research the user's trade/craft context, market conditions, operational best practices, relevant community networks.
+Grok returns structured JSON with sections:
+ownerProfile — who this person is (from X, LinkedIn, web research)
+domainSummary — what domain they operate in and current state of that domain
+verifiedFacts — list of real facts found from URLs/research (sourced, not hallucinated)
+landscapeContext — industry/domain/community landscape relevant to the persona
+relevantEntities — competitors, peers, resources, services, communities (context-dependent)
+suggestedGoals — inferred goals (always present, whether user provided goals or not — Grok validates/expands user goals or generates from scratch)
+anticipatedChallenges — challenges this person likely faces (always present — validates user challenges or discovers them)
+opportunities — actionable opportunities Grok identified
+suggestedStarterTasks — 3-5 tasks aligned with persona, calibrated to experienceLevel if provided
+Backend: Knowledge Gap Backlog & Proactive Discovery
+After spawning, compute a knowledgeGaps list from: which onboarding fields were missing + which Grok-inferred assumptions need validation.
+Store in a new knowledgeGaps (jsonb, nullable) column on hosted_agents. Each gap has: field (e.g. "xHandle", "goals", "location"), type ("missing" or "unconfirmed"), inferredValue (what Grok guessed, if applicable), asked (boolean, initially false), confirmedAt (null).
+Examples:
+User didn't provide X handle → {field: "xHandle", type: "missing", inferredValue: null, asked: false}
+Grok inferred a goal → {field: "goals", type: "unconfirmed", inferredValue: "Grow online client base", asked: false}
+User didn't provide location but Grok guessed from LinkedIn → {field: "location", type: "unconfirmed", inferredValue: "Nairobi, Kenya", asked: false}
+The agent's system prompt is augmented with unasked knowledge gaps. The agent is instructed to naturally weave these into conversation — not interrogation-style, but as genuine curiosity:
+Missing field → ask the user for it when contextually relevant. E.g. after a conversation about content: "By the way, are you on X? I could learn a lot from your posts."
+Unconfirmed inference → propose Grok's guess and ask if it's accurate. E.g. "Based on my research it seems like growing your online sales is a priority — is that right, or are you focused on something else?"
+When the user confirms or provides the info, the agent updates the knowledge gap (asked: true, confirmedAt: timestamp) and stores the confirmed value as a memory. The gap is marked resolved.
+Limit: surface at most 1 gap per conversation to avoid feeling like an interrogation. Prioritize gaps by relevance to the current conversation topic.
+This creates a virtuous loop: the agent gets smarter about the user over time through natural dialogue, not just from the initial research.
+Backend: Storing Research Results
+Research results stored in a new spawningResearch (jsonb, nullable) column on hosted_agents table.
+Verified facts and key findings seeded as agent memories (category: "context") so they're available in conversation context via vector search.
+Starter tasks inserted into agent_task_queue with requires_approval: true, skill_id: "onboarding", task_type: "starter-task".
+The agent's personalContext is enriched with the research summary (appended, not replaced).
+A spawningStatus column tracks the pipeline state: null (legacy agents), "researching", "training", "ready", "failed".
+Backend: Spawning Status API
+Existing creation endpoint returns immediately with agent ID + spawningStatus: "researching".
+New GET /v1/hosted-agents/:id/spawning-status endpoint returns current status and progress steps.
+Progress steps are stored as a JSON array in spawningProgress (jsonb, nullable) column: e.g. [{step: "Researching your X profile", status: "done"}, {step: "Analyzing your website", status: "active"}, ...].
+Progress step labels adapt to what data was provided (don't show "Analyzing your LinkedIn" if no LinkedIn was given).
+The research function updates progress steps as it proceeds, so the frontend can poll for updates.
+Frontend: Spawning Experience
+After agent creation, the create-assistant page shows a spawning/training screen instead of immediately redirecting.
+The screen shows the agent's name/emoji and animated progress steps that reflect the actual research being done (adapted to data provided): e.g. "Researching your X profile @handle...", "Analyzing your website...", "Mapping your industry landscape...", "Identifying opportunities and challenges...", "Building knowledge base...", "Generating starter tasks...", "Training complete."
+Polls GET /v1/hosted-agents/:id/spawning-status every 2-3 seconds for updates.
+When status reaches "ready", shows a "Meet your agent" button that goes to the agent chat page.
+If spawning fails, shows a graceful fallback — "Your agent is ready but research is still processing" — and the agent works without the research (as it does today).
+Gateway: Expose spawning status
+New GET /v1/hosted-agents/:id/spawning-status endpoint in miniclaw-gateway for external miniapps.
+Out of scope
+Changing which LLM is used for regular chat (stays as configured).
+Re-running research after creation (future feature — manual "re-research" button).
+Modifying the soul reflection or memory extraction logic.
+Tasks
+Schema + creation endpoint updates — Add spawningStatus (varchar, nullable), spawningResearch (jsonb, nullable), and spawningProgress (jsonb, nullable) columns to hosted_agents table. Add new onboarding fields to creation endpoint: ownerName, xHandle, linkedinUrl, urls, location, domain, goals, challenges, targetAudience, experienceLevel, budget, languages. Store these in the agent record (new columns or in a spawningInput jsonb).
+
+Persona-adaptive research prompt builder — Create a buildResearchPrompt(agent, template, onboardingData) function that dynamically assembles the Grok prompt based on: (a) which persona category, (b) which data fields are available. Each available field adds a research directive section. Missing fields add "discover this" directives. All prompts request the same structured JSON output including suggestedGoals and anticipatedChallenges regardless of whether user provided them.
+
+Implement spawnAgentResearch — Async function called after agent creation. Sets spawningStatus to "researching", builds persona-adaptive prompt, calls Grok 4.20 reasoning, updates progress steps dynamically (labels adapted to provided data), parses structured response, stores results in spawningResearch, seeds memories from verifiedFacts, inserts starter tasks into agent_task_queue, enriches personalContext, computes knowledgeGaps from missing fields + unconfirmed Grok inferences, sets spawningStatus to "ready". Handles errors gracefully (sets status to "failed", agent still works without research).
+
+Knowledge gap integration into agent chat — Augment the agent system prompt builder to include unasked knowledge gaps (max 1 per conversation). Add a confirm_knowledge chat tool so the agent can mark gaps as confirmed/resolved when the user answers. The tool updates the knowledgeGaps array and stores confirmed values as memories.
+
+Wire into creation flow and add status endpoint — Modify the POST /v1/hosted-agents endpoint to trigger spawnAgentResearch asynchronously after creation and return spawningStatus in the response. Add GET /v1/hosted-agents/:id/spawning-status endpoint. Add the same endpoint to miniclaw-gateway.
+
+Frontend: creation form + spawning experience — Update create-assistant.html: add the new onboarding fields to the creation form (ownerName required, others encouraged with helpful placeholders). After creation, show a training/spawning screen with animated progress steps adapted to data provided, polling the status endpoint. Show a "Meet your agent" CTA when complete. Handle failure gracefully.
+
+Update API docs and replit.md — Document the new onboarding fields, spawning status endpoint, and knowledge gap system in miniclaw-api.html and update replit.md with the new spawning pipeline description.
+
