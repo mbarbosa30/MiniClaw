@@ -467,8 +467,8 @@ export function HomeView() {
             padding: 0,
           }}
         >
-          <TrendingUp size={13} strokeWidth={1.5} />
-          <span style={{ fontFamily: 'ui-monospace, Menlo, monospace', fontSize: 9, letterSpacing: '0.06em' }}>
+          <TrendingUp size={14} strokeWidth={1.5} />
+          <span style={{ fontFamily: 'ui-monospace, Menlo, monospace', fontSize: 11, letterSpacing: '0.04em' }}>
             Growth
           </span>
         </button>

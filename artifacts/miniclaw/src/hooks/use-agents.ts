@@ -111,7 +111,7 @@ type DetailEnvelope = {
   progressPercent?: number | null;
 };
 
-export function useAgent(id: string | number | undefined) {
+export function useAgent(id: string | number | undefined, options?: { refetchInterval?: number }) {
   return useQuery({
     queryKey: ['agents', qid(id)],
     queryFn: async () => {
@@ -140,6 +140,7 @@ export function useAgent(id: string | number | undefined) {
       return failureCount < 3;
     },
     retryDelay: 800,
+    refetchInterval: options?.refetchInterval,
   });
 }
 

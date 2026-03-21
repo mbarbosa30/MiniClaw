@@ -237,6 +237,7 @@ function AgentHeader({
       {/* Compact sub-row: phase pill left | compact quota right | tappable to expand */}
       {(awarenessLabel || hasQuota) ? (
         <div style={{ marginLeft: -8, marginRight: -8 }}>
+          <div style={{ height: 1, background: t.divider, opacity: 0.25, marginLeft: 8, marginRight: 8 }} />
           <button
             onClick={() => awarenessLabel && setShowAwareness(v => !v)}
             style={{
@@ -246,7 +247,7 @@ function AgentHeader({
               justifyContent: 'space-between',
               paddingLeft: 16,
               paddingRight: 16,
-              paddingTop: 2,
+              paddingTop: 6,
               paddingBottom: 8,
               background: 'none',
               border: 'none',
@@ -384,7 +385,7 @@ export function AgentDetailView() {
   const id: string = currentView.params?.id ?? '';
   const newChatAt: string | undefined = currentView.params?.newChatAt;
   const briefContext: string | undefined = currentView.params?.briefContext;
-  const { data: agent, isLoading, isError, error, refetch } = useAgent(id);
+  const { data: agent, isLoading, isError, error, refetch } = useAgent(id, { refetchInterval: 4_000 });
   const { data: awareness } = useAwareness(id);
   const [newChatTrigger, setNewChatTrigger] = useState(0);
   const [quota, setQuota] = useState<QuotaState | null>(null);
@@ -1101,17 +1102,16 @@ function ChatTab({
             style={{
               flex: 1,
               maxHeight: 120,
-              minHeight: 36,
               background: 'transparent',
               resize: 'none',
               outline: 'none',
               border: 'none',
-              padding: 0,
+              padding: '7px 0 0',
               fontSize: 14,
               fontWeight: 300,
               color: t.text,
               fontFamily: 'inherit',
-              lineHeight: 1.6,
+              lineHeight: 1.5,
             }}
             rows={1}
           />
