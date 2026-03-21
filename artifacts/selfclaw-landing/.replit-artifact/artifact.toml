@@ -1,5 +1,5 @@
 kind = "web"
-previewPath = "/selfclaw-landing/"
+previewPath = "/ing/"
 title = "MiniClaw Landing Page"
 version = "1.0.0"
 id = "artifacts/selfclaw-landing"
@@ -11,7 +11,7 @@ version = "1.0.0"
 
 [[services]]
 name = "web"
-paths = [ "/selfclaw-landing/" ]
+paths = [ "/ing/" ]
 localPort = 20477
 
 [services.development]
@@ -28,4 +28,4 @@ to = "/index.html"
 
 [services.env]
 PORT = "20477"
-BASE_PATH = "/selfclaw-landing/"
+BASE_PATH = "/ing/"

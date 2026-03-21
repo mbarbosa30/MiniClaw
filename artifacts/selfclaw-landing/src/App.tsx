@@ -326,7 +326,8 @@ function ContextStrip() {
           }}>
             MiniPay is a lightweight crypto wallet by Opera — the browser used by
             hundreds of millions across Africa, Asia, and Latin America. MiniClaw
-            lives inside it as a MiniApp: no separate download, no complicated setup.
+            is being built as a native MiniApp for this platform, bringing AI agents
+            to the people who need them most.
           </p>
         </div>
         <div style={{
@@ -366,8 +367,8 @@ function ContextStrip() {
 const STEPS = [
   {
     n: '01',
-    title: 'Open MiniPay',
-    body: "Find MiniClaw in the MiniApps section on Opera's wallet. No extra download, no complex setup.",
+    title: 'Join the waitlist',
+    body: "Drop your email below. We're rolling out access in waves — you'll get notified as soon as your spot opens.",
   },
   {
     n: '02',
