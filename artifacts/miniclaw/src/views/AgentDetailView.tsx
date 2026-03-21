@@ -4,7 +4,7 @@ import { useRouter } from '@/lib/store';
 import { useTheme } from '@/lib/theme';
 import { Button } from '@/components/ui';
 import { MoreHorizontal } from 'lucide-react';
-import { apiFetchStream, apiFetch, ApiError } from '@/lib/api-client';
+import { apiFetch, apiFetchWithHeaders, ApiError } from '@/lib/api-client';
 import type { Agent, ChatMessage } from '@/types';
 
 const MONO = {
@@ -540,7 +540,6 @@ function fmtTime(ts?: number, iso?: string): string {
   }
 }
 
-const SSE_TIMEOUT_MS = 8000;
 
 function ChatTab({
   agent,
@@ -614,11 +613,14 @@ function ChatTab({
   }, [briefContext]);
 
   const parseQuotaHeaders = (headers: Headers) => {
-    const used = parseInt(headers.get('X-Quota-Used') ?? '', 10);
-    const limit = parseInt(headers.get('X-Quota-Limit') ?? '', 10);
-    if (!isNaN(used) && !isNaN(limit) && limit > 0) {
-      const resetAt = headers.get('X-Quota-Reset-At') ?? quota?.resetAt;
-      onQuotaUpdate({ used, limit, resetAt });
+    const used = parseInt(headers.get('X-Quota-Tokens-Used') ?? '', 10);
+    const remaining = parseInt(headers.get('X-Quota-Tokens-Remaining') ?? '', 10);
+    if (!isNaN(used) && !isNaN(remaining)) {
+      const limit = used + remaining;
+      if (limit > 0) {
+        const resetAt = headers.get('X-Quota-Reset') ?? quota?.resetAt;
+        onQuotaUpdate({ used, limit, resetAt });
+      }
     }
   };
 
@@ -641,29 +643,42 @@ function ChatTab({
     }
   }, [activeConversationId, agent.id, compact, refetchMessages]);
 
-  const pollForResult = async (messageId: string) => {
-    const maxAttempts = 15;
+  const pollForResult = async (messageId: string, agentId: string) => {
+    const maxAttempts = 60;
+    const intervalMs = 1500;
     for (let i = 0; i < maxAttempts; i++) {
-      await new Promise(r => setTimeout(r, 2000));
+      await new Promise(r => setTimeout(r, intervalMs));
       try {
-        const res = await apiFetch<{ content: string; done?: boolean }>(
-          `/api/selfclaw/v1/hosted-agents/${agent.id}/chat/${messageId}/result`
-        );
-        if (res.content) {
+        const res = await apiFetchWithHeaders<{
+          status: string;
+          content?: string;
+          suggestedChips?: string[];
+        }>(`/api/selfclaw/v1/hosted-agents/${agentId}/chat/${messageId}/result`);
+
+        parseQuotaHeaders(res.headers);
+
+        if (res.status === 200 && res.data.status === 'completed') {
+          const content = res.data.content ?? '';
           setMessages(prev => {
             const msgs = [...prev];
             const last = msgs[msgs.length - 1];
             if (last && last.role === 'assistant') {
-              msgs[msgs.length - 1] = { ...last, content: res.content, _ts: Date.now() };
+              msgs[msgs.length - 1] = { ...last, content, _ts: Date.now() };
             }
+            setCachedMessages(agentId, msgs);
             return msgs;
           });
-          if (res.done !== false) return;
+          setChips(res.data.suggestedChips ?? []);
+          return;
         }
       } catch {
         // keep polling
       }
     }
+    setMessages(prev => [
+      ...prev.slice(0, -1),
+      { role: 'system', content: 'The agent took too long to respond. Please try again.', _ts: Date.now() },
+    ]);
   };
 
   const handleSend = useCallback(async (override?: string) => {
@@ -671,181 +686,47 @@ function ChatTab({
     if (!userMsg || isStreaming) return;
     if (!override) setInput('');
     const now = Date.now();
-    setMessages(prev => {
-      const next = [
-        ...prev,
-        { role: 'user' as const, content: userMsg, _ts: now },
-        { role: 'assistant' as const, content: '', _ts: undefined },
-      ];
-      return next;
-    });
+    setMessages(prev => [
+      ...prev,
+      { role: 'user' as const, content: userMsg, _ts: now },
+      { role: 'assistant' as const, content: '', _ts: undefined },
+    ]);
     setIsStreaming(true);
 
     try {
-      const body: { message: string; conversationId?: string } = { message: userMsg };
-      if (activeConversationId) body.conversationId = activeConversationId;
+      const body: { message: string; conversationId?: number } = { message: userMsg };
+      if (activeConversationId) body.conversationId = Number(activeConversationId);
 
-      const res = await apiFetchStream(`/api/selfclaw/v1/hosted-agents/${agent.id}/chat`, {
+      const postRes = await apiFetchWithHeaders<{
+        messageId: string;
+        conversationId: number;
+        status: string;
+      }>(`/api/selfclaw/v1/hosted-agents/${agent.id}/chat`, {
         method: 'POST',
         body: JSON.stringify(body),
       });
 
-      if (!res.ok) {
-        if (res.status === 429) {
-          const resetIn = fmtResetAt(quota?.resetAt);
-          setMessages(prev => [
-            ...prev.slice(0, -1),
-            {
-              role: 'system',
-              content: `Daily token limit reached.${resetIn ? ` Resets in ${resetIn}.` : ''} Try compacting the conversation to free up tokens.`,
-              _ts: Date.now(),
-            },
-          ]);
-          setIsStreaming(false);
-          return;
-        }
-        throw new Error(`HTTP ${res.status}`);
-      }
-      parseQuotaHeaders(res.headers);
+      parseQuotaHeaders(postRes.headers);
 
-      const reader = res.body?.getReader();
-      const decoder = new TextDecoder();
-      if (!reader) throw new Error('No stream');
-
-      let buffer = '';
-      let pendingMessageId: string | null = null;
-      let gotAnyData = false;
-
-      const sseTimeout = setTimeout(() => {
-        if (!gotAnyData && pendingMessageId) {
-          reader.cancel();
-          pollForResult(pendingMessageId);
-        }
-      }, SSE_TIMEOUT_MS);
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop() ?? '';
-        for (const line of lines) {
-          if (!line.startsWith('data: ')) continue;
-          const data = line.slice(6).trim();
-          if (data === '[DONE]') continue;
-          try {
-            const parsed: {
-              type?: string;
-              done?: boolean;
-              content?: string;
-              conversationId?: number;
-              messageId?: number | string;
-              tokensUsed?: number;
-              message?: string;
-              error?: string;
-              suggestedChips?: string[];
-            } = JSON.parse(data);
-
-            if (parsed.messageId) {
-              pendingMessageId = String(parsed.messageId);
-            }
-
-            const isDone = parsed.type === 'done' || parsed.done === true;
-            if (isDone) {
-              clearTimeout(sseTimeout);
-              if (parsed.conversationId != null && !activeConversationId) {
-                setActiveConversationId(String(parsed.conversationId));
-                refetchConversations();
-              }
-              setChips(parsed.suggestedChips ?? []);
-              setMessages(prev => {
-                const msgs = [...prev];
-                const last = msgs[msgs.length - 1];
-                if (last && last.role === 'assistant' && !last._ts) {
-                  msgs[msgs.length - 1] = { ...last, _ts: Date.now() };
-                }
-                setCachedMessages(agent.id, msgs);
-                return msgs;
-              });
-              continue;
-            }
-
-            const isError = parsed.type === 'error' || (parsed.error != null && !isDone);
-            if (isError) {
-              clearTimeout(sseTimeout);
-              setMessages(prev => [
-                ...prev.slice(0, -1),
-                { role: 'system', content: parsed.error ?? parsed.message ?? 'The agent encountered an error.', _ts: Date.now() }
-              ]);
-              continue;
-            }
-
-            const chunk = parsed.content ?? '';
-            if (chunk && parsed.type !== 'done' && !parsed.done) {
-              gotAnyData = true;
-              setMessages(prev => {
-                const msgs = [...prev];
-                const last = msgs[msgs.length - 1];
-                msgs[msgs.length - 1] = { ...last, content: last.content + chunk };
-                return msgs;
-              });
-            }
-          } catch {
-            // Malformed SSE line — skip
-          }
-        }
+      if (postRes.data.conversationId != null && !activeConversationId) {
+        setActiveConversationId(String(postRes.data.conversationId));
+        refetchConversations();
       }
 
-      clearTimeout(sseTimeout);
-    } catch {
-      // SSE failed — try poll=true fallback
-      try {
-        const body: { message: string; conversationId?: string; poll?: boolean } = {
-          message: userMsg,
-          poll: true,
-        };
-        if (activeConversationId) body.conversationId = activeConversationId;
-
-        const res2 = await apiFetch<{
-          messageId?: string;
-          conversationId?: string;
-          content?: string;
-          reply?: string;
-        }>(`/api/selfclaw/v1/hosted-agents/${agent.id}/chat?poll=true`, {
-          method: 'POST',
-          body: JSON.stringify(body),
-        });
-
-        const reply = res2.content || res2.reply;
-
-        if (reply) {
-          setMessages(prev => {
-            const msgs = [...prev];
-            msgs[msgs.length - 1] = { ...msgs[msgs.length - 1], content: reply, _ts: Date.now() };
-            setCachedMessages(agent.id, msgs);
-            return msgs;
-          });
-        } else if (res2.messageId) {
-          await pollForResult(res2.messageId);
-        }
-
-        if (res2.conversationId && !activeConversationId) {
-          setActiveConversationId(String(res2.conversationId));
-          refetchConversations();
-        }
-      } catch (err) {
-        const is429 = err instanceof ApiError && err.status === 429;
-        const resetIn = fmtResetAt(quota?.resetAt);
-        setMessages(prev => [
-          ...prev.slice(0, -1),
-          {
-            role: 'system',
-            content: is429
-              ? `Daily token limit reached.${resetIn ? ` Resets in ${resetIn}.` : ''} Try compacting the conversation to free up tokens.`
-              : 'Something went wrong. Please try again.',
-          },
-        ]);
-      }
+      await pollForResult(String(postRes.data.messageId), String(agent.id));
+    } catch (err) {
+      const is429 = err instanceof ApiError && err.status === 429;
+      const resetIn = fmtResetAt(quota?.resetAt);
+      setMessages(prev => [
+        ...prev.slice(0, -1),
+        {
+          role: 'system',
+          content: is429
+            ? `Daily token limit reached.${resetIn ? ` Resets in ${resetIn}.` : ''} Try compacting the conversation to free up tokens.`
+            : 'Something went wrong. Please try again.',
+          _ts: Date.now(),
+        },
+      ]);
     } finally {
       setIsStreaming(false);
     }
@@ -913,10 +794,13 @@ function ChatTab({
                 margin: 0,
                 whiteSpace: 'pre-wrap',
               }}>
-                {m.content}
-                {isActiveStream && (
-                  <span style={{ borderRight: `1px solid ${t.label}`, animation: 'blink 1s step-end infinite', marginLeft: 1, paddingRight: 1 }}>&nbsp;</span>
-                )}
+                {isActiveStream && !m.content ? (
+                  <span className="typing-dots" style={{ display: 'inline-flex', gap: 4, alignItems: 'center' }}>
+                    <span style={{ width: 5, height: 5, borderRadius: '50%', background: t.faint, animation: 'dotPulse 1.4s ease-in-out infinite', animationDelay: '0s' }} />
+                    <span style={{ width: 5, height: 5, borderRadius: '50%', background: t.faint, animation: 'dotPulse 1.4s ease-in-out infinite', animationDelay: '0.2s' }} />
+                    <span style={{ width: 5, height: 5, borderRadius: '50%', background: t.faint, animation: 'dotPulse 1.4s ease-in-out infinite', animationDelay: '0.4s' }} />
+                  </span>
+                ) : m.content}
               </p>
             </div>
           );
@@ -1065,7 +949,7 @@ function ChatTab({
       </div>
 
       <style>{`
-        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+        @keyframes dotPulse { 0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); } 40% { opacity: 1; transform: scale(1.2); } }
         textarea::placeholder { color: ${t.faint}; opacity: 1; }
       `}</style>
     </div>

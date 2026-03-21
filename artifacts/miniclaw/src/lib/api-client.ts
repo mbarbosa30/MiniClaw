@@ -45,19 +45,6 @@ async function dispatchUnauthorized(response: Response): Promise<void> {
   );
 }
 
-/**
- * Raw fetch for SSE streaming — includes auth headers, returns raw Response.
- */
-export async function apiFetchStream(path: string, options?: RequestInit): Promise<Response> {
-  const headers = buildHeaders(options?.headers, options?.body);
-  const response = await fetch(`${BASE_URL}${path}`, { ...options, headers });
-  if (response.status === 401) {
-    await dispatchUnauthorized(response);
-    throw new Error('Unauthorized');
-  }
-  return response;
-}
-
 export async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
   const headers = buildHeaders(options?.headers, options?.body);
   const response = await fetch(`${BASE_URL}${path}`, { ...options, headers });
@@ -81,4 +68,30 @@ export async function apiFetch<T>(path: string, options?: RequestInit): Promise<
   if (response.status === 204) return {} as T;
 
   return response.json();
+}
+
+export async function apiFetchWithHeaders<T>(path: string, options?: RequestInit): Promise<{ data: T; headers: Headers; status: number }> {
+  const headers = buildHeaders(options?.headers, options?.body);
+  const response = await fetch(`${BASE_URL}${path}`, { ...options, headers });
+
+  if (response.status === 401) {
+    await dispatchUnauthorized(response);
+    throw new Error('Unauthorized');
+  }
+
+  if (!response.ok) {
+    let errorMessage = 'An error occurred';
+    try {
+      const data = await response.json();
+      errorMessage = data.message || data.error || response.statusText;
+    } catch {
+      errorMessage = response.statusText;
+    }
+    throw new ApiError(errorMessage, response.status);
+  }
+
+  if (response.status === 204) return { data: {} as T, headers: response.headers, status: 204 };
+
+  const data = await response.json();
+  return { data, headers: response.headers, status: response.status };
 }
