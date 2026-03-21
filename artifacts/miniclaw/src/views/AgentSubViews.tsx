@@ -1209,9 +1209,9 @@ function SettingsForm({ agent, onDeleted }: { agent: Agent; onDeleted: () => voi
           )}
         </button>
       </SRow>
-      {agent.modelInfo?.modelName && (
+      {agent.modelInfo?.chat && (
         <p style={{ fontSize: 10, color: t.faint, fontFamily: 'ui-monospace, Menlo, monospace', letterSpacing: '0.02em', paddingTop: 6, paddingBottom: 2 }}>
-          {agent.modelInfo.provider ? `${agent.modelInfo.provider} · ` : ''}{agent.modelInfo.modelName}
+          {agent.modelInfo.provider ? `${agent.modelInfo.provider} · ` : ''}{agent.modelInfo.chat}
         </p>
       )}
 

@@ -185,11 +185,11 @@ function AgentCard({ agent, i }: { agent: Agent; i: number }) {
       )}
 
       {/* POC SCORE */}
-      {agent.pocScore != null && agent.pocScore > 0 && (
+      {agent.pocScore != null && agent.pocScore.totalScore > 0 && (
         <MetricRow
           label="PoC Score"
-          value={`${agent.pocScore} pts`}
-          bar={agent.pocScore / 100}
+          value={`${agent.pocScore.totalScore} pts`}
+          bar={agent.pocScore.totalScore / 100}
           barColor="#818cf8"
         />
       )}

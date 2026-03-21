@@ -35,10 +35,17 @@ export interface AvailableModel {
 }
 
 export interface ModelInfo {
-  modelName: string;
+  chat: string;
   tier: 'free' | 'premium' | 'fallback';
   provider: string;
   availableModels: AvailableModel[];
+}
+
+export interface PocScore {
+  totalScore: number;
+  grade: string;
+  rank: number;
+  percentile: number;
 }
 
 export interface Agent {
@@ -65,7 +72,7 @@ export interface Agent {
   runtimeStatus?: AgentRuntimeStatus | null;
   llmTokensUsedToday?: number | null;
   llmTokensLimit?: number | null;
-  pocScore?: number | null;
+  pocScore?: PocScore | null;
   economicsEarnedToday?: number | null;
   memorySizeEstimate?: number | null;
   memorySizeLimit?: number | null;
@@ -88,8 +95,8 @@ export interface Agent {
 // Per API docs: straight | dry-wit | playful | sarcastic | absurdist
 export type HumorStyle = 'straight' | 'dry-wit' | 'playful' | 'sarcastic' | 'absurdist';
 
-// Per API docs: "grok-4.20" | "gpt-5.4" | null/none
-export type PremiumModel = 'none' | 'grok-4.20' | 'gpt-5.4';
+// Per API docs: "grok-4.20" | "gpt-5.4" | "gpt-5-mini" | null/none
+export type PremiumModel = 'none' | 'grok-4.20' | 'gpt-5.4' | 'gpt-5-mini';
 
 export interface SocialHandles {
   twitter?: string;

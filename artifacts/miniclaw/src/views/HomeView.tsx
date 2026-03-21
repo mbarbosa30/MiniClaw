@@ -158,7 +158,7 @@ function AgentRow({
   if (agent.memorySizeEstimate != null && agent.memorySizeEstimate > 0) {
     statSegments.push(`${(agent.memorySizeEstimate / 1_048_576).toFixed(1)} MB`);
   }
-  if (agent.pocScore != null && agent.pocScore > 0) statSegments.push(`PoC ${agent.pocScore}`);
+  if (agent.pocScore != null && agent.pocScore.totalScore > 0) statSegments.push(`PoC ${agent.pocScore.totalScore}`);
   if (agent.celoBalance != null && agent.celoBalance > 0) statSegments.push(`${agent.celoBalance} CELO`);
 
   const pColor = awareness ? phaseColor(awareness.phase) : null;
