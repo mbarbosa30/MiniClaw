@@ -13,16 +13,25 @@ const NOTIF_LABEL: Record<TelegramNotificationLevel, string> = {
   none: 'Off',
 };
 
+const LANGUAGE_CHIPS = ['English', 'French', 'Swahili', 'Hausa', 'Yoruba', 'Amharic', 'Portuguese', 'Arabic'];
+const EXP_LEVELS = [
+  { value: 'beginner', label: 'Beginner' },
+  { value: 'intermediate', label: 'Intermediate' },
+  { value: 'expert', label: 'Expert' },
+];
+
+const FONT = 'ui-monospace, Menlo, monospace';
+
 function SectionLabel({ children }: { children: React.ReactNode }) {
   const t = useTheme();
   return (
     <p style={{
-      fontSize: 9,
+      fontSize: 11,
       fontWeight: 600,
       color: t.faint,
       letterSpacing: '0.10em',
       textTransform: 'uppercase',
-      fontFamily: 'ui-monospace, Menlo, monospace',
+      fontFamily: FONT,
       paddingTop: 28,
       paddingBottom: 10,
     }}>
@@ -55,7 +64,7 @@ function Val({ children, mono }: { children: React.ReactNode; mono?: boolean }) 
       fontSize: mono ? 10 : 12,
       color: t.text,
       letterSpacing: mono ? '0.02em' : '-0.01em',
-      ...(mono ? { fontFamily: 'ui-monospace, Menlo, monospace' } : {}),
+      ...(mono ? { fontFamily: FONT } : {}),
     }}>
       {children}
     </span>
@@ -66,20 +75,33 @@ function Toggle({ on, onToggle }: { on: boolean; onToggle: () => void }) {
   const t = useTheme();
   return (
     <button
+      role="switch"
+      aria-checked={on}
       onClick={onToggle}
       style={{
-        fontFamily: 'ui-monospace, Menlo, monospace',
-        fontSize: 10,
-        letterSpacing: '0.06em',
-        color: on ? t.text : t.faint,
-        background: 'none',
-        border: 'none',
+        width: 42,
+        height: 24,
+        borderRadius: 12,
+        background: on ? t.text : t.surface,
+        border: `1.5px solid ${on ? t.text : t.divider}`,
         padding: 0,
         cursor: 'pointer',
-        fontWeight: on ? 600 : 400,
+        position: 'relative',
+        transition: 'background 0.2s ease, border-color 0.2s ease',
+        flexShrink: 0,
       }}
     >
-      {on ? 'on' : 'off'}
+      <span style={{
+        position: 'absolute',
+        top: 2,
+        left: on ? 18 : 2,
+        width: 16,
+        height: 16,
+        borderRadius: '50%',
+        background: on ? t.bg : t.label,
+        transition: 'left 0.2s ease, background 0.2s ease',
+        display: 'block',
+      }} />
     </button>
   );
 }
@@ -117,6 +139,14 @@ function ProfileSection() {
     setUserProfile({ ...userProfile, [field]: value });
   };
 
+  const toggleLanguage = (lang: string) => {
+    const current = userProfile.languages ?? [];
+    const next = current.includes(lang)
+      ? current.filter(l => l !== lang)
+      : [...current, lang];
+    setUserProfile({ ...userProfile, languages: next });
+  };
+
   const fieldStyle: React.CSSProperties = {
     width: '100%',
     background: t.surface,
@@ -132,8 +162,8 @@ function ProfileSection() {
   };
 
   const fieldLabelStyle: React.CSSProperties = {
-    fontSize: 9,
-    fontFamily: 'ui-monospace, Menlo, monospace',
+    fontSize: 11,
+    fontFamily: FONT,
     fontWeight: 600,
     color: t.faint,
     letterSpacing: '0.08em',
@@ -142,10 +172,28 @@ function ProfileSection() {
     marginBottom: 8,
   };
 
+  const chipStyle = (active: boolean): React.CSSProperties => ({
+    padding: '6px 12px',
+    borderRadius: 20,
+    border: `1.5px solid ${active ? t.text : t.divider}`,
+    background: active ? t.text : 'transparent',
+    color: active ? t.bg : t.label,
+    fontSize: 12,
+    fontFamily: 'inherit',
+    letterSpacing: '-0.01em',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+    lineHeight: 1,
+    whiteSpace: 'nowrap',
+  });
+
+  const currentLangs = userProfile.languages ?? [];
+  const currentExp = userProfile.experienceLevel ?? '';
+
   return (
     <>
       <SectionLabel>Profile</SectionLabel>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, paddingBottom: 4 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 14, paddingBottom: 4 }}>
         <div>
           <label style={fieldLabelStyle}>Name</label>
           <input
@@ -156,13 +204,31 @@ function ProfileSection() {
             style={fieldStyle}
           />
         </div>
+
+        <div>
+          <label style={fieldLabelStyle}>X / Twitter handle <span style={{ textTransform: 'none', letterSpacing: 0, fontWeight: 400, opacity: 0.7 }}>(optional)</span></label>
+          <div style={{ position: 'relative' }}>
+            <span style={{
+              position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)',
+              fontSize: 15, color: t.faint, pointerEvents: 'none', fontFamily: 'inherit',
+            }}>@</span>
+            <input
+              type="text"
+              value={userProfile.xHandle ?? ''}
+              placeholder="yourhandle"
+              onChange={(e) => handleChange('xHandle', e.target.value.replace(/^@+/, ''))}
+              style={{ ...fieldStyle, paddingLeft: 30 }}
+            />
+          </div>
+        </div>
+
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
           <div>
             <label style={fieldLabelStyle}>City</label>
             <input
               type="text"
               value={userProfile.city}
-              placeholder="e.g. Lagos, Nairobi"
+              placeholder="e.g. Lagos"
               onChange={(e) => handleChange('city', e.target.value)}
               style={fieldStyle}
             />
@@ -172,12 +238,13 @@ function ProfileSection() {
             <input
               type="text"
               value={userProfile.country}
-              placeholder="e.g. Nigeria, Kenya"
+              placeholder="e.g. Nigeria"
               onChange={(e) => handleChange('country', e.target.value)}
               style={fieldStyle}
             />
           </div>
         </div>
+
         <div>
           <label style={fieldLabelStyle}>Current focus</label>
           <input
@@ -188,13 +255,43 @@ function ProfileSection() {
             style={fieldStyle}
           />
         </div>
+
+        <div>
+          <label style={fieldLabelStyle}>Experience level</label>
+          <div style={{ display: 'flex', gap: 7 }}>
+            {EXP_LEVELS.map(({ value, label }) => (
+              <button
+                key={value}
+                onClick={() => handleChange('experienceLevel', currentExp === value ? '' : value)}
+                style={chipStyle(currentExp === value)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <label style={fieldLabelStyle}>Languages</label>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            {LANGUAGE_CHIPS.map(lang => (
+              <button
+                key={lang}
+                onClick={() => toggleLanguage(lang)}
+                style={chipStyle(currentLangs.includes(lang))}
+              >
+                {lang}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
       <p style={{
         fontSize: 10,
         color: t.faint,
         lineHeight: 1.5,
         letterSpacing: '-0.005em',
-        paddingTop: 6,
+        paddingTop: 8,
         paddingBottom: 4,
       }}>
         Pre-fills when you create a new agent
@@ -270,7 +367,7 @@ function TelegramSection() {
             fontSize: botName ? 10 : 12,
             color: isConnected ? t.text : t.faint,
             letterSpacing: '-0.01em',
-            fontFamily: botName ? 'ui-monospace, Menlo, monospace' : 'inherit',
+            fontFamily: botName ? FONT : 'inherit',
           }}>
             {isLoading ? '…' : isConnected ? (botName ?? 'connected') : 'not connected →'}
           </span>
@@ -283,7 +380,7 @@ function TelegramSection() {
             onClick={handleCycleNotif}
             disabled={updateTg.isPending}
             style={{
-              fontFamily: 'ui-monospace, Menlo, monospace',
+              fontFamily: FONT,
               fontSize: 10,
               color: t.text,
               letterSpacing: '0.04em',

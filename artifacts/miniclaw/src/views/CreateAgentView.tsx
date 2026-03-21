@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { ChevronDown, Plus } from 'lucide-react';
 import { useTemplates, useCreateAgent, useSpawningStatus } from '@/hooks/use-agents';
 import { useRouter, useAppStore } from '@/lib/store';
 import { useTheme } from '@/lib/theme';
@@ -325,12 +326,12 @@ function PersonalizeStep({
         </div>
       )}
 
-      <div className="no-scrollbar" style={{ flex: 1, overflowY: 'auto', padding: '24px 32px 8px' }}>
+      <div className="no-scrollbar" style={{ flex: 1, overflowY: 'auto', padding: '24px 32px 40px' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
           {/* Agent name */}
           <div>
-            <p style={{ ...MONO, fontSize: 9, color: t.faint, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
+            <p style={{ ...MONO, fontSize: 11, color: t.faint, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
               Agent name <span style={{ textTransform: 'none', fontStyle: 'normal', letterSpacing: 0, opacity: 0.6 }}>(optional)</span>
             </p>
             <input type="text" value={agentCustomName} onChange={e => onChangeAgentName(e.target.value)}
@@ -342,7 +343,7 @@ function PersonalizeStep({
 
           {/* First name */}
           <div>
-            <p style={{ ...MONO, fontSize: 9, color: t.faint, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
+            <p style={{ ...MONO, fontSize: 11, color: t.faint, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
               Your first name
             </p>
             <input type="text" value={userName} onChange={e => onChangeName(e.target.value)}
@@ -351,7 +352,7 @@ function PersonalizeStep({
 
           {/* Country */}
           <div>
-            <p style={{ ...MONO, fontSize: 9, color: t.faint, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
+            <p style={{ ...MONO, fontSize: 11, color: t.faint, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
               Country / Region
             </p>
             <input type="text" value={userCountry} onChange={e => onChangeCountry(e.target.value)}
@@ -360,7 +361,7 @@ function PersonalizeStep({
 
           {/* X / Twitter handle */}
           <div>
-            <p style={{ ...MONO, fontSize: 9, color: t.faint, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
+            <p style={{ ...MONO, fontSize: 11, color: t.faint, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
               X / Twitter handle <span style={{ textTransform: 'none', fontStyle: 'normal', letterSpacing: 0, opacity: 0.6 }}>(optional)</span>
             </p>
             <div style={{ position: 'relative' }}>
@@ -383,7 +384,7 @@ function PersonalizeStep({
 
           {/* Goal */}
           <div>
-            <p style={{ ...MONO, fontSize: 9, color: t.faint, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
+            <p style={{ ...MONO, fontSize: 11, color: t.faint, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
               What are you working on?
             </p>
             <input type="text" value={userGoal} onChange={e => onChangeGoal(e.target.value)}
@@ -391,13 +392,10 @@ function PersonalizeStep({
           </div>
 
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-              <div style={{ flex: 1, height: 1, background: t.divider }} />
-              <p style={{ ...MONO, fontSize: 9, color: t.faint, textTransform: 'uppercase', letterSpacing: '0.08em', flexShrink: 0 }}>
-                Vibe
-              </p>
-              <div style={{ flex: 1, height: 1, background: t.divider }} />
-            </div>
+            <div style={{ height: 1, background: t.divider, marginBottom: 16 }} />
+            <p style={{ ...MONO, fontSize: 11, color: t.faint, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>
+              Vibe
+            </p>
             <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
               {HUMOR_STYLES.map(style => {
                 const active = humorStyle === style;
@@ -431,13 +429,10 @@ function PersonalizeStep({
           </div>
 
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-              <div style={{ flex: 1, height: 1, background: t.divider }} />
-              <p style={{ ...MONO, fontSize: 9, color: t.faint, textTransform: 'uppercase', letterSpacing: '0.08em', flexShrink: 0 }}>
-                My projects
-              </p>
-              <div style={{ flex: 1, height: 1, background: t.divider }} />
-            </div>
+            <div style={{ height: 1, background: t.divider, marginBottom: 16 }} />
+            <p style={{ ...MONO, fontSize: 11, color: t.faint, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>
+              My projects
+            </p>
 
             <p style={{ fontSize: 11, color: t.label, letterSpacing: '-0.005em', lineHeight: 1.5, marginBottom: 12 }}>
               Share links to your work — your agent will read them so it knows your projects from the start.
@@ -587,6 +582,7 @@ function PersonalizeStep({
 
           {/* Advanced section toggle */}
           <div>
+            <div style={{ height: 1, background: t.divider }} />
             <button
               onClick={() => setAdvancedOpen(v => !v)}
               disabled={creating}
@@ -597,22 +593,23 @@ function PersonalizeStep({
                 justifyContent: 'space-between',
                 background: 'none',
                 border: 'none',
-                borderTop: `1px solid ${t.divider}`,
-                padding: '16px 0 0',
+                padding: '14px 0 0',
                 cursor: 'pointer',
                 fontFamily: FONT,
               }}
             >
-              <span style={{ ...MONO, fontSize: 9, color: t.faint, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                More detail → better research
+              <span style={{ ...MONO, fontSize: 11, color: t.faint, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                More detail = better research
               </span>
-              <span style={{
-                fontSize: 11,
-                color: t.faint,
-                transform: advancedOpen ? 'rotate(180deg)' : 'rotate(0deg)',
-                transition: 'transform 0.2s ease',
-                display: 'inline-block',
-              }}>▾</span>
+              <ChevronDown
+                size={14}
+                color={t.faint}
+                style={{
+                  transform: advancedOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                  transition: 'transform 0.2s ease',
+                  flexShrink: 0,
+                }}
+              />
             </button>
 
             <AnimatePresence initial={false}>
@@ -629,7 +626,7 @@ function PersonalizeStep({
 
                     {/* Experience level */}
                     <div>
-                      <p style={{ ...MONO, fontSize: 9, color: t.faint, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>
+                      <p style={{ ...MONO, fontSize: 11, color: t.faint, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>
                         Your experience level
                       </p>
                       <div style={{ display: 'flex', gap: 7 }}>
@@ -664,7 +661,7 @@ function PersonalizeStep({
 
                     {/* Languages */}
                     <div>
-                      <p style={{ ...MONO, fontSize: 9, color: t.faint, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>
+                      <p style={{ ...MONO, fontSize: 11, color: t.faint, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>
                         Languages you work in
                       </p>
                       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
@@ -723,23 +720,42 @@ function PersonalizeStep({
                           ))}
                       </div>
                       {/* Other language free-text */}
-                      <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
+                      <div style={{ display: 'flex', gap: 6, marginTop: 8, alignItems: 'center' }}>
                         <input
                           type="text"
                           value={otherLangInput}
                           onChange={e => setOtherLangInput(e.target.value)}
                           onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); commitOtherLang(); } }}
-                          onBlur={commitOtherLang}
                           placeholder="Other language…"
                           disabled={creating}
                           style={{ ...inputStyle, flex: 1, marginBottom: 0 }}
                         />
+                        <button
+                          type="button"
+                          onClick={commitOtherLang}
+                          disabled={creating || !otherLangInput.trim()}
+                          style={{
+                            width: 36,
+                            height: 44,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            background: otherLangInput.trim() ? t.text : t.surface,
+                            border: 'none',
+                            borderRadius: 10,
+                            cursor: otherLangInput.trim() ? 'pointer' : 'default',
+                            flexShrink: 0,
+                            transition: 'background 0.15s ease',
+                          }}
+                        >
+                          <Plus size={16} color={otherLangInput.trim() ? t.bg : t.faint} />
+                        </button>
                       </div>
                     </div>
 
                     {/* Challenges */}
                     <div>
-                      <p style={{ ...MONO, fontSize: 9, color: t.faint, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
+                      <p style={{ ...MONO, fontSize: 11, color: t.faint, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
                         Biggest challenge <span style={{ textTransform: 'none', fontStyle: 'normal', letterSpacing: 0, opacity: 0.6 }}>(optional)</span>
                       </p>
                       <input
@@ -755,7 +771,7 @@ function PersonalizeStep({
                     {/* Target audience — only for commerce/creator personas */}
                     {showAudienceField && (
                       <div>
-                        <p style={{ ...MONO, fontSize: 9, color: t.faint, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
+                        <p style={{ ...MONO, fontSize: 11, color: t.faint, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
                           Who do you sell to / serve? <span style={{ textTransform: 'none', fontStyle: 'normal', letterSpacing: 0, opacity: 0.6 }}>(optional)</span>
                         </p>
                         <input
@@ -1141,7 +1157,7 @@ export function CreateAgentView() {
       setHasSeenOnboard(true);
       setUserProfile({
         name: info.name.trim(),
-        city: '',
+        city: userProfile.city,
         country: info.country.trim(),
         goal: info.goal.trim(),
         xHandle: xHandle.trim(),
