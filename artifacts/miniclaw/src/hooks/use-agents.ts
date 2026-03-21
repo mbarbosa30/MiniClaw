@@ -35,6 +35,8 @@ import type {
   EconomyData,
   CommerceRequestResult,
   GatewayEndpoint,
+  FeedPost,
+  FeedComment,
 } from '@/types';
 
 export type { Agent, AgentListSummary, PersonaTemplate, SkillDef };
@@ -685,6 +687,91 @@ export function useCommerceRequest() {
         body: JSON.stringify({ description, amount, currency }),
       }),
     onSuccess: (_, variables) => qc.invalidateQueries({ queryKey: ['economy', qid(variables.agentId)] }),
+  });
+}
+
+// --- FEED ---
+
+type RawFeedEnvelope = FeedPost[] | { posts?: FeedPost[]; items?: FeedPost[]; feed?: FeedPost[] };
+
+function normaliseFeedResponse(raw: RawFeedEnvelope): FeedPost[] {
+  if (Array.isArray(raw)) return raw;
+  const env = raw as { posts?: FeedPost[]; items?: FeedPost[]; feed?: FeedPost[] };
+  return env.posts ?? env.items ?? env.feed ?? [];
+}
+
+// GET /v1/feed?source=miniclaw — returns posts from the authenticated user's agents.
+// Optionally filter to a single agent with agentId.
+export function useFeed(filters?: { agentId?: string | number }) {
+  const agentKey = filters?.agentId != null ? String(filters.agentId) : 'all';
+  return useQuery<FeedPost[]>({
+    queryKey: ['feed', agentKey],
+    queryFn: async () => {
+      const params = new URLSearchParams({ source: 'miniclaw', limit: '20' });
+      if (filters?.agentId != null) params.set('agentId', String(filters.agentId));
+      const raw = await apiFetch<RawFeedEnvelope>(`/api/selfclaw/v1/feed?${params.toString()}`);
+      return normaliseFeedResponse(raw);
+    },
+    staleTime: 60_000,
+    refetchInterval: 120_000,
+    refetchIntervalInBackground: false,
+  });
+}
+
+// GET /v1/hosted-agents/:id/feed/:postId/comments — loaded lazily when a post is expanded.
+export function useFeedPostComments(
+  agentId: string | number | undefined,
+  postId: string | undefined,
+  enabled = false,
+) {
+  return useQuery<FeedComment[]>({
+    queryKey: ['feed-comments', qid(agentId), postId],
+    queryFn: async () => {
+      const raw = await apiFetch<FeedComment[] | { comments?: FeedComment[] }>(
+        `/api/selfclaw/v1/hosted-agents/${sid(agentId!)}/feed/${postId}/comments`,
+      );
+      if (Array.isArray(raw)) return raw;
+      return (raw as { comments?: FeedComment[] }).comments ?? [];
+    },
+    enabled: enabled && agentId != null && postId != null,
+    staleTime: 30_000,
+  });
+}
+
+// POST /v1/hosted-agents/:id/feed/:postId/like — toggles like state.
+export function useLikeFeedPost() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ agentId, postId }: { agentId: string | number; postId: string }) =>
+      apiFetch<void>(
+        `/api/selfclaw/v1/hosted-agents/${sid(agentId)}/feed/${postId}/like`,
+        { method: 'POST' },
+      ),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['feed'] }),
+  });
+}
+
+// POST /v1/hosted-agents/:id/feed/:postId/comment — adds a comment.
+export function useCommentFeedPost() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      agentId,
+      postId,
+      content,
+    }: {
+      agentId: string | number;
+      postId: string;
+      content: string;
+    }) =>
+      apiFetch<FeedComment>(
+        `/api/selfclaw/v1/hosted-agents/${sid(agentId)}/feed/${postId}/comment`,
+        { method: 'POST', body: JSON.stringify({ content }) },
+      ),
+    onSuccess: (_, v) => {
+      qc.invalidateQueries({ queryKey: ['feed'] });
+      qc.invalidateQueries({ queryKey: ['feed-comments', qid(v.agentId), v.postId] });
+    },
   });
 }
 

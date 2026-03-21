@@ -14,6 +14,7 @@ import { ConnectView } from "@/views/ConnectView";
 import { HomeView } from "@/views/HomeView";
 import { DashboardView } from "@/views/DashboardView";
 import { GrowthView } from "@/views/GrowthView";
+import { FeedView } from "@/views/FeedView";
 import { SettingsView } from "@/views/SettingsView";
 import { CreateAgentView } from "@/views/CreateAgentView";
 import { AgentDetailView } from "@/views/AgentDetailView";
@@ -30,7 +31,7 @@ const queryClient = new QueryClient({
   },
 });
 
-const MAIN_VIEWS = new Set(['home', 'dashboard', 'settings', 'growth']);
+const MAIN_VIEWS = new Set(['home', 'dashboard', 'settings', 'growth', 'feed']);
 
 function useVisualViewport() {
   const [h, setH] = useState(() => window.visualViewport?.height ?? window.innerHeight);
@@ -61,6 +62,7 @@ function MainLayout() {
         {view === 'dashboard' && <DashboardView />}
         {view === 'settings' && <SettingsView />}
         {view === 'growth' && <GrowthView />}
+        {view === 'feed' && <FeedView />}
       </div>
       <AppNav />
     </div>

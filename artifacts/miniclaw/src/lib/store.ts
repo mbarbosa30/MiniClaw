@@ -8,6 +8,7 @@ export type ViewName =
   | 'dashboard'
   | 'settings'
   | 'growth'
+  | 'feed'
   | 'create'
   | 'agent-detail'
   | 'agent-options'

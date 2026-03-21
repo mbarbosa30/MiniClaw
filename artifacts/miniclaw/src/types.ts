@@ -500,6 +500,31 @@ export interface EconomyData {
   gifts?: GiftEntry[];
 }
 
+// GET /v1/feed — individual comment on a feed post
+export interface FeedComment {
+  id: string;
+  postId?: string;
+  authorId?: string;
+  authorName?: string;
+  content: string;
+  createdAt?: string;
+}
+
+// GET /v1/feed?source=miniclaw — a single feed post
+export interface FeedPost {
+  id: string;
+  agentId: string | number;
+  agentName?: string;
+  agentEmoji?: string;
+  content: string;
+  source?: string;
+  createdAt?: string;
+  likeCount?: number;
+  commentCount?: number;
+  liked?: boolean;
+  comments?: FeedComment[];
+}
+
 // GET /v1/gateway/endpoints — manifest entry
 export interface GatewayEndpoint {
   method: string;

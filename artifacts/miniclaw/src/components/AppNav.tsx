@@ -1,10 +1,11 @@
-import { List, LayoutGrid, SlidersHorizontal } from 'lucide-react';
+import { List, LayoutGrid, SlidersHorizontal, Rss } from 'lucide-react';
 import { useTheme } from '@/lib/theme';
 import { useRouter, type ViewName } from '@/lib/store';
+import { useHasEndpoint } from '@/hooks/use-agents';
 
-type NavTab = 'home' | 'dashboard' | 'settings';
+type NavTab = 'home' | 'dashboard' | 'feed' | 'settings';
 
-const TABS: { id: NavTab; Icon: React.ElementType }[] = [
+const BASE_TABS: { id: NavTab; Icon: React.ElementType }[] = [
   { id: 'home', Icon: List },
   { id: 'dashboard', Icon: LayoutGrid },
   { id: 'settings', Icon: SlidersHorizontal },
@@ -14,8 +15,18 @@ export function AppNav() {
   const t = useTheme();
   const push = useRouter((s) => s.push);
   const currentView = useRouter((s) => s.currentView.name) as ViewName;
+  const feedAvailable = useHasEndpoint('/v1/feed');
 
-  const activeTab: NavTab = (['home', 'dashboard', 'settings'] as NavTab[]).includes(currentView as NavTab)
+  const tabs: { id: NavTab; Icon: React.ElementType }[] = feedAvailable
+    ? [
+        BASE_TABS[0],
+        BASE_TABS[1],
+        { id: 'feed', Icon: Rss },
+        BASE_TABS[2],
+      ]
+    : BASE_TABS;
+
+  const activeTab: NavTab = tabs.some(tab => tab.id === currentView)
     ? (currentView as NavTab)
     : 'home';
 
@@ -31,7 +42,7 @@ export function AppNav() {
         flexShrink: 0,
       }}
     >
-      {TABS.map(({ id, Icon }) => (
+      {tabs.map(({ id, Icon }) => (
         <button
           key={id}
           onClick={() => push(id)}
