@@ -15,17 +15,19 @@ export const STATE_LABEL: Record<VisualState, string> = {
   running: 'running',
   thinking: 'thinking',
   waiting: 'waiting',
-  pending: 'pending',
-  idle: 'idle',
+  pending: 'active',
+  idle: 'paused',
 };
 
 export function agentVisualState(agent: Agent): VisualState {
-  // runtimeStatus is the canonical source; null/undefined/unknown → idle (dim)
+  // runtimeStatus takes priority when set
   const rs = agent.runtimeStatus;
   if (rs === 'thinking') return 'thinking';
   if (rs === 'running') return 'running';
   if (rs === 'waiting') return 'waiting';
-  // 'idle', null, undefined, or any unknown string → idle
+  // Fall back to lifecycle status: active agents are 'pending' (alive but quiet)
+  if (agent.status === 'active') return 'pending';
+  // paused, error, or unknown → idle (fully dim)
   return 'idle';
 }
 

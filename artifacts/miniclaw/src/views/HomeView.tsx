@@ -142,7 +142,7 @@ function AgentRow({
   const t = useTheme();
   const state = agentVisualState(agent);
   const color = STATE_COLOR[state];
-  const isIdle = state === 'idle' || state === 'pending';
+  const isIdle = state === 'idle';
 
   const { data: awareness } = useAwareness(agent.id);
   const { data: pendingTasks } = useTasks(agent.id, 'pending');
