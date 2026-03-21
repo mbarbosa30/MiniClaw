@@ -29,6 +29,7 @@ interface UserInfo {
 }
 
 interface ProjectEntry {
+  id: string;
   url: string;
   title?: string;
   description?: string;
@@ -634,7 +635,7 @@ function PersonalizeStep({
   onChangeGoal: (v: string) => void;
   onChangeHumorStyle: (s: HumorStyle) => void;
   onAddProject: (url: string) => void;
-  onRemoveProject: (idx: number) => void;
+  onRemoveProject: (id: string) => void;
   onBack: () => void;
   onSkip: () => void;
   onLaunch: () => void;
@@ -880,9 +881,9 @@ function PersonalizeStep({
             {/* Project cards */}
             {projects.length > 0 && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {projects.map((p, idx) => (
+                {projects.map((p) => (
                   <motion.div
-                    key={`${p.url}-${idx}`}
+                    key={p.id}
                     initial={{ opacity: 0, y: 6 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.2 }}
@@ -939,7 +940,7 @@ function PersonalizeStep({
                       )}
                     </div>
                     <button
-                      onClick={() => onRemoveProject(idx)}
+                      onClick={() => onRemoveProject(p.id)}
                       disabled={creating}
                       style={{
                         flexShrink: 0,
@@ -1073,26 +1074,22 @@ export function CreateAgentView() {
 
   const handleAddProject = (url: string) => {
     if (userProjects.length >= MAX_PROJECTS) return;
-    const entry: ProjectEntry = { url, fetchStatus: 'loading' };
+    const id = crypto.randomUUID();
+    const entry: ProjectEntry = { id, url, fetchStatus: 'loading' };
     setUserProjects(prev => [...prev, entry]);
-    const idx = userProjects.length;
     fetchProjectMeta(url).then(meta => {
       setUserProjects(prev =>
-        prev.map((p, i) =>
-          i === idx
-            ? { ...p, ...meta, fetchStatus: 'ready' }
-            : p
-        )
+        prev.map(p => p.id === id ? { ...p, ...meta, fetchStatus: 'ready' } : p)
       );
     }).catch(() => {
       setUserProjects(prev =>
-        prev.map((p, i) => i === idx ? { ...p, fetchStatus: 'error' } : p)
+        prev.map(p => p.id === id ? { ...p, fetchStatus: 'error' } : p)
       );
     });
   };
 
-  const handleRemoveProject = (idx: number) => {
-    setUserProjects(prev => prev.filter((_, i) => i !== idx));
+  const handleRemoveProject = (id: string) => {
+    setUserProjects(prev => prev.filter(p => p.id !== id));
   };
 
   const buildBriefContext = (persona: PersonaConfig, info: UserInfo, projects: ProjectEntry[]): string => {
