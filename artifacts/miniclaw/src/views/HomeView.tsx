@@ -39,16 +39,34 @@ function setCachedAgents(agents: Agent[]) {
 
 // --- Daily Brief helpers ---
 
-function sanitizeSummary(summary: string | undefined, agentName: string): string {
-  if (!summary) return `${agentName} has an update for you`;
-  const s = summary.trim();
-  if (!/\s/.test(s) && s.includes('_')) {
-    return s
-      .replace(/^hosted_/, '')
-      .replace(/_/g, ' ')
-      .replace(/^\w/, (c) => c.toUpperCase());
+const BRIEF_EVENT_LABELS: Record<string, (agentName: string) => string> = {
+  hosted_agent_created: (n) => `${n} is live and ready to go`,
+  task_completed:       (n) => `${n} just finished a task`,
+  task_failed:          (n) => `${n} hit a snag on a task`,
+  task_created:         (n) => `${n} picked up a new task`,
+  memory_added:         (n) => `${n} saved something new to memory`,
+  quota_warning:        (n) => `${n} is approaching its daily usage limit`,
+  quota_exhausted:      (n) => `${n} has reached its daily usage limit`,
+  agent_updated:        (n) => `${n}'s settings were updated`,
+  agent_paused:         (n) => `${n} is currently paused`,
+  agent_resumed:        (n) => `${n} is back in action`,
+  skill_added:          (n) => `${n} gained a new skill`,
+  knowledge_added:      (n) => `${n} has new knowledge to work with`,
+};
+
+function resolveBriefSummary(item: DailyBriefItem): string {
+  const raw = item.highlight?.summary ?? '';
+  const type = item.highlight?.type ?? '';
+  const name = item.agentName || 'Your agent';
+  const isRawKey = !raw || raw === type || !/\s/.test(raw.trim());
+  if (isRawKey) {
+    return (
+      BRIEF_EVENT_LABELS[type]?.(name) ??
+      BRIEF_EVENT_LABELS[raw]?.(name) ??
+      `${name} has an update for you`
+    );
   }
-  return s;
+  return raw;
 }
 
 // --- Daily Brief ---
@@ -104,7 +122,7 @@ function DailyBriefCard({
       </div>
 
       <p style={{ fontSize: 13, fontWeight: 300, lineHeight: 1.55, color: t.text, paddingRight: 20, marginBottom: (item.pendingTaskCount ?? 0) > 0 ? 8 : 12 }}>
-        {sanitizeSummary(item.highlight?.summary, item.agentName)}
+        {resolveBriefSummary(item)}
       </p>
 
       {(item.pendingTaskCount ?? 0) > 0 && (
