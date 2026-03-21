@@ -70,7 +70,6 @@ function MetricRow({
     <div style={{ marginBottom: 14 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
         <span style={{
-          fontFamily: 'ui-monospace, Menlo, monospace',
           fontSize: 9,
           color: t.faint,
           letterSpacing: '0.07em',
@@ -163,7 +162,7 @@ function AgentCard({ agent, i }: { agent: Agent; i: number }) {
           value={fmtMB(agent.memorySizeEstimate)}
           sub={`/ ${fmtMB(memLimit)}`}
           bar={memBar}
-          barColor={t.text}
+          barColor={memBar != null && memBar > 0.7 ? '#f59e0b' : t.text}
         />
       )}
 
@@ -173,6 +172,7 @@ function AgentCard({ agent, i }: { agent: Agent; i: number }) {
           label="Tokens"
           value={agent.llmTokensUsedToday.toLocaleString()}
           sub={agent.tokenCostUsd != null ? `${fmtCost(agent.tokenCostUsd)} today` : undefined}
+          bar={Math.min(agent.llmTokensUsedToday / 20000, 1)}
         />
       )}
 
@@ -218,7 +218,7 @@ function AgentCard({ agent, i }: { agent: Agent; i: number }) {
           label="Progress"
           value={`${agent.progressPercent}%`}
           bar={agent.progressPercent / 100}
-          barColor={t.text}
+          barColor={color}
         />
       )}
 

@@ -204,7 +204,7 @@ function AgentRow({
       transition={{ delay: index * 0.07, duration: 0.35 }}
       style={{ paddingTop: 20, paddingBottom: 20 }}
     >
-      {/* Row 1: name + phase pill + options button */}
+      {/* Row 1: name | [StateIndicator] [phase pill] [options] */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <button
           className="text-left"
@@ -228,7 +228,8 @@ function AgentRow({
         >
           {agent.name}
         </button>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, marginLeft: 6 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0, marginLeft: 8, height: 12 }}>
+          <StateIndicator state={state} />
           {awareness && pColor && (
             <span style={{
               fontFamily: 'ui-monospace, Menlo, monospace',
@@ -249,8 +250,8 @@ function AgentRow({
           <button
             onClick={(e) => { e.stopPropagation(); onOptions(); }}
             style={{
-              width: 32,
-              height: 32,
+              width: 28,
+              height: 28,
               background: 'none',
               border: 'none',
               cursor: 'pointer',
@@ -260,16 +261,13 @@ function AgentRow({
               justifyContent: 'center',
             }}
           >
-            <MoreHorizontal size={16} strokeWidth={1.5} />
+            <MoreHorizontal size={14} strokeWidth={1.5} />
           </button>
         </div>
       </div>
 
-      {/* Row 2: status dot + label + pending badge + activity text */}
+      {/* Row 2: status label + pending badge + activity text */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 6 }}>
-        <span style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
-          <StateIndicator state={state} />
-        </span>
         <span style={{
           fontSize: 9,
           fontWeight: 600,
@@ -301,7 +299,7 @@ function AgentRow({
 
       {/* Row 3: monospace live stats */}
       {statSegments.length > 0 && (
-        <div style={{ display: 'flex', gap: 14, marginTop: 5 }}>
+        <div style={{ display: 'flex', gap: 16, marginTop: 5 }}>
           {statSegments.map((seg) => (
             <span key={seg} style={{ ...MONO, color: t.faint }}>
               {seg}
