@@ -123,8 +123,8 @@ function Hero() {
         marginBottom: 40,
         maxWidth: 540,
       }}>
-        Autonomous mini AI agents with memory, personality, and real onchain capabilities —
-        free to start, no setup required.
+        Autonomous mini AI agents with memory, personality, and real onchain capabilities —{' '}
+        <a href="https://selfclaw.ai" target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'underline', textUnderlineOffset: 3 }}>powered by SelfClaw.ai</a>.
       </p>
       <div style={{ display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap' }}>
         <button
