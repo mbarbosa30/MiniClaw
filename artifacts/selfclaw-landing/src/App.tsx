@@ -124,7 +124,7 @@ function Hero() {
         maxWidth: 540,
       }}>
         Autonomous mini AI agents with memory, personality, and real onchain capabilities —{' '}
-        <a href="https://selfclaw.ai" target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'underline', textUnderlineOffset: 3 }}>powered by SelfClaw.ai</a>.
+        <a href="https://selfclaw.ai" target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'none' }}>powered by SelfClaw.ai</a>.
       </p>
       <div style={{ display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap' }}>
         <button
@@ -582,7 +582,7 @@ function PersonaStrip() {
       padding: '48px 0',
       overflow: 'hidden',
     }}>
-      <div style={{ paddingLeft: 24, marginBottom: 20 }}>
+      <div style={{ maxWidth: MAX_W, margin: '0 auto', padding: '0 24px', marginBottom: 20 }}>
         <p style={{
           ...MONO,
           fontSize: 10,
