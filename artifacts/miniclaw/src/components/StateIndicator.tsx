@@ -7,7 +7,7 @@ export const STATE_COLOR: Record<VisualState, string> = {
   running: '#22c55e',
   thinking: '#818cf8',
   waiting: '#f59e0b',
-  pending: '#555',
+  pending: '#60a5fa',
   idle: '#333',
 };
 
