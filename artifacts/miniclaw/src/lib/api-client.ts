@@ -98,6 +98,7 @@ export async function apiFetchWithHeaders<T>(path: string, options?: RequestInit
 
 export async function apiFetchStream(path: string, options?: RequestInit): Promise<Response> {
   const headers = buildHeaders(options?.headers, options?.body);
+  headers.set('Accept', 'text/event-stream');
   const response = await fetch(`${BASE_URL}${path}`, { ...options, headers });
 
   if (response.status === 401) {
