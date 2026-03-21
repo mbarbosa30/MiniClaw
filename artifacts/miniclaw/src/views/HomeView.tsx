@@ -208,7 +208,7 @@ function AgentRow({
       transition={{ delay: index * 0.07, duration: 0.35 }}
       style={{ paddingTop: 20, paddingBottom: 20 }}
     >
-      {/* Row 1: name [bare-icon] | [StateIndicator] [phase pill] [options] */}
+      {/* Row 1: name [bare-icon] | [StateIndicator] [options] */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
           <button
@@ -229,7 +229,7 @@ function AgentRow({
               overflow: 'hidden',
               display: 'flex',
               alignItems: 'center',
-              gap: 4,
+              gap: 10,
             }}
           >
             <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{agent.name}</span>
@@ -241,23 +241,6 @@ function AgentRow({
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0, marginLeft: 8, height: 12 }}>
           <StateIndicator state={state} />
-          {awareness && pColor && (
-            <span style={{
-              fontFamily: 'ui-monospace, Menlo, monospace',
-              fontSize: 8,
-              fontWeight: 600,
-              letterSpacing: '0.07em',
-              textTransform: 'uppercase',
-              color: pColor,
-              background: `${pColor}1a`,
-              border: `1px solid ${pColor}40`,
-              borderRadius: 3,
-              padding: '2px 5px',
-              whiteSpace: 'nowrap',
-            }}>
-              {awareness.label || awareness.phase}
-            </span>
-          )}
           <button
             onClick={(e) => { e.stopPropagation(); onOptions(); }}
             style={{
@@ -277,7 +260,7 @@ function AgentRow({
         </div>
       </div>
 
-      {/* Row 2: status label + pending badge + activity text */}
+      {/* Row 2: status label + pending badge + activity text | phase pill right */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 6 }}>
         <span style={{
           fontSize: 9,
@@ -304,6 +287,25 @@ function AgentRow({
         {activity && (
           <span style={{ fontSize: 10, color: t.label, fontStyle: 'italic', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {activity.replace('Still learning who I am', 'Learning who I am')}
+          </span>
+        )}
+        {awareness && pColor && (
+          <span style={{
+            marginLeft: 'auto',
+            flexShrink: 0,
+            fontFamily: 'ui-monospace, Menlo, monospace',
+            fontSize: 8,
+            fontWeight: 600,
+            letterSpacing: '0.07em',
+            textTransform: 'uppercase',
+            color: pColor,
+            background: `${pColor}1a`,
+            border: `1px solid ${pColor}40`,
+            borderRadius: 3,
+            padding: '2px 5px',
+            whiteSpace: 'nowrap',
+          }}>
+            {awareness.label || awareness.phase}
           </span>
         )}
       </div>
@@ -450,7 +452,7 @@ export function HomeView() {
           color: t.text,
           lineHeight: 1,
         }}>
-          Agents
+          My Agents
         </p>
         <button
           onClick={() => push('growth')}
