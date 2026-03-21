@@ -128,7 +128,7 @@ function PersonaRow({
         left: 0,
         top: 0,
         bottom: 0,
-        width: 3,
+        width: 2,
         background: persona.color,
         borderRadius: '0 1px 1px 0',
       }} />
@@ -179,7 +179,7 @@ function PersonaRow({
                 textTransform: 'uppercase',
                 whiteSpace: 'nowrap',
               }}>
-                Launching…
+                Launching {persona.name}…
               </span>
             </motion.div>
           ) : (
@@ -298,7 +298,7 @@ export function OnboardingScreen() {
             <div style={{
               position: 'absolute',
               left: 0, top: 0, bottom: 0,
-              width: 3,
+              width: 2,
               background: T.divider,
               borderRadius: '0 1px 1px 0',
             }} />
