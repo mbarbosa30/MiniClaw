@@ -143,7 +143,7 @@ export function GrowthView() {
     : `Your Claw helped you act on ${combinedTotal} things this month.`;
 
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: t.bg, transition: 'background 0.3s ease' }}>
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: t.bg, transition: 'background 0.3s ease', minHeight: 0 }}>
       <ScreenHeader title="Growth" onBack={pop} />
 
       <div className="flex-1 overflow-y-auto no-scrollbar" style={{ padding: '28px 32px 40px' }}>
