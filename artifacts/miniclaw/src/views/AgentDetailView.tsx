@@ -7,20 +7,6 @@ import { MoreHorizontal } from 'lucide-react';
 import { apiFetchStream, apiFetch, ApiError } from '@/lib/api-client';
 import type { Agent, ChatMessage } from '@/types';
 
-const DOT_COLOR: Record<string, string> = {
-  active: '#22c55e',
-  error: '#f59e0b',
-};
-
-function statusDotColor(status: string): string {
-  return DOT_COLOR[status] ?? '#555555';
-}
-
-function statusFallback(status: string): string {
-  if (status === 'active') return 'active';
-  return 'paused';
-}
-
 const MONO = {
   fontFamily: 'ui-monospace, Menlo, monospace',
   fontSize: 9,

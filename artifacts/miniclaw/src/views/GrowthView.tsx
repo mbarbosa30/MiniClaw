@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { useTheme } from '@/lib/theme';
-import { useRouter } from '@/lib/store';
 import { useAgents, useGrowthSummary } from '@/hooks/use-agents';
 import type { GrowthSummary } from '@/types';
 
@@ -79,7 +78,6 @@ function AgentGrowthFetcher({
 
 export function GrowthView() {
   const t = useTheme();
-  const pop = useRouter(s => s.pop);
   const { data, isLoading: agentsLoading } = useAgents();
   const agents = data?.agents ?? [];
 
