@@ -10,12 +10,19 @@ import {
   useTasks, useResolveTask,
   useTelegramStatus, useUpdateTelegramSettings,
   useUpdateAgent, useDeleteAgent,
+  useAwareness,
+  useWallet, useCreateWallet, useRequestGas,
+  useIdentity, useRegisterIdentity,
+  useToken,
+  useEconomy,
+  useCommerceRequest,
 } from '@/hooks/use-agents';
 import { apiFetch } from '@/lib/api-client';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Trash2, Link as LinkIcon, FileText, Check, X, Send,
   Zap, BookOpen, Brain, CircleCheck,
+  Wallet, Shield, Coins, Gift, ShoppingCart, Lock,
 } from 'lucide-react';
 import type { Agent, HumorStyle, PremiumModel, Memory, TelegramNotificationLevel, AvailableModel } from '@/types';
 import { HUSTLE_MODE_SOUL_APPEND } from './CreateAgentView';
@@ -591,6 +598,7 @@ export function AgentOptionsView() {
     { id: 'soul',           label: 'Soul',       meta: 'identity · directives' },
     { id: 'tasks',          label: 'Tasks',      meta: 'pending approvals' },
     { id: 'telegram',       label: 'Telegram',   meta: 'bot connection' },
+    { id: 'economy',        label: 'Economy',    meta: 'wallet · identity · gifts' },
   ];
 
   const allItems = [
@@ -1238,6 +1246,350 @@ function SettingsForm({ agent, onDeleted }: { agent: Agent; onDeleted: () => voi
         </button>
       </div>
     </div>
+  );
+}
+
+function EcoCard({ title, icon, children }: { title: string; icon: React.ReactNode; children: React.ReactNode }) {
+  const t = useTheme();
+  return (
+    <div style={{ background: t.surface, border: `1px solid ${t.divider}`, borderRadius: 12, padding: '14px 16px', marginBottom: 12 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+        <div style={{ color: t.faint, display: 'flex', alignItems: 'center' }}>{icon}</div>
+        <span style={{ fontSize: 11, fontWeight: 600, color: t.label, letterSpacing: '0.05em', textTransform: 'uppercase', fontFamily: 'ui-monospace, Menlo, monospace' }}>{title}</span>
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function StatusDot({ active }: { active: boolean }) {
+  return (
+    <span style={{ display: 'inline-block', width: 7, height: 7, borderRadius: '50%', background: active ? '#22c55e' : '#6b7280', marginRight: 6, flexShrink: 0 }} />
+  );
+}
+
+function EcoRow({ label, value }: { label: string; value: React.ReactNode }) {
+  const t = useTheme();
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 8, paddingBottom: 8, borderBottom: `1px solid ${t.divider}` }}>
+      <span style={{ fontSize: 12, color: t.label }}>{label}</span>
+      <span style={{ fontSize: 12, color: t.text, fontFamily: 'ui-monospace, Menlo, monospace', letterSpacing: '-0.01em' }}>{value}</span>
+    </div>
+  );
+}
+
+function EcoActionBtn({ label, onClick, disabled, danger }: { label: string; onClick: () => void; disabled: boolean; danger?: boolean }) {
+  const t = useTheme();
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      style={{
+        marginTop: 10,
+        padding: '8px 16px',
+        borderRadius: 8,
+        fontSize: 12,
+        fontWeight: 600,
+        cursor: disabled ? 'not-allowed' : 'pointer',
+        border: `1px solid ${disabled ? t.divider : danger ? '#f87171' : t.text}`,
+        background: 'transparent',
+        color: disabled ? t.faint : danger ? '#f87171' : t.text,
+        opacity: disabled ? 0.5 : 1,
+        letterSpacing: '-0.01em',
+        transition: 'opacity 0.15s',
+      }}
+    >
+      {label}
+    </button>
+  );
+}
+
+export function EconomyView() {
+  const t = useTheme();
+  const agentId: string = useRouter(s => s.currentView.params?.id ?? '');
+
+  const { data: awareness } = useAwareness(agentId);
+  const { data: wallet, isLoading: walletLoading } = useWallet(agentId);
+  const { data: identity, isLoading: identityLoading } = useIdentity(agentId);
+  const { data: token, isLoading: tokenLoading } = useToken(agentId);
+  const { data: economy, isLoading: economyLoading } = useEconomy(agentId);
+
+  const createWallet = useCreateWallet();
+  const requestGas = useRequestGas();
+  const registerIdentity = useRegisterIdentity();
+  const commerceRequest = useCommerceRequest();
+
+  const phase = awareness?.phase ?? 'curious';
+  const isPhase3 = phase === 'confident';
+
+  const [handleInput, setHandleInput] = useState('');
+  const [registerError, setRegisterError] = useState<string | null>(null);
+  const [registerSuccess, setRegisterSuccess] = useState(false);
+
+  const [commerceDesc, setCommerceDesc] = useState('');
+  const [commerceAmount, setCommerceAmount] = useState('');
+  const [commerceError, setCommerceError] = useState<string | null>(null);
+  const [commerceResult, setCommerceResult] = useState<string | null>(null);
+
+  const [walletError, setWalletError] = useState<string | null>(null);
+  const [gasError, setGasError] = useState<string | null>(null);
+  const [gasSuccess, setGasSuccess] = useState(false);
+
+  const clearAfter = (setter: (v: null) => void, ms = 4000) => {
+    setTimeout(() => setter(null), ms);
+  };
+
+  const handleCreateWallet = async () => {
+    try {
+      await createWallet.mutateAsync(agentId);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Failed to create wallet';
+      setWalletError(msg);
+      clearAfter(setWalletError);
+    }
+  };
+
+  const handleRequestGas = async () => {
+    setGasSuccess(false);
+    try {
+      await requestGas.mutateAsync(agentId);
+      setGasSuccess(true);
+      setTimeout(() => setGasSuccess(false), 4000);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Failed to request gas';
+      setGasError(msg);
+      clearAfter(setGasError);
+    }
+  };
+
+  const handleRegisterIdentity = async () => {
+    const h = handleInput.trim();
+    if (!h) return;
+    setRegisterError(null);
+    setRegisterSuccess(false);
+    try {
+      await registerIdentity.mutateAsync({ agentId, handle: h });
+      setRegisterSuccess(true);
+      setHandleInput('');
+      setTimeout(() => setRegisterSuccess(false), 4000);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Failed to register';
+      setRegisterError(msg);
+      clearAfter(setRegisterError);
+    }
+  };
+
+  const handleCommerceRequest = async () => {
+    const desc = commerceDesc.trim();
+    const amt = parseFloat(commerceAmount);
+    if (!desc || isNaN(amt) || amt <= 0) {
+      setCommerceError('Enter a description and a valid amount.');
+      clearAfter(setCommerceError);
+      return;
+    }
+    setCommerceError(null);
+    setCommerceResult(null);
+    try {
+      const result = await commerceRequest.mutateAsync({ agentId, description: desc, amount: amt, currency: 'CELO' });
+      setCommerceResult(result.paymentLink ?? result.id ?? 'Created');
+      setCommerceDesc('');
+      setCommerceAmount('');
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Failed to create request';
+      setCommerceError(msg);
+      clearAfter(setCommerceError);
+    }
+  };
+
+  const inputStyle = {
+    width: '100%',
+    background: t.bg,
+    border: `1px solid ${t.divider}`,
+    borderRadius: 8,
+    padding: '8px 10px',
+    fontSize: 12,
+    color: t.text,
+    outline: 'none',
+    fontFamily: 'inherit',
+    letterSpacing: '-0.01em',
+    marginTop: 8,
+  } as React.CSSProperties;
+
+  const anyLoading = walletLoading || identityLoading || tokenLoading || economyLoading;
+
+  return (
+    <SubScreenLayout title="Economy">
+      <div style={{ padding: '16px 20px 32px' }}>
+        {!isPhase3 && (
+          <div style={{
+            display: 'flex', alignItems: 'flex-start', gap: 10,
+            background: t.surface, border: `1px solid ${t.divider}`,
+            borderRadius: 12, padding: '12px 14px', marginBottom: 16,
+          }}>
+            <Lock size={14} style={{ color: t.faint, marginTop: 2, flexShrink: 0 }} />
+            <div>
+              <p style={{ fontSize: 12, fontWeight: 600, color: t.text, marginBottom: 4 }}>Economy features unlock at Phase 3</p>
+              <p style={{ fontSize: 11, color: t.label, lineHeight: 1.6 }}>
+                Reach 75+ messages with your agent to unlock wallet creation, identity registration, and commerce. Keep the conversation going.
+              </p>
+              <p style={{ fontSize: 10, color: t.faint, fontFamily: 'ui-monospace, Menlo, monospace', marginTop: 6 }}>
+                Current phase: {phase} · {awareness?.messageCount ?? 0} messages
+              </p>
+            </div>
+          </div>
+        )}
+
+        {anyLoading ? (
+          <LoadingState />
+        ) : (
+          <>
+            <EcoCard title="Wallet" icon={<Wallet size={14} />}>
+              <EcoRow
+                label="Status"
+                value={<><StatusDot active={wallet?.created ?? false} />{wallet?.created ? 'Created' : 'Not created'}</>}
+              />
+              {wallet?.address && (
+                <EcoRow label="Address" value={`${wallet.address.slice(0, 8)}…${wallet.address.slice(-6)}`} />
+              )}
+              {(wallet?.balance != null || wallet?.balanceCelo != null) && (
+                <EcoRow label="Balance" value={`${wallet.balanceCelo ?? wallet.balance} CELO`} />
+              )}
+              {walletError && <p style={{ fontSize: 11, color: '#f87171', marginTop: 8 }}>{walletError}</p>}
+              {!wallet?.created && (
+                <EcoActionBtn
+                  label={createWallet.isPending ? 'Creating…' : 'Create Wallet'}
+                  onClick={handleCreateWallet}
+                  disabled={!isPhase3 || createWallet.isPending}
+                />
+              )}
+              {wallet?.created && (
+                <>
+                  {gasError && <p style={{ fontSize: 11, color: '#f87171', marginTop: 8 }}>{gasError}</p>}
+                  {gasSuccess && <p style={{ fontSize: 11, color: '#22c55e', marginTop: 8 }}>Gas requested successfully.</p>}
+                  <EcoActionBtn
+                    label={requestGas.isPending ? 'Requesting…' : 'Request Gas'}
+                    onClick={handleRequestGas}
+                    disabled={!isPhase3 || requestGas.isPending}
+                  />
+                </>
+              )}
+            </EcoCard>
+
+            <EcoCard title="Identity" icon={<Shield size={14} />}>
+              <EcoRow
+                label="Status"
+                value={<><StatusDot active={identity?.registered ?? false} />{identity?.registered ? 'Registered' : 'Not registered'}</>}
+              />
+              {identity?.handle && (
+                <EcoRow label="Handle" value={`@${identity.handle}`} />
+              )}
+              {identity?.displayName && (
+                <EcoRow label="Name" value={identity.displayName} />
+              )}
+              {!identity?.registered && (
+                <>
+                  <input
+                    placeholder="Choose a handle"
+                    value={handleInput}
+                    onChange={e => setHandleInput(e.target.value)}
+                    disabled={!isPhase3}
+                    style={{ ...inputStyle, opacity: isPhase3 ? 1 : 0.4 }}
+                  />
+                  {registerError && <p style={{ fontSize: 11, color: '#f87171', marginTop: 6 }}>{registerError}</p>}
+                  {registerSuccess && <p style={{ fontSize: 11, color: '#22c55e', marginTop: 6 }}>Registered successfully.</p>}
+                  <EcoActionBtn
+                    label={registerIdentity.isPending ? 'Registering…' : 'Register Identity'}
+                    onClick={handleRegisterIdentity}
+                    disabled={!isPhase3 || !handleInput.trim() || registerIdentity.isPending}
+                  />
+                </>
+              )}
+            </EcoCard>
+
+            <EcoCard title="Token" icon={<Coins size={14} />}>
+              <EcoRow
+                label="Status"
+                value={<><StatusDot active={token?.deployed ?? false} />{token?.deployed ? 'Deployed' : 'Not deployed'}</>}
+              />
+              {token?.name && <EcoRow label="Name" value={token.name} />}
+              {token?.symbol && <EcoRow label="Symbol" value={`$${token.symbol}`} />}
+              {token?.contractAddress && (
+                <EcoRow label="Contract" value={`${token.contractAddress.slice(0, 8)}…${token.contractAddress.slice(-6)}`} />
+              )}
+              {token?.totalSupply != null && (
+                <EcoRow label="Supply" value={token.totalSupply.toLocaleString()} />
+              )}
+              {!token?.deployed && (
+                <p style={{ fontSize: 11, color: t.faint, marginTop: 10, lineHeight: 1.5 }}>Token deployment is managed by the agent autonomously as it grows.</p>
+              )}
+            </EcoCard>
+
+            <EcoCard title="Gifts" icon={<Gift size={14} />}>
+              {economy?.giftsReceivedCount != null ? (
+                <>
+                  <EcoRow label="Gifts received" value={economy.giftsReceivedCount} />
+                  {economy.totalGiftsValueCelo != null && (
+                    <EcoRow label="Total value" value={`${economy.totalGiftsValueCelo} CELO`} />
+                  )}
+                  {economy.gifts && economy.gifts.length > 0 && (
+                    <div style={{ marginTop: 10 }}>
+                      {economy.gifts.slice(0, 3).map((g, i) => (
+                        <div key={i} style={{ paddingTop: 8, paddingBottom: 8, borderBottom: `1px solid ${t.divider}`, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                          <div>
+                            <p style={{ fontSize: 12, color: t.text }}>{g.amount} {g.currency ?? 'CELO'}</p>
+                            {g.message && <p style={{ fontSize: 11, color: t.label, marginTop: 2 }}>{g.message}</p>}
+                          </div>
+                          {g.fromAddress && (
+                            <span style={{ fontSize: 10, color: t.faint, fontFamily: 'ui-monospace, Menlo, monospace' }}>
+                              {g.fromAddress.slice(0, 6)}…
+                            </span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <p style={{ fontSize: 12, color: t.faint }}>No gift data yet.</p>
+              )}
+            </EcoCard>
+
+            <EcoCard title="Commerce" icon={<ShoppingCart size={14} />}>
+              <p style={{ fontSize: 12, color: t.label, marginBottom: 10, lineHeight: 1.6 }}>
+                Create a payment request that your agent can share with users.
+              </p>
+              <input
+                placeholder="Description (e.g. Consultation)"
+                value={commerceDesc}
+                onChange={e => setCommerceDesc(e.target.value)}
+                disabled={!isPhase3}
+                style={{ ...inputStyle, opacity: isPhase3 ? 1 : 0.4 }}
+              />
+              <input
+                placeholder="Amount in CELO"
+                type="number"
+                value={commerceAmount}
+                onChange={e => setCommerceAmount(e.target.value)}
+                disabled={!isPhase3}
+                style={{ ...inputStyle, opacity: isPhase3 ? 1 : 0.4 }}
+              />
+              {commerceError && <p style={{ fontSize: 11, color: '#f87171', marginTop: 8 }}>{commerceError}</p>}
+              {commerceResult && (
+                <div style={{ marginTop: 8, padding: '8px 10px', background: t.bg, border: `1px solid ${t.divider}`, borderRadius: 8 }}>
+                  <p style={{ fontSize: 10, color: t.faint, marginBottom: 4, fontFamily: 'ui-monospace, Menlo, monospace' }}>Payment link</p>
+                  <p style={{ fontSize: 11, color: t.text, wordBreak: 'break-all' }}>{commerceResult}</p>
+                </div>
+              )}
+              <EcoActionBtn
+                label={commerceRequest.isPending ? 'Creating…' : 'Create Request'}
+                onClick={handleCommerceRequest}
+                disabled={!isPhase3 || !commerceDesc.trim() || !commerceAmount || commerceRequest.isPending}
+              />
+            </EcoCard>
+          </>
+        )}
+      </div>
+    </SubScreenLayout>
   );
 }
 

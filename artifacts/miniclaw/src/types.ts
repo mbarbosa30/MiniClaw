@@ -413,3 +413,55 @@ export type TelegramNotificationLevel = 'all' | 'important' | 'none';
 export interface TelegramSettingsPayload {
   notificationLevel: TelegramNotificationLevel;
 }
+
+// GET /:id/wallet
+export interface WalletStatus {
+  created: boolean;
+  address?: string;
+  balance?: number;
+  balanceCelo?: number;
+}
+
+// GET /:id/identity
+export interface IdentityStatus {
+  registered: boolean;
+  handle?: string;
+  displayName?: string;
+}
+
+// GET /:id/token
+export interface TokenStatus {
+  deployed: boolean;
+  name?: string;
+  symbol?: string;
+  contractAddress?: string;
+  totalSupply?: number;
+}
+
+// GET /:id/economy/gifts — individual gift entry
+export interface GiftEntry {
+  id?: string;
+  fromAddress?: string;
+  amount: number;
+  currency?: string;
+  message?: string;
+  createdAt?: string;
+}
+
+// GET /:id/economy
+export interface EconomyData {
+  giftsReceivedCount?: number;
+  totalGiftsValueCelo?: number;
+  gifts?: GiftEntry[];
+}
+
+// POST /:id/commerce/request response
+export interface CommerceRequestResult {
+  id: string;
+  description: string;
+  amount: number;
+  currency: string;
+  status: string;
+  createdAt?: string;
+  paymentLink?: string;
+}

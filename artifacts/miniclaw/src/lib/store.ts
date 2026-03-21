@@ -17,7 +17,8 @@ export type ViewName =
   | 'skills'
   | 'soul'
   | 'tasks'
-  | 'telegram';
+  | 'telegram'
+  | 'economy';
 
 export interface ViewParams {
   id?: string;

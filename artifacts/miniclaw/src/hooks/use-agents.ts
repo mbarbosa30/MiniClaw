@@ -27,6 +27,11 @@ import type {
   AgentUsageStats,
   DailyBriefResponse,
   DailyBriefItem,
+  WalletStatus,
+  IdentityStatus,
+  TokenStatus,
+  EconomyData,
+  CommerceRequestResult,
 } from '@/types';
 
 export type { Agent, AgentListSummary, PersonaTemplate, SkillDef };
@@ -513,6 +518,98 @@ export function useDailyBrief() {
       return (raw as DailyBriefResponse).briefs ?? [];
     },
     staleTime: 300_000,
+  });
+}
+
+// --- ECONOMY & ONCHAIN ---
+
+export function useWallet(agentId: string | number | undefined) {
+  return useQuery<WalletStatus>({
+    queryKey: ['wallet', qid(agentId)],
+    queryFn: () => apiFetch<WalletStatus>(`/api/selfclaw/v1/hosted-agents/${sid(agentId!)}/wallet`),
+    enabled: agentId != null && agentId !== '',
+    staleTime: 30_000,
+  });
+}
+
+export function useCreateWallet() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (agentId: string | number) =>
+      apiFetch<WalletStatus>(`/api/selfclaw/v1/hosted-agents/${sid(agentId)}/wallet/create`, { method: 'POST' }),
+    onSuccess: (_, agentId) => qc.invalidateQueries({ queryKey: ['wallet', qid(agentId)] }),
+  });
+}
+
+export function useRequestGas() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (agentId: string | number) =>
+      apiFetch<{ success: boolean; message?: string }>(`/api/selfclaw/v1/hosted-agents/${sid(agentId)}/wallet/request-gas`, { method: 'POST' }),
+    onSuccess: (_, agentId) => qc.invalidateQueries({ queryKey: ['wallet', qid(agentId)] }),
+  });
+}
+
+export function useIdentity(agentId: string | number | undefined) {
+  return useQuery<IdentityStatus>({
+    queryKey: ['identity', qid(agentId)],
+    queryFn: () => apiFetch<IdentityStatus>(`/api/selfclaw/v1/hosted-agents/${sid(agentId!)}/identity`),
+    enabled: agentId != null && agentId !== '',
+    staleTime: 30_000,
+  });
+}
+
+export function useRegisterIdentity() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ agentId, handle }: { agentId: string | number; handle: string }) =>
+      apiFetch<IdentityStatus>(`/api/selfclaw/v1/hosted-agents/${sid(agentId)}/identity/register`, {
+        method: 'POST',
+        body: JSON.stringify({ handle }),
+      }),
+    onSuccess: (_, variables) => qc.invalidateQueries({ queryKey: ['identity', qid(variables.agentId)] }),
+  });
+}
+
+export function useToken(agentId: string | number | undefined) {
+  return useQuery<TokenStatus>({
+    queryKey: ['token', qid(agentId)],
+    queryFn: () => apiFetch<TokenStatus>(`/api/selfclaw/v1/hosted-agents/${sid(agentId!)}/token`),
+    enabled: agentId != null && agentId !== '',
+    staleTime: 60_000,
+  });
+}
+
+export function useEconomy(agentId: string | number | undefined) {
+  return useQuery<EconomyData>({
+    queryKey: ['economy', qid(agentId)],
+    queryFn: () => apiFetch<EconomyData>(`/api/selfclaw/v1/hosted-agents/${sid(agentId!)}/economy`),
+    enabled: agentId != null && agentId !== '',
+    staleTime: 30_000,
+  });
+}
+
+export function useGiftOwner() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ agentId, amount, message }: { agentId: string | number; amount: number; message?: string }) =>
+      apiFetch<{ success: boolean }>(`/api/selfclaw/v1/hosted-agents/${sid(agentId)}/economy/gift-owner`, {
+        method: 'POST',
+        body: JSON.stringify({ amount, message }),
+      }),
+    onSuccess: (_, variables) => qc.invalidateQueries({ queryKey: ['economy', qid(variables.agentId)] }),
+  });
+}
+
+export function useCommerceRequest() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ agentId, description, amount, currency }: { agentId: string | number; description: string; amount: number; currency: string }) =>
+      apiFetch<CommerceRequestResult>(`/api/selfclaw/v1/hosted-agents/${sid(agentId)}/commerce/request`, {
+        method: 'POST',
+        body: JSON.stringify({ description, amount, currency }),
+      }),
+    onSuccess: (_, variables) => qc.invalidateQueries({ queryKey: ['economy', qid(variables.agentId)] }),
   });
 }
 
