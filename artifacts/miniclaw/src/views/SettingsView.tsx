@@ -224,11 +224,23 @@ export function SettingsView() {
       className="overflow-y-auto no-scrollbar"
       style={{
         height: '100%',
-        padding: '28px 32px 32px',
+        padding: '0 32px 32px',
         background: t.bg,
         transition: 'background 0.3s ease',
       }}
     >
+      <p style={{
+        fontSize: 22,
+        fontWeight: 200,
+        letterSpacing: '-0.03em',
+        color: t.text,
+        paddingTop: 28,
+        paddingBottom: 4,
+        lineHeight: 1,
+      }}>
+        Settings
+      </p>
+
       {/* ── APPEARANCE ── */}
       <SectionLabel>Appearance</SectionLabel>
       <Row label="Dark mode">

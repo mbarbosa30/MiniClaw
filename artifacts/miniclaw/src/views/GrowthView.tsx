@@ -3,7 +3,6 @@ import { motion } from 'framer-motion';
 import { useTheme } from '@/lib/theme';
 import { useRouter } from '@/lib/store';
 import { useAgents, useGrowthSummary } from '@/hooks/use-agents';
-import { ScreenHeader } from '@/components/ui';
 import type { GrowthSummary } from '@/types';
 
 // --- Helpers ---
@@ -144,14 +143,24 @@ export function GrowthView() {
 
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: t.bg, transition: 'background 0.3s ease', minHeight: 0 }}>
-      <ScreenHeader title="Growth" onBack={pop} />
-
-      <div className="flex-1 overflow-y-auto no-scrollbar" style={{ padding: '28px 32px 40px' }}>
+      <div className="flex-1 overflow-y-auto no-scrollbar" style={{ padding: '0 32px 40px' }}>
 
         {/* Invisible data fetchers for each agent */}
         {agents.map(agent => (
           <AgentGrowthFetcher key={agent.id} agentId={agent.id} onData={handleData} />
         ))}
+
+        <p style={{
+          fontSize: 22,
+          fontWeight: 200,
+          letterSpacing: '-0.03em',
+          color: t.text,
+          lineHeight: 1,
+          paddingTop: 28,
+          paddingBottom: 4,
+        }}>
+          Growth
+        </p>
 
         {/* Hero number */}
         <motion.div

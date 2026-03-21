@@ -3,9 +3,8 @@ import { useAgent, useConversations, useMessages, useAwareness } from '@/hooks/u
 import { useRouter } from '@/lib/store';
 import { useTheme } from '@/lib/theme';
 import { Button } from '@/components/ui';
-import { MoreHorizontal, Bot } from 'lucide-react';
+import { MoreHorizontal } from 'lucide-react';
 import { apiFetchStream, apiFetch, ApiError } from '@/lib/api-client';
-import { resolveIcon } from '@/lib/agent-icon';
 import type { Agent, ChatMessage } from '@/types';
 
 const DOT_COLOR: Record<string, string> = {
@@ -292,15 +291,6 @@ function AgentHeader({
   const t = useTheme();
   const stats = agent.stats;
   const pendingCount = stats?.pendingTasksCount ?? 0;
-  const dotColor = statusDotColor(agent.status);
-
-  const activityText: string = (() => {
-    if (stats?.currentActivity) return stats.currentActivity;
-    const firstTask = agent.recentTasks?.[0]?.title;
-    if (firstTask) return firstTask;
-    return statusFallback(agent.status);
-  })();
-
   const SIDE_W = 72;
 
   return (
@@ -328,43 +318,20 @@ function AgentHeader({
           </button>
         </div>
 
-        {/* Center */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, overflow: 'hidden' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 5, maxWidth: '100%', overflow: 'hidden' }}>
-            {(() => { const Icon = resolveIcon(agent.icon) ?? Bot; return <Icon size={13} strokeWidth={1.5} color={t.faint} style={{ flexShrink: 0 }} />; })()}
-            <span style={{
-              fontSize: 13,
-              fontWeight: 300,
-              letterSpacing: '-0.01em',
-              lineHeight: 1,
-              color: t.label,
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              textAlign: 'center',
-            }}>
-              {agent.name || 'Agent'}
-            </span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4, maxWidth: '100%', overflow: 'hidden' }}>
-            <span style={{ display: 'block', width: 4, height: 4, borderRadius: '50%', background: dotColor, flexShrink: 0 }} />
-            {(() => {
-              const m = activityText.match(/^(.*?)\s*[·•]\s*(\d+\s*(?:s|sec|m|min|h|hr|d|day)s?\s+ago)$/i);
-              if (m) {
-                return (
-                  <span style={{ display: 'flex', alignItems: 'baseline', gap: 3, overflow: 'hidden', minWidth: 0 }}>
-                    <span style={{ fontSize: 9, fontWeight: 300, color: t.faint, letterSpacing: '0.01em', lineHeight: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m[1]}</span>
-                    <span style={{ fontSize: 8, fontWeight: 300, color: t.faint, letterSpacing: '0.01em', lineHeight: 1, whiteSpace: 'nowrap', flexShrink: 0, opacity: 0.75 }}>{m[2]}</span>
-                  </span>
-                );
-              }
-              return (
-                <span style={{ fontSize: 9, fontWeight: 300, color: t.faint, letterSpacing: '0.01em', lineHeight: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {activityText}
-                </span>
-              );
-            })()}
-          </div>
+        {/* Center — single-line agent name */}
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+          <span style={{
+            fontSize: 15,
+            fontWeight: 300,
+            letterSpacing: '-0.015em',
+            lineHeight: 1,
+            color: t.text,
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+          }}>
+            {agent.name || 'Agent'}
+          </span>
         </div>
 
         {/* Right — fixed width */}
