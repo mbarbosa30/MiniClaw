@@ -972,35 +972,37 @@ function SettingsForm({ agent, onDeleted }: { agent: Agent; onDeleted: () => voi
 
     const failedFields: string[] = [];
 
-    if (agentName.trim() && agentName !== agent.name) {
-      try {
-        await update.mutateAsync({ id: agent.id, data: { name: agentName.trim() } });
-      } catch {
-        failedFields.push('name');
+    try {
+      if (agentName.trim() && agentName !== agent.name) {
+        try {
+          await update.mutateAsync({ id: agent.id, data: { name: agentName.trim() } });
+        } catch {
+          failedFields.push('name');
+        }
       }
-    }
 
-    const knowledgeEntries: Array<{ label: string; title: string; content: string; clear: () => void }> = [
-      { label: 'main skill', title: 'Main skill', content: mainSkill.trim(), clear: () => setMainSkill('') },
-      { label: 'platforms', title: 'Platforms I use', content: platforms.trim(), clear: () => setPlatforms('') },
-      { label: 'country', title: 'Country', content: country.trim(), clear: () => setCountry('') },
-    ].filter(e => e.content);
+      const knowledgeEntries: Array<{ label: string; title: string; content: string; clear: () => void }> = [
+        { label: 'main skill', title: 'Main skill', content: mainSkill.trim(), clear: () => setMainSkill('') },
+        { label: 'platforms', title: 'Platforms I use', content: platforms.trim(), clear: () => setPlatforms('') },
+        { label: 'country', title: 'Country', content: country.trim(), clear: () => setCountry('') },
+      ].filter(e => e.content);
 
-    for (const entry of knowledgeEntries) {
-      try {
-        await addKnowledge.mutateAsync({ agentId: agent.id, data: { title: entry.title, content: entry.content } });
-        entry.clear();
-      } catch {
-        failedFields.push(entry.label);
+      for (const entry of knowledgeEntries) {
+        try {
+          await addKnowledge.mutateAsync({ agentId: agent.id, data: { title: entry.title, content: entry.content } });
+          entry.clear();
+        } catch {
+          failedFields.push(entry.label);
+        }
       }
-    }
 
-    setSavingProfile(false);
-
-    if (failedFields.length === 0) {
-      setProfileSaved(true);
-    } else {
-      setProfileError(`Couldn't save: ${failedFields.join(', ')}`);
+      if (failedFields.length === 0) {
+        setProfileSaved(true);
+      } else {
+        setProfileError(`Couldn't save: ${failedFields.join(', ')}`);
+      }
+    } finally {
+      setSavingProfile(false);
     }
   };
 
