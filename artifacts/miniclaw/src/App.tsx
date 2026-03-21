@@ -55,6 +55,9 @@ function useVisualViewport() {
 function MainLayout() {
   const view = useRouter((s) => s.currentView.name);
   const { h, top } = useVisualViewport();
+  // Prefetch gateway manifest after auth — must not run before wallet is connected
+  // or it fires a 401 which the session handler misreads as an auth failure.
+  useGatewayEndpoints();
   return (
     <div style={{ position: 'fixed', top, left: 0, right: 0, height: h, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
@@ -72,9 +75,6 @@ function MainLayout() {
 function ViewManager() {
   useAutoConnect();
   useRestoreSession();
-  // Prefetch the gateway manifest once at startup — no blocking, result cached
-  // for the session. Views use useHasEndpoint() to read it reactively.
-  useGatewayEndpoints();
 
   const view = useRouter((s) => s.currentView.name);
 
