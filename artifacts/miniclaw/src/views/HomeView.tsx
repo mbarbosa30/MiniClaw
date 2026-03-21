@@ -448,118 +448,124 @@ export function HomeView() {
 
   return (
     <div
-      className="flex-1 overflow-y-auto no-scrollbar"
-      style={{ padding: '40px 32px 0', background: t.bg, transition: 'background 0.3s ease' }}
+      className="flex-1"
+      style={{ display: 'flex', flexDirection: 'column', background: t.bg, transition: 'background 0.3s ease', overflow: 'hidden' }}
     >
-      {/* Title + Growth button row */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
-        <p style={{
-          fontSize: 22,
-          fontWeight: 200,
-          letterSpacing: '-0.03em',
-          color: t.text,
-          lineHeight: 1,
-        }}>
-          My Agents
-        </p>
-        <button
-          onClick={() => push('growth')}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 4,
-            background: 'none',
-            border: 'none',
-            cursor: 'pointer',
-            color: t.faint,
-            padding: 0,
-          }}
-        >
-          <TrendingUp size={14} strokeWidth={1.5} />
-          <span style={{ fontFamily: 'ui-monospace, Menlo, monospace', fontSize: 11, letterSpacing: '0.04em' }}>
-            Growth
-          </span>
-        </button>
+      {/* Pinned header — does not scroll */}
+      <div style={{ flexShrink: 0, padding: '40px 32px 0' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+          <p style={{
+            fontSize: 22,
+            fontWeight: 200,
+            letterSpacing: '-0.03em',
+            color: t.text,
+            lineHeight: 1,
+          }}>
+            My Agents
+          </p>
+          <button
+            onClick={() => push('growth')}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 4,
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              color: t.faint,
+              padding: 0,
+            }}
+          >
+            <TrendingUp size={14} strokeWidth={1.5} />
+            <span style={{ fontFamily: 'ui-monospace, Menlo, monospace', fontSize: 11, letterSpacing: '0.04em' }}>
+              Growth
+            </span>
+          </button>
+        </div>
       </div>
 
-      {/* Quota gradient separator — always visible */}
+      {/* Quota gradient separator — pinned, always visible, full-bleed */}
       <div style={{
+        flexShrink: 0,
         height: 1,
         background: quotaGradient
           ? `linear-gradient(to right, transparent, ${quotaGradient.color})`
           : `linear-gradient(to right, transparent, ${t.divider})`,
         opacity: quotaGradient ? quotaGradient.opacity : 0.6,
-        marginLeft: -32,
-        marginRight: -32,
-        marginBottom: 16,
       }} />
 
-      {/* Daily Brief */}
-      <AnimatePresence>
-        {showBrief && (
-          <DailyBriefCard
-            key="brief"
-            item={briefItem}
-            onDismiss={handleDismissBrief}
-            onTellMore={handleTellMore}
-          />
-        )}
-      </AnimatePresence>
-
-      {isError && (
-        <p style={{ fontSize: 11, color: '#ef4444', letterSpacing: '-0.01em', marginBottom: 16 }}>
-          Could not load agents. Check your connection.
-        </p>
-      )}
-
-      <div>
-        {showSkeleton
-          ? [0, 1, 2].map((i) => <SkeletonRow key={i} index={i} />)
-          : agents.map((agent, i) => (
-            <AgentRow
-              key={agent.id}
-              agent={agent}
-              index={i}
-              onPress={() => push('agent-detail', { id: String(agent.id) })}
-              onOptions={() => push('agent-options', { id: String(agent.id) })}
+      {/* Scrollable list */}
+      <div
+        className="overflow-y-auto no-scrollbar"
+        style={{ flex: 1, padding: '20px 32px 0' }}
+      >
+        {/* Daily Brief */}
+        <AnimatePresence>
+          {showBrief && (
+            <DailyBriefCard
+              key="brief"
+              item={briefItem}
+              onDismiss={handleDismissBrief}
+              onTellMore={handleTellMore}
             />
-          ))}
+          )}
+        </AnimatePresence>
 
-        {!isLoading && agents.length === 0 && !isError && (
-          <p style={{ fontSize: 13, color: t.faint, fontWeight: 300, marginBottom: 20 }}>
-            No agents yet.
+        {isError && (
+          <p style={{ fontSize: 11, color: '#ef4444', letterSpacing: '-0.01em', marginBottom: 16 }}>
+            Could not load agents. Check your connection.
           </p>
         )}
 
-        <motion.button
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: Math.max(agents.length, 1) * 0.07 + 0.05, duration: 0.35 }}
-          className="w-full text-left"
-          onClick={() => push('create')}
-          style={{ paddingTop: 20, paddingBottom: 20, display: 'flex', alignItems: 'center', gap: 10 }}
-        >
-          <span style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: 16,
-            height: 16,
-            border: `1px solid ${t.divider}`,
-            borderRadius: '50%',
-          }}>
-            <Plus size={9} color={t.faint} strokeWidth={2} />
-          </span>
-          <span style={{
-            fontSize: 27,
-            fontWeight: 300,
-            letterSpacing: '-0.025em',
-            color: t.faint,
-            lineHeight: 1,
-          }}>
-            New agent
-          </span>
-        </motion.button>
+        <div>
+          {showSkeleton
+            ? [0, 1, 2].map((i) => <SkeletonRow key={i} index={i} />)
+            : agents.map((agent, i) => (
+              <AgentRow
+                key={agent.id}
+                agent={agent}
+                index={i}
+                onPress={() => push('agent-detail', { id: String(agent.id) })}
+                onOptions={() => push('agent-options', { id: String(agent.id) })}
+              />
+            ))}
+
+          {!isLoading && agents.length === 0 && !isError && (
+            <p style={{ fontSize: 13, color: t.faint, fontWeight: 300, marginBottom: 20 }}>
+              No agents yet.
+            </p>
+          )}
+
+          <motion.button
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: Math.max(agents.length, 1) * 0.07 + 0.05, duration: 0.35 }}
+            className="w-full text-left"
+            onClick={() => push('create')}
+            style={{ paddingTop: 20, paddingBottom: 20, display: 'flex', alignItems: 'center', gap: 10 }}
+          >
+            <span style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 16,
+              height: 16,
+              border: `1px solid ${t.divider}`,
+              borderRadius: '50%',
+            }}>
+              <Plus size={9} color={t.faint} strokeWidth={2} />
+            </span>
+            <span style={{
+              fontSize: 27,
+              fontWeight: 300,
+              letterSpacing: '-0.025em',
+              color: t.faint,
+              lineHeight: 1,
+            }}>
+              New agent
+            </span>
+          </motion.button>
+        </div>
       </div>
     </div>
   );
