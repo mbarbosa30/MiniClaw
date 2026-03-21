@@ -256,6 +256,17 @@ export interface AgentTask {
   createdAt?: string;
 }
 
+export interface TaskSummarySection {
+  count: number;
+  items: AgentTask[];
+}
+
+export interface TaskSummary {
+  pending: TaskSummarySection;
+  running: TaskSummarySection;
+  recentlyCompleted: TaskSummarySection;
+}
+
 export interface ActivityItem {
   id?: string | number;
   type: string;

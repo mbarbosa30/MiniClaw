@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueries, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiFetch, ApiError } from '@/lib/api-client';
 import type {
   Agent,
@@ -19,6 +19,7 @@ import type {
   Conversation,
   ChatMessage,
   AgentTask,
+  TaskSummary,
   ActivityItem,
   GrowthSummary,
   TelegramStatus,
@@ -529,6 +530,33 @@ export function useDailyBrief() {
       return (raw as DailyBriefResponse).briefs ?? [];
     },
     staleTime: 300_000,
+  });
+}
+
+// GET /:id/tasks/summary — compact activity digest (pending, running, recentlyCompleted)
+export function useTaskSummary(agentId: string | number | undefined) {
+  return useQuery<TaskSummary>({
+    queryKey: ['task-summary', qid(agentId)],
+    queryFn: () => apiFetch<TaskSummary>(
+      `/api/selfclaw/v1/hosted-agents/${sid(agentId!)}/tasks/summary`
+    ),
+    enabled: agentId != null && agentId !== '',
+    refetchInterval: 30_000,
+    staleTime: 15_000,
+  });
+}
+
+// Parallel task summaries for all agents (uses useQueries to avoid hook-in-loop)
+export function useAllTaskSummaries(agentIds: Array<string | number>) {
+  return useQueries({
+    queries: agentIds.map(id => ({
+      queryKey: ['task-summary', qid(id)],
+      queryFn: () => apiFetch<TaskSummary>(
+        `/api/selfclaw/v1/hosted-agents/${sid(id)}/tasks/summary`
+      ),
+      refetchInterval: 30_000,
+      staleTime: 15_000,
+    })),
   });
 }
 

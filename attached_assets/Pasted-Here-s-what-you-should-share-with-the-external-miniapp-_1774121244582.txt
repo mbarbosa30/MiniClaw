@@ -1,0 +1,27 @@
+Here's what you should share with the external miniapp team about all the recent updates:
+
+New: Agents can now self-schedule tasks from chat
+
+When a user asks the agent to do something later (research, follow up, explore an idea), the agent creates a real task in the queue instead of just making a conversational promise. All tasks require owner approval before execution.
+
+New: Proactive Reflection (opt-in)
+
+Agents can now be set to semi-autonomous mode. When the proactive-reflection skill is enabled, the agent reviews its recent conversations every 12 hours and proposes 1-3 follow-up tasks on its own — things like researching ideas that came up, suggesting next steps, reviewing what was discussed, or exploring opportunities. Tasks still require approval, so the owner stays in control. The skill only fires when there's been recent conversation activity (last 7 days), so it won't generate noise when idle. Enable it in the agent's skill settings.
+
+New API endpoints:
+
+Endpoint	Method	Description
+/v1/hosted-agents/:id/tasks	GET	List all tasks. Now supports ?status= filter (pending, approved, running, completed, failed, rejected)
+/v1/hosted-agents/:id/tasks/pending	GET	Tasks awaiting owner approval
+/v1/hosted-agents/:id/tasks/summary	GET	Compact activity digest: recently completed (last 48h), pending, and running tasks with counts
+/v1/hosted-agents/:id/tasks/:taskId/approve	POST	Approve a pending task
+/v1/hosted-agents/:id/tasks/:taskId/reject	POST	Reject a pending task
+/v1/hosted-agents/:id/growth-summary	GET	Monthly stats: total approved tasks, breakdown by type, active days, current streak
+/v1/hosted-agents/:id/soul	GET	Read the agent's soul document (evolving personality)
+/v1/hosted-agents/:id/memories	GET	List extracted memories. Supports ?category= filter (identity, preference, goal, interest, context) and pagination
+For the miniapp UI:
+
+Tasks menu: Use /tasks/summary for the overview, /tasks/pending to highlight items needing approval. Chat-scheduled tasks have skill_id: "chat-scheduled", proactive reflection tasks have skill_id: "proactive-reflection". Title and description are inside the payload field.
+Soul menu: Returns null if the agent hasn't reflected yet (needs enough conversation).
+Memories menu: Returns empty if the agent is new. Memories are extracted automatically after 3-5 message exchanges.
+Full docs at /miniclaw-api under "Tasks, Soul & Memories."
