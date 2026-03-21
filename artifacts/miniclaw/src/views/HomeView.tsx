@@ -246,7 +246,7 @@ function AgentRow({
   const isIdle = state === 'idle';
 
   const isSpawning = agent.spawningStatus === 'researching' || agent.spawningStatus === 'training';
-  const pendingCount = agent.stats?.pendingTasksCount ?? agent.pendingTaskCount ?? 0;
+  const pendingCount = agent.pendingTaskCount ?? agent.stats?.pendingTasksCount ?? 0;
 
   const liveActivity = agent.stats?.currentActivity?.trim() || agent.recentActivity?.trim() || null;
   const activity =
@@ -429,7 +429,13 @@ export function HomeView() {
   const agents = apiAgents.length > 0 ? apiAgents : cachedAgents;
   const showSkeleton = isLoading && agents.length === 0;
 
-  const taskSummaries = useAllTaskSummaries(agents.map(a => a.id));
+  // Only fetch task summaries for agents the enriched list says have pending tasks.
+  // This eliminates N+1 calls for agents with no work awaiting approval.
+  const agentsWithPending = useMemo(
+    () => agents.filter(a => (a.pendingTaskCount ?? a.stats?.pendingTasksCount ?? 0) > 0),
+    [agents],
+  );
+  const taskSummaries = useAllTaskSummaries(agentsWithPending.map(a => a.id));
 
   const quotaGradient = useMemo(() => {
     const withQuota = agents.filter(a => (a as Agent & { quota?: { tokensLimit?: number } }).quota?.tokensLimit);
@@ -546,7 +552,7 @@ export function HomeView() {
       >
         {/* Activity section */}
         {agents.length > 0 && (
-          <ActivitySection agents={agents} summaries={taskSummaries} />
+          <ActivitySection agents={agentsWithPending} summaries={taskSummaries} />
         )}
 
         {isError && cachedAgents.length === 0 && (

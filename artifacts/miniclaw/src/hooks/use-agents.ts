@@ -74,13 +74,11 @@ function normalizeListAgent(agent: RawAgent): Agent {
     }
   }
 
-  // Merge inline pendingTaskCount → stats.pendingTasksCount so AgentRow can read it from stats
+  // Merge inline pendingTaskCount → stats.pendingTasksCount (inline wins; always write through)
   const inlinePending = agent.pendingTaskCount ?? null;
   if (inlinePending != null) {
     if (agent.stats) {
-      if (!agent.stats.pendingTasksCount) {
-        agent.stats = { ...agent.stats, pendingTasksCount: inlinePending };
-      }
+      agent.stats = { ...agent.stats, pendingTasksCount: inlinePending };
     } else {
       agent.stats = { totalActionsCount: 0, pendingTasksCount: inlinePending, memoriesCount: 0, currentActivity: null };
     }
