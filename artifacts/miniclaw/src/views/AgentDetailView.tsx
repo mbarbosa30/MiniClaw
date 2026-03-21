@@ -528,7 +528,12 @@ export function AgentDetailView() {
   );
 }
 
-type LocalMessage = ChatMessage & { _ts?: number };
+type LocalMessage = ChatMessage & {
+  _ts?: number;
+  latencyMs?: number;
+  tokensUsed?: number;
+  model?: string;
+};
 
 function fmtTime(ts?: number, iso?: string): string {
   try {
@@ -612,7 +617,7 @@ function ChatTab({
     }
   }, [briefContext]);
 
-  const parseQuotaHeaders = (headers: Headers) => {
+  const parseQuotaHeaders = (headers: Headers): number | undefined => {
     const used = parseInt(headers.get('X-Quota-Tokens-Used') ?? '', 10);
     const remaining = parseInt(headers.get('X-Quota-Tokens-Remaining') ?? '', 10);
     if (!isNaN(used) && !isNaN(remaining)) {
@@ -620,8 +625,10 @@ function ChatTab({
       if (limit > 0) {
         const resetAt = headers.get('X-Quota-Reset') ?? quota?.resetAt;
         onQuotaUpdate({ used, limit, resetAt });
+        return used;
       }
     }
+    return undefined;
   };
 
   const handleCompact = useCallback(async () => {
@@ -643,7 +650,11 @@ function ChatTab({
     }
   }, [activeConversationId, agent.id, compact, refetchMessages]);
 
-  const pollForResult = async (messageId: string, agentId: string) => {
+  const pollForResult = async (
+    messageId: string,
+    agentId: string,
+    meta: { sendTime: number; quotaUsedBefore?: number; model?: string },
+  ) => {
     const maxAttempts = 60;
     const intervalMs = 1500;
     for (let i = 0; i < maxAttempts; i++) {
@@ -655,15 +666,19 @@ function ChatTab({
           suggestedChips?: string[];
         }>(`/api/selfclaw/v1/hosted-agents/${agentId}/chat/${messageId}/result`);
 
-        parseQuotaHeaders(res.headers);
+        const usedAfter = parseQuotaHeaders(res.headers);
 
         if (res.status === 200 && res.data.status === 'completed') {
           const content = res.data.content ?? '';
+          const latencyMs = Date.now() - meta.sendTime;
+          const tokensUsed = usedAfter !== undefined && meta.quotaUsedBefore !== undefined
+            ? Math.max(0, usedAfter - meta.quotaUsedBefore)
+            : undefined;
           setMessages(prev => {
             const msgs = [...prev];
             const last = msgs[msgs.length - 1];
             if (last && last.role === 'assistant') {
-              msgs[msgs.length - 1] = { ...last, content, _ts: Date.now() };
+              msgs[msgs.length - 1] = { ...last, content, _ts: Date.now(), latencyMs, tokensUsed, model: meta.model };
             }
             setCachedMessages(agentId, msgs);
             return msgs;
@@ -694,6 +709,10 @@ function ChatTab({
     setIsStreaming(true);
     setChips([]);
 
+    const sendTime = Date.now();
+    const quotaUsedBefore = quota?.used;
+    const msgModel = agent.modelInfo?.chat;
+
     const body: { message: string; conversationId?: number } = { message: userMsg };
     if (activeConversationId) body.conversationId = Number(activeConversationId);
 
@@ -707,7 +726,7 @@ function ChatTab({
         { method: 'POST', body: JSON.stringify(body), signal: abortCtrl.signal },
       );
 
-      parseQuotaHeaders(sseRes.headers);
+      const usedAfterSSE = parseQuotaHeaders(sseRes.headers);
 
       // 4s timeout — abort if no data arrives
       let firstDataReceived = false;
@@ -765,11 +784,15 @@ function ChatTab({
                 refetchConversations();
               }
               setChips(evt.suggestedChips ?? []);
+              const latencyMs = Date.now() - sendTime;
+              const tokensUsed = usedAfterSSE !== undefined && quotaUsedBefore !== undefined
+                ? Math.max(0, usedAfterSSE - quotaUsedBefore)
+                : undefined;
               setMessages(prev => {
                 const msgs = [...prev];
                 const last = msgs[msgs.length - 1];
                 if (last?.role === 'assistant') {
-                  msgs[msgs.length - 1] = { ...last, _ts: Date.now() };
+                  msgs[msgs.length - 1] = { ...last, _ts: Date.now(), latencyMs, tokensUsed, model: msgModel };
                 }
                 setCachedMessages(agent.id, msgs);
                 return msgs;
@@ -845,7 +868,7 @@ function ChatTab({
         refetchConversations();
       }
 
-      await pollForResult(String(postRes.data.messageId), String(agent.id));
+      await pollForResult(String(postRes.data.messageId), String(agent.id), { sendTime, quotaUsedBefore, model: msgModel });
     } catch (err) {
       const is429 = err instanceof ApiError && err.status === 429;
       const resetIn = fmtResetAt(quota?.resetAt);
@@ -934,6 +957,22 @@ function ChatTab({
                   </span>
                 ) : m.content}
               </p>
+              {m.role === 'assistant' && !isActiveStream && (m.model || m.latencyMs !== undefined || m.tokensUsed !== undefined) && (
+                <p style={{
+                  fontFamily: 'ui-monospace, Menlo, monospace',
+                  fontSize: 9,
+                  letterSpacing: '0.04em',
+                  color: t.faint,
+                  margin: 0,
+                  opacity: 0.7,
+                }}>
+                  {[
+                    m.model,
+                    m.latencyMs !== undefined ? `${(m.latencyMs / 1000).toFixed(1)}s` : undefined,
+                    m.tokensUsed !== undefined && m.tokensUsed > 0 ? `${m.tokensUsed.toLocaleString()} tok` : undefined,
+                  ].filter(Boolean).join(' · ')}
+                </p>
+              )}
             </div>
           );
         })}
