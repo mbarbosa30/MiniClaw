@@ -240,21 +240,27 @@ function AgentHeader({
 
       {/* Quota info row — integrated inline below agent name */}
       {hasQuota && (
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingLeft: 8, paddingRight: 8, paddingBottom: 6 }}>
-          <span style={{ fontFamily: 'ui-monospace, Menlo, monospace', fontSize: 8, color: isExhausted ? '#ef4444' : isWarning ? '#f59e0b' : t.faint, letterSpacing: '0.04em' }}>
-            {fmt(quota!.used)} / {fmt(quota!.limit)} tokens
-            {(isWarning || isExhausted) && (
-              <span style={{ marginLeft: 6 }}>
-                {isExhausted ? '· limit reached' : '· limit approaching'}
+        <>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingLeft: 8, paddingRight: 8, paddingBottom: 4 }}>
+            <span style={{ fontFamily: 'ui-monospace, Menlo, monospace', fontSize: 8, color: isExhausted ? '#ef4444' : isWarning ? '#f59e0b' : t.faint, letterSpacing: '0.04em' }}>
+              {fmt(quota!.used)} / {fmt(quota!.limit)} tokens
+              {(isWarning || isExhausted) && (
+                <span style={{ marginLeft: 6 }}>
+                  {isExhausted ? '· limit reached' : '· limit approaching'}
+                </span>
+              )}
+            </span>
+            {resetIn && (
+              <span style={{ fontFamily: 'ui-monospace, Menlo, monospace', fontSize: 8, color: t.faint, letterSpacing: '0.04em' }}>
+                resets {resetIn}
               </span>
             )}
-          </span>
-          {resetIn && (
-            <span style={{ fontFamily: 'ui-monospace, Menlo, monospace', fontSize: 8, color: t.faint, letterSpacing: '0.04em' }}>
-              resets {resetIn}
-            </span>
-          )}
-        </div>
+          </div>
+          {/* Quota progress bar — always shown under quota text */}
+          <div style={{ height: 2, background: t.surface, overflow: 'hidden', marginLeft: -8, marginRight: -8, marginBottom: awarenessLabel ? 0 : 0 }}>
+            <div style={{ height: '100%', width: `${quotaPct * 100}%`, background: quotaBarColor, transition: 'width 0.4s ease' }} />
+          </div>
+        </>
       )}
 
       {/* Collapsible awareness — phase tag + pct on same row, full-bleed phase bar at bottom */}
@@ -344,19 +350,10 @@ function AgentHeader({
         </div>
       )}
 
-      {/* Bottom border: quota bar when no awareness, plain divider when no data at all */}
-      {!awarenessLabel && (
-        hasQuota ? (
-          <div style={{ height: 2, background: t.surface, overflow: 'hidden', marginLeft: -8, marginRight: -8 }}>
-            <div style={{ height: '100%', width: `${quotaPct * 100}%`, background: quotaBarColor, transition: 'width 0.4s ease' }} />
-          </div>
-        ) : (
-          <div style={{ height: 1, background: t.divider, marginLeft: -8, marginRight: -8 }} />
-        )
+      {/* Bottom divider when neither quota nor awareness is present */}
+      {!awarenessLabel && !hasQuota && (
+        <div style={{ height: 1, background: t.divider, marginLeft: -8, marginRight: -8 }} />
       )}
-
-      {/* Invisible spacer so header doesn't end flush when no bottom bar rendered above */}
-      {awarenessLabel && !hasQuota && <div style={{ height: 0 }} />}
     </div>
   );
 }
