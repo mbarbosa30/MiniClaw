@@ -449,9 +449,17 @@ export function AgentDetailView() {
   }, [newChatAt]);
 
   useEffect(() => {
-    if (awareness?.quota && quota == null) {
+    if (awareness?.quota) {
       const q = awareness.quota;
-      setQuota({ used: q.tokensUsed, limit: q.tokensLimit, resetAt: q.resetAt });
+      setQuota(prev => {
+        if (prev == null) {
+          return { used: q.tokensUsed, limit: q.tokensLimit, resetAt: q.resetAt };
+        }
+        if (!prev.resetAt && q.resetAt) {
+          return { ...prev, resetAt: q.resetAt };
+        }
+        return prev;
+      });
     }
   }, [awareness]);
 
@@ -566,7 +574,7 @@ function ChatTab({
   const [input, setInput] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
   const [chips, setChips] = useState<string[]>(agent.suggestedChips ?? []);
-  const [compactBanner, setCompactBanner] = useState<{ tokensSaved: number } | null>(null);
+  const [compactBanner, setCompactBanner] = useState<{ tokensSaved: number; error?: boolean } | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const compact = useCompactConversation();
 
@@ -628,7 +636,8 @@ function ChatTab({
         setCachedMessages(agent.id, freshHistory);
       }
     } catch {
-      // silent — compact is a best-effort feature
+      setCompactBanner({ tokensSaved: 0, error: true });
+      setTimeout(() => setCompactBanner(null), 4000);
     }
   }, [activeConversationId, agent.id, compact, refetchMessages]);
 
@@ -953,7 +962,7 @@ function ChatTab({
         </div>
       )}
 
-      {/* Compact success banner */}
+      {/* Compact banner (success or error) */}
       {compactBanner && (
         <div style={{
           flexShrink: 0,
@@ -965,8 +974,15 @@ function ChatTab({
           alignItems: 'center',
           justifyContent: 'space-between',
         }}>
-          <span style={{ fontFamily: 'ui-monospace, Menlo, monospace', fontSize: 9, color: '#22c55e', letterSpacing: '0.04em' }}>
-            Saved ~{compactBanner.tokensSaved.toLocaleString()} tokens
+          <span style={{
+            fontFamily: 'ui-monospace, Menlo, monospace',
+            fontSize: 9,
+            color: compactBanner.error ? '#f87171' : '#22c55e',
+            letterSpacing: '0.04em',
+          }}>
+            {compactBanner.error
+              ? 'Compaction failed — try again'
+              : `Saved ~${compactBanner.tokensSaved.toLocaleString()} tokens`}
           </span>
           <button
             onClick={() => setCompactBanner(null)}
