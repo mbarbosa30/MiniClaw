@@ -156,15 +156,27 @@ function ProfileSection() {
             style={fieldStyle}
           />
         </div>
-        <div>
-          <label style={fieldLabelStyle}>Location</label>
-          <input
-            type="text"
-            value={userProfile.country}
-            placeholder="e.g. Nigeria, Kenya"
-            onChange={(e) => handleChange('country', e.target.value)}
-            style={fieldStyle}
-          />
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+          <div>
+            <label style={fieldLabelStyle}>City</label>
+            <input
+              type="text"
+              value={userProfile.city}
+              placeholder="e.g. Lagos, Nairobi"
+              onChange={(e) => handleChange('city', e.target.value)}
+              style={fieldStyle}
+            />
+          </div>
+          <div>
+            <label style={fieldLabelStyle}>Country</label>
+            <input
+              type="text"
+              value={userProfile.country}
+              placeholder="e.g. Nigeria, Kenya"
+              onChange={(e) => handleChange('country', e.target.value)}
+              style={fieldStyle}
+            />
+          </div>
         </div>
         <div>
           <label style={fieldLabelStyle}>Current focus</label>

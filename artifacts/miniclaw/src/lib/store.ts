@@ -107,6 +107,7 @@ function writeLocalBool(key: string, v: boolean): void {
 
 export interface UserProfile {
   name: string;
+  city: string;
   country: string;
   goal: string;
 }
@@ -116,15 +117,16 @@ const PROFILE_KEY = 'miniclaw-user-profile';
 function readProfile(): UserProfile {
   try {
     const raw = localStorage.getItem(PROFILE_KEY);
-    if (!raw) return { name: '', country: '', goal: '' };
+    if (!raw) return { name: '', city: '', country: '', goal: '' };
     const parsed = JSON.parse(raw);
     return {
       name: typeof parsed.name === 'string' ? parsed.name : '',
+      city: typeof parsed.city === 'string' ? parsed.city : '',
       country: typeof parsed.country === 'string' ? parsed.country : '',
       goal: typeof parsed.goal === 'string' ? parsed.goal : '',
     };
   } catch {
-    return { name: '', country: '', goal: '' };
+    return { name: '', city: '', country: '', goal: '' };
   }
 }
 

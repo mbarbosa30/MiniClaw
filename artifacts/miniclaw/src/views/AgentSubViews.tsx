@@ -840,7 +840,6 @@ function SettingsForm({ agent, onDeleted }: { agent: Agent; onDeleted: () => voi
   // --- Profile state ---
   const [mainSkill, setMainSkill] = useState('');
   const [platforms, setPlatforms] = useState('');
-  const [country, setCountry] = useState('');
   const [agentName, setAgentName] = useState(agent.name ?? '');
   const [hustleMode, setHustleMode] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
@@ -974,7 +973,7 @@ function SettingsForm({ agent, onDeleted }: { agent: Agent; onDeleted: () => voi
   };
 
   const handleSaveProfile = async () => {
-    if (!mainSkill.trim() && !platforms.trim() && !country.trim() && agentName === (agent.name ?? '')) return;
+    if (!mainSkill.trim() && !platforms.trim() && agentName === (agent.name ?? '')) return;
     setSavingProfile(true);
     setProfileSaved(false);
     setProfileError(null);
@@ -993,7 +992,6 @@ function SettingsForm({ agent, onDeleted }: { agent: Agent; onDeleted: () => voi
       const knowledgeEntries: Array<{ label: string; title: string; content: string; clear: () => void }> = [
         { label: 'main skill', title: 'Main skill', content: mainSkill.trim(), clear: () => setMainSkill('') },
         { label: 'platforms', title: 'Platforms I use', content: platforms.trim(), clear: () => setPlatforms('') },
-        { label: 'country', title: 'Country', content: country.trim(), clear: () => setCountry('') },
       ].filter(e => e.content);
 
       for (const entry of knowledgeEntries) {
@@ -1124,20 +1122,13 @@ function SettingsForm({ agent, onDeleted }: { agent: Agent; onDeleted: () => voi
         onChange={setPlatforms}
         placeholder="e.g. TikTok, Upwork, Gumroad"
       />
-      <STextRow
-        label="Your country"
-        value={country}
-        onChange={setCountry}
-        placeholder="e.g. Nigeria, Kenya, Brazil"
-      />
-
       {profileError && <p style={{ fontSize: 11, color: '#f87171', fontFamily: 'ui-monospace, Menlo, monospace', marginTop: 8 }}>{profileError}</p>}
       {profileSaved && <p style={{ fontSize: 11, color: '#22c55e', fontFamily: 'ui-monospace, Menlo, monospace', marginTop: 8 }}>Profile saved to knowledge base.</p>}
 
       <div style={{ paddingTop: 13, paddingBottom: 13, borderBottom: `1px solid ${t.divider}` }}>
         <button
           onClick={handleSaveProfile}
-          disabled={savingProfile || (!mainSkill.trim() && !platforms.trim() && !country.trim() && agentName === (agent.name ?? ''))}
+          disabled={savingProfile || (!mainSkill.trim() && !platforms.trim() && agentName === (agent.name ?? ''))}
           style={{ fontSize: 12, color: t.label, textDecoration: 'underline', textUnderlineOffset: 3, background: 'none', border: 'none', padding: 0, cursor: 'pointer', letterSpacing: '-0.01em', opacity: savingProfile ? 0.5 : 1 }}
         >
           {savingProfile ? 'Saving…' : 'Save profile'}
