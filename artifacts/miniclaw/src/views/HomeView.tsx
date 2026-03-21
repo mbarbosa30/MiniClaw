@@ -490,8 +490,21 @@ export function HomeView() {
             letterSpacing: '-0.03em',
             color: t.text,
             lineHeight: 1,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 7,
           }}>
             My Agents
+            <span style={{
+              width: 6,
+              height: 6,
+              borderRadius: '50%',
+              background: '#f59e0b',
+              display: 'inline-block',
+              flexShrink: 0,
+              opacity: (isError && cachedAgents.length > 0) ? 1 : 0,
+              transition: 'opacity 0.4s ease',
+            }} />
           </p>
           <button
             onClick={() => push('growth')}
@@ -538,30 +551,6 @@ export function HomeView() {
           </p>
         )}
 
-        {isError && cachedAgents.length > 0 && (
-          <div style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 5,
-            fontSize: 11,
-            color: t.label,
-            background: t.surface,
-            border: `1px solid ${t.divider}`,
-            borderRadius: 20,
-            padding: '3px 10px',
-            marginBottom: 12,
-          }}>
-            <span style={{
-              width: 6,
-              height: 6,
-              borderRadius: '50%',
-              background: '#f59e0b',
-              display: 'inline-block',
-              flexShrink: 0,
-            }} />
-            Reconnecting…
-          </div>
-        )}
 
         <div>
           {showSkeleton
