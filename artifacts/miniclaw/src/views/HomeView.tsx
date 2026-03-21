@@ -532,10 +532,35 @@ export function HomeView() {
           <ActivitySection agents={agents} summaries={taskSummaries} />
         )}
 
-        {isError && (
+        {isError && cachedAgents.length === 0 && (
           <p style={{ fontSize: 11, color: '#ef4444', letterSpacing: '-0.01em', marginBottom: 16 }}>
             Could not load agents. Check your connection.
           </p>
+        )}
+
+        {isError && cachedAgents.length > 0 && (
+          <div style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 5,
+            fontSize: 11,
+            color: t.label,
+            background: t.surface,
+            border: `1px solid ${t.divider}`,
+            borderRadius: 20,
+            padding: '3px 10px',
+            marginBottom: 12,
+          }}>
+            <span style={{
+              width: 6,
+              height: 6,
+              borderRadius: '50%',
+              background: '#f59e0b',
+              display: 'inline-block',
+              flexShrink: 0,
+            }} />
+            Reconnecting…
+          </div>
         )}
 
         <div>
