@@ -4,8 +4,6 @@ import { useTemplates, useCreateAgent, useUpdateSoul } from '@/hooks/use-agents'
 import { apiFetch } from '@/lib/api-client';
 import { useRouter, useAppStore } from '@/lib/store';
 import { useTheme } from '@/lib/theme';
-import { ScreenHeader } from '@/components/ui';
-import { AgentIcon } from '@/lib/agent-icon';
 import { resolveIcon } from '@/lib/agent-icon';
 
 interface PersonaConfig {
@@ -517,234 +515,129 @@ export function CreateAgentView() {
     pop();
   };
 
-  if (fromOnboarding) {
-    return (
-      <div style={{
-        height: '100%',
-        display: 'flex',
-        flexDirection: 'column',
-        background: t.bg,
-        transition: 'background 0.3s ease',
-        fontFamily: FONT,
-      }}>
-        <div style={{ padding: '56px 32px 28px', flexShrink: 0 }}>
-          <motion.p
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4 }}
+  return (
+    <div style={{
+      height: '100%',
+      display: 'flex',
+      flexDirection: 'column',
+      background: t.bg,
+      transition: 'background 0.3s ease',
+      fontFamily: FONT,
+    }}>
+      <div style={{ padding: '56px 32px 28px', flexShrink: 0, position: 'relative' }}>
+        {!fromOnboarding && (
+          <button
+            onClick={handleBack}
             style={{
-              fontSize: 34,
-              fontWeight: 200,
-              letterSpacing: '-0.04em',
-              color: t.text,
-              lineHeight: 1.1,
-              marginBottom: 10,
+              position: 'absolute',
+              top: 20,
+              right: 24,
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              padding: 4,
+              color: t.faint,
+              fontSize: 20,
+              lineHeight: 1,
+              fontFamily: FONT,
             }}
           >
-            Your AI team<br />starts here.
-          </motion.p>
-          <motion.p
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay: 0.08 }}
-            style={{ fontSize: 13, color: t.label, letterSpacing: '-0.01em', lineHeight: 1.5 }}
-          >
-            Pick a persona. Start earning.
-          </motion.p>
-        </div>
-
-        <div style={{ height: 1, background: t.divider, flexShrink: 0 }} />
-
-        {error && (
-          <div style={{ padding: '10px 32px', background: 'rgba(248,113,113,0.08)', flexShrink: 0 }}>
-            <p style={{ fontSize: 11, color: '#f87171' }}>{error}</p>
-          </div>
+            ×
+          </button>
         )}
-
-        <div className="no-scrollbar" style={{ flex: 1, overflowY: 'auto' }}>
-          {visiblePersonas.map((persona, i) => (
-            <OnboardingPersonaRow
-              key={persona.id}
-              persona={persona}
-              selected={creatingPersonaId === persona.id}
-              launching={creating && creatingPersonaId === persona.id}
-              onSelect={() => !templatesLoading && handleSelect(persona)}
-              index={i}
-              dividerColor={t.divider}
-              faintColor={t.faint}
-              textColor={t.text}
-            />
-          ))}
-
-          {!showAll && PERSONAS.length > TOP_PERSONA_COUNT && (
-            <motion.button
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.32 }}
-              onClick={() => setShowAll(true)}
-              style={{
-                width: '100%',
-                background: 'none',
-                border: 'none',
-                borderBottom: `1px solid ${t.divider}`,
-                padding: '22px 32px 22px 20px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                position: 'relative',
-                fontFamily: FONT,
-              }}
-            >
-              <div style={{
-                position: 'absolute',
-                left: 0, top: 0, bottom: 0,
-                width: 2,
-                background: t.divider,
-                borderRadius: '0 1px 1px 0',
-              }} />
-              <span style={{
-                paddingLeft: 12,
-                fontSize: 26,
-                fontWeight: 300,
-                letterSpacing: '-0.03em',
-                color: t.faint,
-              }}>
-                + more personas
-              </span>
-            </motion.button>
-          )}
-
-          <div style={{ height: 40 }} />
-        </div>
-
-        <div style={{ flexShrink: 0, padding: '12px 32px 32px', borderTop: `1px solid ${t.divider}` }}>
-          <p style={{ ...MONO, fontSize: 9, color: t.faint, textAlign: 'center', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
-            You can switch or add agents anytime
-          </p>
-        </div>
+        <motion.p
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
+          style={{
+            fontSize: 34,
+            fontWeight: 200,
+            letterSpacing: '-0.04em',
+            color: t.text,
+            lineHeight: 1.1,
+            marginBottom: 10,
+          }}
+        >
+          Your AI team<br />starts here.
+        </motion.p>
+        <motion.p
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.08 }}
+          style={{ fontSize: 13, color: t.label, letterSpacing: '-0.01em', lineHeight: 1.5 }}
+        >
+          Pick a persona. Start earning.
+        </motion.p>
       </div>
-    );
-  }
 
-  return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: t.bg, transition: 'background 0.3s ease' }}>
-      <ScreenHeader
-        title="Choose your agent"
-        onBack={handleBack}
-      />
+      <div style={{ height: 1, background: t.divider, flexShrink: 0 }} />
 
-      <div className="no-scrollbar" style={{ flex: 1, overflowY: 'auto', padding: '0 16px 24px' }}>
-        <div style={{ paddingTop: 16, paddingBottom: 20 }}>
-          <h2 style={{ fontSize: 22, fontWeight: 300, letterSpacing: '-0.025em', color: t.text, lineHeight: 1.2, marginBottom: 6 }}>
-            Pick your co-founder
-          </h2>
-          <p style={{ fontSize: 13, color: t.label, lineHeight: 1.5 }}>
-            One tap. Instant agent, pre-loaded with the right skills.
-          </p>
+      {error && (
+        <div style={{ padding: '10px 32px', background: 'rgba(248,113,113,0.08)', flexShrink: 0 }}>
+          <p style={{ fontSize: 11, color: '#f87171' }}>{error}</p>
         </div>
+      )}
 
-        {creating ? (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px 0', gap: 16 }}>
-            <div style={{ width: 36, height: 36, borderRadius: '50%', border: `3px solid ${t.divider}`, borderTopColor: t.text, animation: 'spin 0.8s linear infinite' }} />
-            <p style={{ fontSize: 14, color: t.text, fontWeight: 500 }}>Setting up your agent…</p>
-            <p style={{ fontSize: 12, color: t.label }}>Applying skills and personality</p>
-            <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
-          </div>
-        ) : (
-          <>
-            {error && (
-              <div style={{ border: '1px solid rgba(248,113,113,0.2)', borderRadius: 12, padding: '12px 14px', marginBottom: 16 }}>
-                <p style={{ fontSize: 11, color: '#f87171' }}>{error}</p>
-              </div>
-            )}
+      <div className="no-scrollbar" style={{ flex: 1, overflowY: 'auto' }}>
+        {visiblePersonas.map((persona, i) => (
+          <OnboardingPersonaRow
+            key={persona.id}
+            persona={persona}
+            selected={creatingPersonaId === persona.id}
+            launching={creating && creatingPersonaId === persona.id}
+            onSelect={() => !templatesLoading && handleSelect(persona)}
+            index={i}
+            dividerColor={t.divider}
+            faintColor={t.faint}
+            textColor={t.text}
+          />
+        ))}
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {visiblePersonas.map((persona, i) => (
-                <motion.button
-                  key={persona.id}
-                  initial={{ opacity: 0, y: 12 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.05, duration: 0.25 }}
-                  onClick={() => !templatesLoading && handleSelect(persona)}
-                  disabled={templatesLoading}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 16,
-                    padding: '16px 18px',
-                    borderRadius: 16,
-                    border: `1px solid ${t.divider}`,
-                    background: t.surface,
-                    cursor: templatesLoading ? 'wait' : 'pointer',
-                    textAlign: 'left',
-                    transition: 'all 0.15s',
-                    width: '100%',
-                    opacity: templatesLoading ? 0.6 : 1,
-                  }}
-                >
-                  <AgentIcon
-                    iconName={persona.icon}
-                    emoji={persona.emoji}
-                    size={22}
-                    color={persona.color}
-                    containerSize={48}
-                    borderRadius={14}
-                  />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <p style={{
-                      fontSize: 14,
-                      fontWeight: 600,
-                      color: t.text,
-                      letterSpacing: '-0.015em',
-                      marginBottom: 3,
-                      lineHeight: 1.2,
-                    }}>
-                      {persona.name}
-                    </p>
-                    <p style={{
-                      fontSize: 12,
-                      color: t.label,
-                      lineHeight: 1.4,
-                      overflow: 'hidden',
-                      display: '-webkit-box',
-                      WebkitLineClamp: 2,
-                      WebkitBoxOrient: 'vertical',
-                    }}>
-                      {persona.tagline}
-                    </p>
-                  </div>
-                  <div style={{
-                    width: 6,
-                    height: 6,
-                    borderRadius: '50%',
-                    background: persona.color,
-                    flexShrink: 0,
-                  }} />
-                </motion.button>
-              ))}
-            </div>
-
-            {!showAll && PERSONAS.length > TOP_PERSONA_COUNT && (
-              <button
-                onClick={() => setShowAll(true)}
-                style={{
-                  marginTop: 14,
-                  width: '100%',
-                  textAlign: 'center',
-                  fontSize: 12,
-                  color: t.faint,
-                  background: 'none',
-                  border: 'none',
-                  padding: '8px 0',
-                  cursor: 'pointer',
-                  letterSpacing: '-0.01em',
-                }}
-              >
-                Show {PERSONAS.length - TOP_PERSONA_COUNT} more →
-              </button>
-            )}
-          </>
+        {!showAll && PERSONAS.length > TOP_PERSONA_COUNT && (
+          <motion.button
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.32 }}
+            onClick={() => setShowAll(true)}
+            style={{
+              width: '100%',
+              background: 'none',
+              border: 'none',
+              borderBottom: `1px solid ${t.divider}`,
+              padding: '22px 32px 22px 20px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              position: 'relative',
+              fontFamily: FONT,
+            }}
+          >
+            <div style={{
+              position: 'absolute',
+              left: 0, top: 0, bottom: 0,
+              width: 2,
+              background: t.divider,
+              borderRadius: '0 1px 1px 0',
+            }} />
+            <span style={{
+              paddingLeft: 12,
+              fontSize: 26,
+              fontWeight: 300,
+              letterSpacing: '-0.03em',
+              color: t.faint,
+            }}>
+              + more personas
+            </span>
+          </motion.button>
         )}
+
+        <div style={{ height: 40 }} />
+      </div>
+
+      <div style={{ flexShrink: 0, padding: '12px 32px 32px', borderTop: `1px solid ${t.divider}` }}>
+        <p style={{ ...MONO, fontSize: 9, color: t.faint, textAlign: 'center', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+          You can switch or add agents anytime
+        </p>
       </div>
     </div>
   );
