@@ -93,6 +93,7 @@ export interface Agent {
 
   // Spawning pipeline state
   spawningStatus?: 'researching' | 'training' | 'ready' | 'failed' | null;
+  spawningProgress?: SpawningProgressStep[];
 }
 
 // GET /:id/spawning-status — live research pipeline progress
