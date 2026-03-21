@@ -568,7 +568,7 @@ export function CreateAgentView() {
               persona={persona}
               selected={creatingPersonaId === persona.id}
               launching={creating && creatingPersonaId === persona.id}
-              onSelect={() => handleSelect(persona)}
+              onSelect={() => !templatesLoading && handleSelect(persona)}
               index={i}
               dividerColor={t.divider}
               faintColor={t.faint}
