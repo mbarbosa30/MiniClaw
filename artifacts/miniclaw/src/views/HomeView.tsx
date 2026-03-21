@@ -6,7 +6,10 @@ import { useRouter, useAppStore } from '@/lib/store';
 import { useAgents, useAwareness, useTasks, useAllTaskSummaries, useResolveTask } from '@/hooks/use-agents';
 import { StateIndicator, agentVisualState, STATE_COLOR, STATE_LABEL } from '@/components/StateIndicator';
 import { resolveIcon } from '@/lib/agent-icon';
+import { PERSONAS } from '@/views/CreateAgentView';
 import type { Agent, AgentTask } from '@/types';
+
+const PERSONA_BY_TAGLINE = new Map(PERSONAS.map(p => [p.tagline, p]));
 
 const MONO: React.CSSProperties = {
   fontFamily: 'ui-monospace, Menlo, monospace',
@@ -297,7 +300,10 @@ function AgentRow({
             {(() => {
               const Icon = resolveIcon(agent.icon);
               if (Icon) return <Icon size={14} strokeWidth={1.5} color={t.faint} style={{ flexShrink: 0 }} />;
-              if (agent.emoji) return <span style={{ fontSize: 13, lineHeight: 1, flexShrink: 0 }}>{agent.emoji}</span>;
+              const emoji = agent.emoji ?? PERSONA_BY_TAGLINE.get(agent.description)?.emoji;
+              if (emoji) return <span style={{ fontSize: 13, lineHeight: 1, flexShrink: 0 }}>{emoji}</span>;
+              const FallbackIcon = resolveIcon(PERSONA_BY_TAGLINE.get(agent.description)?.icon);
+              if (FallbackIcon) return <FallbackIcon size={14} strokeWidth={1.5} color={t.faint} style={{ flexShrink: 0 }} />;
               return <Bot size={14} strokeWidth={1.5} color={t.faint} style={{ flexShrink: 0 }} />;
             })()}
           </button>
