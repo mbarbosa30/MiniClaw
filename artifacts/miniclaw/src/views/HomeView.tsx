@@ -1,13 +1,11 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, MoreHorizontal, X, TrendingUp } from 'lucide-react';
+import { Plus, MoreHorizontal, X, TrendingUp, Bot } from 'lucide-react';
 import { useTheme } from '@/lib/theme';
-import { useRouter, useAuthStore, useAppStore } from '@/lib/store';
+import { useRouter, useAppStore } from '@/lib/store';
 import { useAgents, useTasks, useActivity, useAwareness } from '@/hooks/use-agents';
 import { StateIndicator, agentVisualState, STATE_COLOR, STATE_LABEL } from '@/components/StateIndicator';
 import { resolveIcon } from '@/lib/agent-icon';
-import { Bot } from 'lucide-react';
-import { formatAddress } from '@/lib/utils';
 import type { Agent, DailyBriefItem } from '@/types';
 
 const MONO: React.CSSProperties = {
@@ -373,7 +371,6 @@ function setBriefDismissed() {
 export function HomeView() {
   const t = useTheme();
   const push = useRouter((s) => s.push);
-  const address = useAuthStore((s) => s.address);
   const { hasSeenOnboard, setHasSeenOnboard } = useAppStore();
   const { data, isLoading, isError } = useAgents();
 
@@ -455,15 +452,16 @@ export function HomeView() {
       className="flex-1 overflow-y-auto no-scrollbar"
       style={{ padding: '40px 32px 0', background: t.bg, transition: 'background 0.3s ease' }}
     >
-      {/* Address + Growth button row */}
+      {/* Title + Growth button row */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 40 }}>
         <p style={{
-          fontFamily: 'ui-monospace, Menlo, monospace',
-          fontSize: 9,
-          color: t.faint,
-          letterSpacing: '0.05em',
+          fontSize: 22,
+          fontWeight: 200,
+          letterSpacing: '-0.03em',
+          color: t.text,
+          lineHeight: 1,
         }}>
-          {address ? formatAddress(address) : '—'}
+          Agents
         </p>
         <button
           onClick={() => push('growth')}
