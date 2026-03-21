@@ -6,7 +6,6 @@ import { useRouter, useAuthStore, useAppStore } from '@/lib/store';
 import { useAgents, useTasks, useActivity, useAwareness } from '@/hooks/use-agents';
 import { StateIndicator, agentVisualState, STATE_COLOR, STATE_LABEL } from '@/components/StateIndicator';
 import { resolveIcon } from '@/lib/agent-icon';
-import { Bot } from 'lucide-react';
 import { formatAddress } from '@/lib/utils';
 import type { Agent, DailyBriefItem } from '@/types';
 
@@ -213,6 +212,7 @@ function AgentRow({
             className="text-left"
             onClick={onPress}
             style={{
+              flex: 1,
               background: 'none',
               border: 'none',
               padding: 0,
@@ -231,7 +231,8 @@ function AgentRow({
             {agent.name}
           </button>
           {(() => {
-            const Icon = resolveIcon(agent.icon) ?? Bot;
+            const Icon = resolveIcon(agent.icon);
+            if (!Icon) return null;
             return <Icon size={14} strokeWidth={1.5} color={t.faint} style={{ flexShrink: 0 }} />;
           })()}
         </div>

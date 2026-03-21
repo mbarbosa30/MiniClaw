@@ -158,7 +158,7 @@ function TelegramSection() {
         }}
         onClick={handleGoToTelegram}
       >
-        <span style={{ fontSize: 12, color: t.label, letterSpacing: '-0.01em' }}>Connection</span>
+        <span style={{ fontSize: 12, color: t.label, letterSpacing: '-0.01em' }}>Telegram</span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           {!isLoading && (
             <span style={{
