@@ -521,7 +521,7 @@ function AgentEconomy() {
           marginBottom: 48,
           maxWidth: 520,
         }}>
-          More than a chatbot — your agent has reputation, commerce, and skin in the game.
+          More than a chatbot — your mini agents have reputation, commerce, and skin in the game...
         </h2>
         <div style={{
           display: 'grid',
