@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { useTheme } from '@/lib/theme';
-import { useAgents, useGrowthSummary } from '@/hooks/use-agents';
-import type { GrowthSummary } from '@/types';
+import { useAgents, useGrowthSummary, useUsageStats } from '@/hooks/use-agents';
+import type { GrowthSummary, AgentUsageStats } from '@/types';
 
 // --- Helpers ---
 
@@ -23,6 +23,46 @@ const CATEGORY_LABELS: Record<string, string> = {
 
 function getCategoryLabel(cat: string): string {
   return CATEGORY_LABELS[cat] ?? (cat.charAt(0).toUpperCase() + cat.slice(1));
+}
+
+// --- Usage section helpers ---
+
+const MONO_STYLE: React.CSSProperties = {
+  fontFamily: 'ui-monospace, Menlo, monospace',
+  letterSpacing: '0.04em',
+};
+
+function fmtNum(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}k`;
+  return String(n);
+}
+
+function fmtLatency(ms: number): string {
+  if (ms >= 1000) return `${(ms / 1000).toFixed(1)}s`;
+  return `${Math.round(ms)}ms`;
+}
+
+const CALL_TYPE_LABELS: Record<string, string> = {
+  chat: 'Chat',
+  skill: 'Skills',
+  memory: 'Memory',
+  soul: 'Soul',
+  guard: 'Guard',
+};
+
+function UsageFetcher({
+  agentId,
+  onData,
+}: {
+  agentId: string | number;
+  onData: (data: AgentUsageStats | undefined, loading: boolean) => void;
+}) {
+  const { data, isLoading } = useUsageStats(agentId);
+  useEffect(() => {
+    onData(data, isLoading);
+  }, [data, isLoading]);
+  return null;
 }
 
 // --- Category bar ---
@@ -83,6 +123,10 @@ export function GrowthView() {
 
   const [summaryByAgent, setSummaryByAgent] = useState<Record<string, GrowthSummary>>({});
   const [resolvedAgents, setResolvedAgents] = useState<Set<string>>(new Set());
+
+  // Usage stats — fetch for the first agent
+  const [usageData, setUsageData] = useState<AgentUsageStats | undefined>();
+  const [usageLoading, setUsageLoading] = useState(true);
 
   // Reset when the agent set changes (prune stale summaries)
   const agentIdsKey = agents.map(a => String(a.id)).sort().join(',');
@@ -147,6 +191,13 @@ export function GrowthView() {
         {agents.map(agent => (
           <AgentGrowthFetcher key={agent.id} agentId={agent.id} onData={handleData} />
         ))}
+        {/* Usage stats fetcher for the first agent */}
+        {agents[0] && (
+          <UsageFetcher
+            agentId={agents[0].id}
+            onData={(d, loading) => { setUsageData(d); setUsageLoading(loading); }}
+          />
+        )}
 
         <p style={{
           fontSize: 22,
@@ -251,6 +302,159 @@ export function GrowthView() {
               index={i}
             />
           ))
+        )}
+
+        {/* Usage section — only when there's at least one agent */}
+        {agents.length > 0 && (
+          <>
+            <div style={{ height: 1, background: t.divider, margin: '12px 0 28px' }} />
+
+            {/* Section header */}
+            <p style={{
+              ...MONO_STYLE,
+              fontSize: 9,
+              color: t.faint,
+              textTransform: 'uppercase',
+              letterSpacing: '0.08em',
+              marginBottom: 20,
+            }}>
+              Usage{agents[0] ? ` · ${agents[0].name}` : ''}
+            </p>
+
+            {usageLoading ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                {/* Token grid skeleton */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+                  {[0, 1, 2].map(i => (
+                    <motion.div
+                      key={i}
+                      initial={{ opacity: 0.3 }}
+                      animate={{ opacity: [0.3, 0.6, 0.3] }}
+                      transition={{ duration: 1.5, repeat: Infinity, delay: i * 0.1 }}
+                      style={{ height: 52, background: t.surface, borderRadius: 6 }}
+                    />
+                  ))}
+                </div>
+                {/* Stats row skeleton */}
+                <div style={{ display: 'flex', gap: 24 }}>
+                  {[0, 1].map(i => (
+                    <motion.div
+                      key={i}
+                      initial={{ opacity: 0.3 }}
+                      animate={{ opacity: [0.3, 0.6, 0.3] }}
+                      transition={{ duration: 1.5, repeat: Infinity, delay: i * 0.15 }}
+                      style={{ height: 28, width: 80, background: t.surface, borderRadius: 4 }}
+                    />
+                  ))}
+                </div>
+              </div>
+            ) : !usageData ? (
+              <p style={{ fontSize: 12, color: t.faint, fontWeight: 300 }}>
+                No usage data available.
+              </p>
+            ) : (
+              <motion.div
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.35 }}
+              >
+                {/* Token grid: 24h / 7d / 30d */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 16 }}>
+                  {([
+                    { label: '24h', value: usageData.tokens.last24h },
+                    { label: '7d', value: usageData.tokens.last7d },
+                    { label: '30d', value: usageData.tokens.last30d },
+                  ] as { label: string; value: number }[]).map(({ label, value }) => (
+                    <div
+                      key={label}
+                      style={{
+                        background: t.surface,
+                        borderRadius: 8,
+                        padding: '10px 12px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 4,
+                      }}
+                    >
+                      <span style={{
+                        fontSize: 18,
+                        fontWeight: 200,
+                        letterSpacing: '-0.03em',
+                        lineHeight: 1,
+                        color: t.text,
+                      }}>
+                        {fmtNum(value)}
+                      </span>
+                      <span style={{
+                        ...MONO_STYLE,
+                        fontSize: 8,
+                        color: t.faint,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.07em',
+                      }}>
+                        {label}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Total calls + avg latency */}
+                <div style={{ display: 'flex', gap: 24, marginBottom: 20 }}>
+                  <div>
+                    <span style={{ fontSize: 14, fontWeight: 300, color: t.text }}>
+                      {fmtNum(usageData.totalCalls30d)}
+                    </span>
+                    <span style={{ ...MONO_STYLE, fontSize: 9, color: t.faint, marginLeft: 6, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                      calls (30d)
+                    </span>
+                  </div>
+                  <div>
+                    <span style={{ fontSize: 14, fontWeight: 300, color: t.text }}>
+                      {fmtLatency(usageData.avgLatencyMs)}
+                    </span>
+                    <span style={{ ...MONO_STYLE, fontSize: 9, color: t.faint, marginLeft: 6, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                      avg latency
+                    </span>
+                  </div>
+                </div>
+
+                {/* Call-type breakdown */}
+                {usageData.callsByType.length > 0 && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    {usageData.callsByType.map((ct, idx) => {
+                      const maxCalls = Math.max(...usageData.callsByType.map(c => c.calls), 1);
+                      const pct = ct.calls / maxCalls;
+                      return (
+                        <motion.div
+                          key={ct.type}
+                          initial={{ opacity: 0, x: -6 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: idx * 0.05, duration: 0.25 }}
+                        >
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4 }}>
+                            <span style={{ fontSize: 11, fontWeight: 300, color: t.text, letterSpacing: '-0.01em' }}>
+                              {CALL_TYPE_LABELS[ct.type] ?? ct.type}
+                            </span>
+                            <span style={{ ...MONO_STYLE, fontSize: 9, color: t.faint }}>
+                              {ct.calls} · {fmtNum(ct.tokens)}
+                            </span>
+                          </div>
+                          <div style={{ height: 1.5, background: t.surface, borderRadius: 1 }}>
+                            <motion.div
+                              initial={{ width: 0 }}
+                              animate={{ width: `${pct * 100}%` }}
+                              transition={{ delay: idx * 0.05 + 0.1, duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
+                              style={{ height: '100%', background: t.label, borderRadius: 1 }}
+                            />
+                          </div>
+                        </motion.div>
+                      );
+                    })}
+                  </div>
+                )}
+              </motion.div>
+            )}
+          </>
         )}
       </div>
     </div>

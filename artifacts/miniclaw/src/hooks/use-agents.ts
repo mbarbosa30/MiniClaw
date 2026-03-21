@@ -24,6 +24,9 @@ import type {
   TelegramStatus,
   TelegramSettingsPayload,
   CompactConversationResponse,
+  AgentUsageStats,
+  DailyBriefResponse,
+  DailyBriefItem,
 } from '@/types';
 
 export type { Agent, AgentListSummary, PersonaTemplate, SkillDef };
@@ -453,6 +456,38 @@ export function useAwareness(agentId: string | number | undefined) {
       ),
     enabled: agentId != null && agentId !== '',
     staleTime: 60_000,
+  });
+}
+
+// --- USAGE STATS ---
+
+// GET /:id/usage-stats — per-agent LLM consumption (owner-only)
+export function useUsageStats(agentId: string | number | undefined) {
+  return useQuery<AgentUsageStats>({
+    queryKey: ['usage-stats', qid(agentId)],
+    queryFn: () =>
+      apiFetch<AgentUsageStats>(
+        `/api/selfclaw/v1/hosted-agents/${sid(agentId!)}/usage-stats`
+      ),
+    enabled: agentId != null && agentId !== '',
+    staleTime: 120_000,
+  });
+}
+
+// --- DAILY BRIEF ---
+
+// GET /daily-brief — cross-agent morning brief
+export function useDailyBrief() {
+  return useQuery<DailyBriefItem[]>({
+    queryKey: ['daily-brief'],
+    queryFn: async () => {
+      const raw = await apiFetch<DailyBriefResponse | DailyBriefItem[]>(
+        '/api/selfclaw/v1/hosted-agents/daily-brief'
+      );
+      if (Array.isArray(raw)) return raw;
+      return (raw as DailyBriefResponse).briefs ?? [];
+    },
+    staleTime: 300_000,
   });
 }
 

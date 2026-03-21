@@ -278,6 +278,35 @@ export interface DailyBriefItem {
   highlight?: DailyBriefHighlight;
 }
 
+// GET /daily-brief — cross-agent daily brief (response wraps DailyBriefItem[])
+export interface DailyBriefResponse {
+  briefs: DailyBriefItem[];
+}
+
+// GET /:id/usage-stats — per-agent LLM consumption stats (30d window)
+export interface UsageCallType {
+  type: string;
+  calls: number;
+  tokens: number;
+  avgLatencyMs: number;
+}
+
+export interface AgentUsageStats {
+  agentId: string | number;
+  period: {
+    from: string;
+    to: string;
+  };
+  tokens: {
+    last24h: number;
+    last7d: number;
+    last30d: number;
+  };
+  totalCalls30d: number;
+  avgLatencyMs: number;
+  callsByType: UsageCallType[];
+}
+
 export interface GrowthSummary {
   month: string;
   totalApproved: number;
