@@ -707,13 +707,14 @@ export function useGatewayEndpoints() {
     staleTime: Infinity,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
-    retry: 1,
+    retry: 0,
   });
 }
 
 // Convenience hook — returns true when the endpoint is present in the manifest,
 // or undefined while the manifest is still loading.
-export function useHasEndpoint(method: string, path: string): boolean | undefined {
+// method defaults to 'GET' so callers can write useHasEndpoint('/v1/feed').
+export function useHasEndpoint(path: string, method = 'GET'): boolean | undefined {
   const { data, isLoading } = useGatewayEndpoints();
   if (isLoading) return undefined;
   if (!data) return false;

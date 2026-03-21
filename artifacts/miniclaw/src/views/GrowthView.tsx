@@ -127,7 +127,7 @@ export function GrowthView() {
   const agents = data?.agents ?? [];
 
   // Gate feed section on manifest availability — undefined while loading, true/false once known
-  const feedAvailable = useHasEndpoint('GET', '/v1/feed');
+  const feedAvailable = useHasEndpoint('/v1/feed');
 
   const [summaryByAgent, setSummaryByAgent] = useState<Record<string, GrowthSummary>>({});
   const [resolvedAgents, setResolvedAgents] = useState<Set<string>>(new Set());
