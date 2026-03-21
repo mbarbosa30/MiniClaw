@@ -1388,9 +1388,7 @@ export function CreateAgentView() {
       }
 
       setHasSeenOnboard(true);
-      if (info.name.trim() || info.country.trim() || info.goal.trim()) {
-        setUserProfile({ name: info.name.trim(), country: info.country.trim(), goal: info.goal.trim() });
-      }
+      setUserProfile({ name: info.name.trim(), country: info.country.trim(), goal: info.goal.trim() });
 
       const briefContext = buildBriefContext(persona, info, projects);
 

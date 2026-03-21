@@ -119,9 +119,9 @@ function readProfile(): UserProfile {
     if (!raw) return { name: '', country: '', goal: '' };
     const parsed = JSON.parse(raw);
     return {
-      name: parsed.name ?? '',
-      country: parsed.country ?? '',
-      goal: parsed.goal ?? '',
+      name: typeof parsed.name === 'string' ? parsed.name : '',
+      country: typeof parsed.country === 'string' ? parsed.country : '',
+      goal: typeof parsed.goal === 'string' ? parsed.goal : '',
     };
   } catch {
     return { name: '', country: '', goal: '' };
