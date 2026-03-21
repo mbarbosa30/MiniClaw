@@ -45,9 +45,31 @@ async function dispatchUnauthorized(response: Response): Promise<void> {
   );
 }
 
+// When the gateway returns 503 with { code: "SERVICE_UNAVAILABLE", retryAfterMs: N },
+// wait N ms then retry the fetch exactly once. Any other status is returned as-is.
+async function withRetryAfter(fn: () => Promise<Response>): Promise<Response> {
+  const response = await fn();
+  if (response.status !== 503) return response;
+
+  let retryAfterMs: number | null = null;
+  try {
+    const data = await response.clone().json();
+    if (data.code === 'SERVICE_UNAVAILABLE' && typeof data.retryAfterMs === 'number') {
+      retryAfterMs = data.retryAfterMs;
+    }
+  } catch {
+    // Not JSON or missing fields — fall through and surface the 503 normally
+  }
+
+  if (retryAfterMs == null) return response;
+
+  await new Promise<void>(resolve => setTimeout(resolve, retryAfterMs as number));
+  return fn();
+}
+
 export async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
   const headers = buildHeaders(options?.headers, options?.body);
-  const response = await fetch(`${BASE_URL}${path}`, { ...options, headers });
+  const response = await withRetryAfter(() => fetch(`${BASE_URL}${path}`, { ...options, headers }));
 
   if (response.status === 401) {
     await dispatchUnauthorized(response);
@@ -72,7 +94,7 @@ export async function apiFetch<T>(path: string, options?: RequestInit): Promise<
 
 export async function apiFetchWithHeaders<T>(path: string, options?: RequestInit): Promise<{ data: T; headers: Headers; status: number }> {
   const headers = buildHeaders(options?.headers, options?.body);
-  const response = await fetch(`${BASE_URL}${path}`, { ...options, headers });
+  const response = await withRetryAfter(() => fetch(`${BASE_URL}${path}`, { ...options, headers }));
 
   if (response.status === 401) {
     await dispatchUnauthorized(response);
@@ -99,7 +121,7 @@ export async function apiFetchWithHeaders<T>(path: string, options?: RequestInit
 export async function apiFetchStream(path: string, options?: RequestInit): Promise<Response> {
   const headers = buildHeaders(options?.headers, options?.body);
   headers.set('Accept', 'text/event-stream');
-  const response = await fetch(`${BASE_URL}${path}`, { ...options, headers });
+  const response = await withRetryAfter(() => fetch(`${BASE_URL}${path}`, { ...options, headers }));
 
   if (response.status === 401) {
     await dispatchUnauthorized(response);
