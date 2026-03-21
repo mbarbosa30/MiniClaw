@@ -477,7 +477,7 @@ export function GrowthView() {
                     </p>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                       {usageData.callsByModel.map((m, idx) => {
-                        const maxCalls = Math.max(...usageData.callsByModel!.map(x => x.calls), 1);
+                        const maxCalls = Math.max(...usageData.callsByModel.map(x => x.calls), 1);
                         const pct = m.calls / maxCalls;
                         const costStr = m.costUsd > 0 ? ` · ${fmtCostUsd(m.costUsd)}` : '';
                         return (
