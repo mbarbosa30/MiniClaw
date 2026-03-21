@@ -47,15 +47,22 @@ export interface AgentListResult {
 type RawAgent = Agent & { currentActivity?: string | null };
 
 function normalizeListAgent(agent: RawAgent): Agent {
-  // currentActivity may arrive as a top-level field on list responses
-  // (detail endpoint nests it inside stats). Merge into stats so
-  // HomeView's agent.stats?.currentActivity reference always works.
+  // currentActivity may arrive as a top-level field on list responses;
+  // the detail endpoint nests it inside stats. Merge into stats so
+  // HomeView's agent.stats?.currentActivity reference works either way.
   const topLevel = agent.currentActivity ?? null;
   if (topLevel != null) {
-    agent.stats = {
-      ...(agent.stats ?? { totalActionsCount: 0, pendingTasksCount: 0, memoriesCount: 0, currentActivity: null }),
-      currentActivity: agent.stats?.currentActivity ?? topLevel,
-    };
+    if (agent.stats) {
+      // Prefer the nested value; fill from top-level only when absent.
+      if (!agent.stats.currentActivity) {
+        agent.stats = { ...agent.stats, currentActivity: topLevel };
+      }
+    } else {
+      // No stats object from the list endpoint — create a stub.
+      // Counters are 0 as placeholders; real values come from useTasks
+      // (pendingCount) and the detail endpoint fetch (totalActionsCount etc).
+      agent.stats = { totalActionsCount: 0, pendingTasksCount: 0, memoriesCount: 0, currentActivity: topLevel };
+    }
   }
   return agent as Agent;
 }
