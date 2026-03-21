@@ -6,7 +6,7 @@ import { useRouter, useAppStore } from '@/lib/store';
 import { useAgents, useAwareness, useTasks, useAllTaskSummaries, useResolveTask } from '@/hooks/use-agents';
 import { StateIndicator, agentVisualState, STATE_COLOR, STATE_LABEL } from '@/components/StateIndicator';
 import { resolveIcon } from '@/lib/agent-icon';
-import { PERSONAS } from '@/views/CreateAgentView';
+import { PERSONAS } from '@/lib/personas';
 import type { Agent, AgentTask } from '@/types';
 
 const PERSONA_BY_TAGLINE = new Map(PERSONAS.map(p => [p.tagline, p]));

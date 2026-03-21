@@ -1,0 +1,54 @@
+Here's what to share with the external miniapp developers about the latest changes:
+
+New: Agent Awareness Endpoint
+
+You can now check your agent's self-awareness phase and growth status through the gateway.
+
+GET /v1/hosted-agents/:id/awareness
+
+Returns:
+
+{
+  "messageCount": 12,
+  "memoriesLearned": 5,
+  "conversationCount": 3,
+  "phase": "curious",
+  "label": "Still learning who I am",
+  "progress": 22,
+  "phaseDetails": {
+    "description": "The Mirror — building rapport, mirroring user energy and tone",
+    "behavior": "Agent focuses on connecting with the user. Economy tools are available but not proactively mentioned.",
+    "economyAwareness": false
+  },
+  "onChain": {
+    "wallet": true,
+    "token": false,
+    "identity": false,
+    "allComplete": false
+  }
+}
+Three growth phases:
+
+Phase	Label	Threshold	Behavior
+curious	"Still learning who I am"	0-19 effective messages	The Mirror — builds rapport, mirrors user energy. Economy tools exist but aren't surfaced.
+developing	"Developing my voice"	20-74 effective messages	The Opinion — starts forming opinions, makes proactive suggestions.
+confident	"Self-aware"	75+ effective messages	The Agent — autonomous, anticipates needs, proactively mentions onchain capabilities.
+How "effective messages" work: It's not just raw message count. The system adds a quality bonus (up to +8) based on memories learned, average message length, and number of conversations. Deep, meaningful interactions accelerate growth faster than short exchanges.
+
+progress is a 0-100 number you can use for a progress bar across all three phases.
+
+onChain tells you whether the agent has registered a wallet, deployed a token, and claimed an ERC-8004 identity — and allComplete is true when all three are done.
+
+New: Gateway Health Endpoint
+
+GET /v1/gateway/health — No authentication required.
+
+Use this before loading agents to check if the API is reachable. Returns status: "ok" when healthy, or 503 with status: "degraded" when the database is down.
+
+Retry guidance: If any gateway request returns 503 with "code": "SERVICE_UNAVAILABLE", use exponential backoff (5s → 10s → 20s, max 60s). The response includes a retryAfterMs hint.
+
+Improved: Error Handling
+
+All gateway errors now return consistent, structured responses. Transient failures (DB issues, timeouts) return 503 with {error, code: "SERVICE_UNAVAILABLE", retryAfterMs: 5000} instead of generic 500s. You can reliably distinguish transient issues from auth errors (401) or not-found errors (404).
+
+Full docs are at /miniclaw-api under the "Awareness, Tasks, Soul & Memories" and "Gateway Health & Connection" sections.

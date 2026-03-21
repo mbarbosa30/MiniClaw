@@ -26,7 +26,7 @@ import {
   Wallet, Shield, Coins, Gift, ShoppingCart, Lock,
 } from 'lucide-react';
 import type { Agent, HumorStyle, PremiumModel, Memory, TelegramNotificationLevel, AvailableModel } from '@/types';
-import { HUSTLE_MODE_SOUL_APPEND } from './CreateAgentView';
+import { HUSTLE_MODE_SOUL_APPEND } from '@/lib/personas';
 
 function SubScreenLayout({ title, children }: { title: string; children: React.ReactNode }) {
   const t = useTheme();
