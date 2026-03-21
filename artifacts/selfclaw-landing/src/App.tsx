@@ -174,7 +174,7 @@ const FEATURES = [
       </svg>
     ),
     title: 'Memory that sticks',
-    body: 'Every chat teaches your agents something new. Semantic memory ranked by relevance, auto-maintained every 6 hours — they remember.',
+    body: 'Every chat teaches your agents something new. Semantic memory ranked by relevance, auto-maintained many times a day.',
   },
   {
     icon: (
