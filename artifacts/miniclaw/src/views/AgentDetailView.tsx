@@ -8,6 +8,7 @@ import { apiFetch, apiFetchWithHeaders, apiFetchStream, ApiError } from '@/lib/a
 import type { Agent, ChatMessage, AgentAwareness } from '@/types';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { StateIndicator, agentVisualState } from '@/components/StateIndicator';
 
 const MONO = {
   fontFamily: 'ui-monospace, Menlo, monospace',
@@ -51,6 +52,12 @@ function fmtResetAt(resetAt?: string): string {
   } catch {
     return '';
   }
+}
+
+function fmtCompact(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}k`;
+  return n.toString();
 }
 
 // --- Markdown renderer for assistant messages ---
@@ -177,7 +184,6 @@ function AgentHeader({
   const isExhausted = hasQuota && quotaPct >= 1;
   const isWarning = hasQuota && !isExhausted && quotaPct >= 0.8;
   const quotaBarColor = isExhausted ? '#ef4444' : isWarning ? '#f59e0b' : t.faint;
-  const fmt = (n: number) => n.toLocaleString();
   const resetIn = hasQuota ? fmtResetAt(quota!.resetAt) : '';
 
   return (
@@ -201,19 +207,9 @@ function AgentHeader({
           </button>
         </div>
 
-        {/* Center — agent name + status dot */}
-        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', gap: 7 }}>
-          {(() => {
-            const rts = agent.runtimeStatus;
-            const isActive = rts === 'thinking' || rts === 'running' || rts === 'waiting';
-            return (
-              <span style={{
-                width: 6, height: 6, borderRadius: '50%', flexShrink: 0,
-                background: isActive ? '#f59e0b' : '#22c55e',
-                animation: isActive ? 'statusPulse 1.6s ease-in-out infinite' : undefined,
-              }} />
-            );
-          })()}
+        {/* Center — agent name + state indicator */}
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', gap: 8 }}>
+          <StateIndicator state={agentVisualState(agent)} />
           <span style={{ fontSize: 15, fontWeight: 300, letterSpacing: '-0.015em', lineHeight: 1, color: t.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {agent.name || 'Agent'}
           </span>
@@ -238,73 +234,70 @@ function AgentHeader({
         </div>
       </div>
 
-      {/* Quota info row — integrated inline below agent name */}
-      {hasQuota && (
-        <>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingLeft: 8, paddingRight: 8, paddingBottom: 4 }}>
-            <span style={{ fontFamily: 'ui-monospace, Menlo, monospace', fontSize: 8, color: isExhausted ? '#ef4444' : isWarning ? '#f59e0b' : t.faint, letterSpacing: '0.04em' }}>
-              {fmt(quota!.used)} / {fmt(quota!.limit)} tokens
-              {(isWarning || isExhausted) && (
-                <span style={{ marginLeft: 6 }}>
-                  {isExhausted ? '· limit reached' : '· limit approaching'}
-                </span>
-              )}
-            </span>
-            {resetIn && (
-              <span style={{ fontFamily: 'ui-monospace, Menlo, monospace', fontSize: 8, color: t.faint, letterSpacing: '0.04em' }}>
-                resets {resetIn}
-              </span>
-            )}
-          </div>
-          {/* Quota progress bar — always shown under quota text */}
-          <div style={{ height: 2, background: t.surface, overflow: 'hidden', marginLeft: -8, marginRight: -8, marginBottom: awarenessLabel ? 0 : 0 }}>
-            <div style={{ height: '100%', width: `${quotaPct * 100}%`, background: quotaBarColor, transition: 'width 0.4s ease' }} />
-          </div>
-        </>
-      )}
-
-      {/* Collapsible awareness — phase tag + pct on same row, full-bleed phase bar at bottom */}
-      {awarenessLabel && (
+      {/* Compact sub-row: phase pill left | compact quota right | tappable to expand */}
+      {(awarenessLabel || hasQuota) ? (
         <div style={{ marginLeft: -8, marginRight: -8 }}>
-          {/* Toggle row */}
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            paddingLeft: 16,
-            paddingRight: 16,
-            paddingBottom: 8,
-            paddingTop: hasQuota ? 0 : 4,
-          }}>
-            <button
-              onClick={() => setShowAwareness(v => !v)}
-              style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
-            >
+          <button
+            onClick={() => awarenessLabel && setShowAwareness(v => !v)}
+            style={{
+              width: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              paddingLeft: 16,
+              paddingRight: 16,
+              paddingTop: 2,
+              paddingBottom: 8,
+              background: 'none',
+              border: 'none',
+              cursor: awarenessLabel ? 'pointer' : 'default',
+            }}
+          >
+            {/* Left: phase pill + SVG chevron */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+              {awarenessLabel && (
+                <>
+                  <span style={{
+                    fontFamily: 'ui-monospace, Menlo, monospace',
+                    fontSize: 8,
+                    color: aColor,
+                    letterSpacing: '0.07em',
+                    textTransform: 'uppercase' as const,
+                    background: `${aColor}1a`,
+                    border: `1px solid ${aColor}40`,
+                    borderRadius: 3,
+                    padding: '2px 5px',
+                    lineHeight: 1.4,
+                  }}>
+                    {awarenessLabel}
+                  </span>
+                  <svg
+                    width="9" height="9" viewBox="0 0 9 9" fill="none"
+                    stroke={t.faint} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"
+                  >
+                    {showAwareness
+                      ? <path d="M1.5 6L4.5 3 7.5 6" />
+                      : <path d="M1.5 3L4.5 6 7.5 3" />}
+                  </svg>
+                </>
+              )}
+            </div>
+            {/* Right: compact quota */}
+            {hasQuota && (
               <span style={{
                 fontFamily: 'ui-monospace, Menlo, monospace',
                 fontSize: 8,
-                color: aColor,
-                letterSpacing: '0.07em',
-                textTransform: 'uppercase',
-                background: `${aColor}1a`,
-                border: `1px solid ${aColor}40`,
-                borderRadius: 3,
-                padding: '2px 5px',
+                color: isExhausted ? '#ef4444' : isWarning ? '#f59e0b' : t.faint,
+                letterSpacing: '0.04em',
               }}>
-                {awarenessLabel}
+                {fmtCompact(quota!.used)}/{fmtCompact(quota!.limit)}{resetIn ? ` · ${resetIn}` : ''}{isExhausted ? ' · limit reached' : isWarning ? ' · approaching' : ''}
               </span>
-              <span style={{ fontSize: 8, color: t.faint, lineHeight: 1 }}>
-                {showAwareness ? '▴' : '▾'}
-              </span>
-            </button>
-            <span style={{ fontFamily: 'ui-monospace, Menlo, monospace', fontSize: 9, color: t.faint, letterSpacing: '0.02em' }}>
-              {phasePct}%
-            </span>
-          </div>
+            )}
+          </button>
 
-          {/* Expanded content */}
-          {showAwareness && (
-            <div style={{ paddingLeft: 16, paddingRight: 16, paddingBottom: 8 }}>
+          {/* Expanded awareness content */}
+          {awarenessLabel && showAwareness && (
+            <div style={{ paddingLeft: 16, paddingRight: 16, paddingBottom: 10 }}>
               {phaseBehavior && (
                 <p style={{ fontSize: 10, color: t.label, lineHeight: 1.5, letterSpacing: '-0.005em', marginBottom: 8, marginTop: 0 }}>
                   {phaseBehavior}
@@ -343,15 +336,14 @@ function AgentHeader({
             </div>
           )}
 
-          {/* Phase progress bar as bottom border of awareness section */}
-          <div style={{ height: 2, background: t.surface, overflow: 'hidden' }}>
-            <div style={{ height: '100%', width: `${phasePct}%`, background: aColor, transition: 'width 0.6s ease' }} />
-          </div>
+          {/* Phase progress bar — always at bottom of sub-row section */}
+          {awarenessLabel && (
+            <div style={{ height: 2, background: t.surface, overflow: 'hidden' }}>
+              <div style={{ height: '100%', width: `${phasePct}%`, background: aColor, transition: 'width 0.6s ease' }} />
+            </div>
+          )}
         </div>
-      )}
-
-      {/* Bottom divider when neither quota nor awareness is present */}
-      {!awarenessLabel && !hasQuota && (
+      ) : (
         <div style={{ height: 1, background: t.divider, marginLeft: -8, marginRight: -8 }} />
       )}
     </div>
@@ -397,6 +389,7 @@ export function AgentDetailView() {
   const [newChatTrigger, setNewChatTrigger] = useState(0);
   const [quota, setQuota] = useState<QuotaState | null>(null);
   const [viewportH, setViewportH] = useState<number>(() => window.visualViewport?.height ?? window.innerHeight);
+  const [viewportTop, setViewportTop] = useState<number>(0);
 
   useEffect(() => {
     if (newChatAt) setNewChatTrigger(n => n + 1);
@@ -419,15 +412,25 @@ export function AgentDetailView() {
 
   useEffect(() => {
     const vp = window.visualViewport;
-    const update = () => setViewportH(vp?.height ?? window.innerHeight);
+    const update = () => {
+      if (vp) {
+        setViewportH(vp.height);
+        setViewportTop(vp.offsetTop);
+      } else {
+        setViewportH(window.innerHeight);
+        setViewportTop(0);
+      }
+    };
     if (vp) {
       vp.addEventListener('resize', update);
+      vp.addEventListener('scroll', update);
     } else {
       window.addEventListener('resize', update);
     }
     return () => {
       if (vp) {
         vp.removeEventListener('resize', update);
+        vp.removeEventListener('scroll', update);
       } else {
         window.removeEventListener('resize', update);
       }
@@ -476,7 +479,7 @@ export function AgentDetailView() {
   const agentName = agent.name || 'Agent';
 
   return (
-    <div style={{ height: viewportH, display: 'flex', flexDirection: 'column', background: t.bg, transition: 'background 0.3s ease', overflow: 'hidden' }}>
+    <div style={{ position: 'fixed', top: viewportTop, left: 0, right: 0, height: viewportH, display: 'flex', flexDirection: 'column', background: t.bg, transition: 'background 0.3s ease', overflow: 'hidden' }}>
       <AgentHeader
         agent={agent}
         onBack={pop}
@@ -1087,7 +1090,7 @@ function ChatTab({
       )}
 
       {/* Input */}
-      <div style={{ flexShrink: 0, borderTop: `1px solid ${t.divider}`, padding: '12px 32px 20px' }}>
+      <div style={{ flexShrink: 0, borderTop: `1px solid ${t.divider}`, padding: '12px 16px 20px', boxSizing: 'border-box', width: '100%' }}>
         <div style={{ display: 'flex', alignItems: 'flex-end', gap: 16 }}>
           <textarea
             value={input}
@@ -1159,7 +1162,6 @@ function ChatTab({
 
       <style>{`
         @keyframes dotPulse { 0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); } 40% { opacity: 1; transform: scale(1.2); } }
-        @keyframes statusPulse { 0%, 100% { opacity: 0.45; } 50% { opacity: 1; } }
         textarea::placeholder { color: ${t.faint}; opacity: 1; }
       `}</style>
     </div>
