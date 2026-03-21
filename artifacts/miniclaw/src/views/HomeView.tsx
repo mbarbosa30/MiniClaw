@@ -454,7 +454,7 @@ export function HomeView() {
       {/* Pinned header — does not scroll */}
       <div
         style={{ flexShrink: 0, padding: '40px 32px 0' }}
-        className="pb-[16px] pt-[40px] pl-[32px] pr-[32px]">
+        className="pt-[40px] pl-[32px] pr-[32px] pb-[16px]">
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
           <p style={{
             fontSize: 22,
