@@ -786,6 +786,24 @@ function OnboardingPersonaRow({
   );
 }
 
+const AUDIENCE_AWARE_PERSONAS = new Set([
+  'ai-hustle-builder',
+  'digital-creator-coach',
+  'online-biz-launcher',
+  'gig-economy-maximizer',
+  'social-media-marketer',
+  'local-business-builder',
+  'distribution-strategist',
+]);
+
+const LANGUAGE_CHIPS = ['English', 'French', 'Swahili', 'Hausa', 'Yoruba', 'Amharic', 'Portuguese', 'Arabic'];
+
+const EXP_LEVELS: { value: 'beginner' | 'intermediate' | 'expert'; label: string }[] = [
+  { value: 'beginner', label: 'Beginner' },
+  { value: 'intermediate', label: 'Growing' },
+  { value: 'expert', label: 'Advanced' },
+];
+
 function PersonalizeStep({
   persona,
   agentCustomName,
@@ -793,6 +811,10 @@ function PersonalizeStep({
   userCountry,
   userXHandle,
   userGoal,
+  userExperienceLevel,
+  userLanguages,
+  userChallenges,
+  userTargetAudience,
   humorStyle,
   projects,
   onChangeAgentName,
@@ -800,6 +822,10 @@ function PersonalizeStep({
   onChangeCountry,
   onChangeXHandle,
   onChangeGoal,
+  onChangeExperienceLevel,
+  onChangeLanguages,
+  onChangeChallenges,
+  onChangeTargetAudience,
   onChangeHumorStyle,
   onAddProject,
   onRemoveProject,
@@ -815,6 +841,10 @@ function PersonalizeStep({
   userCountry: string;
   userXHandle: string;
   userGoal: string;
+  userExperienceLevel: '' | 'beginner' | 'intermediate' | 'expert';
+  userLanguages: string[];
+  userChallenges: string;
+  userTargetAudience: string;
   humorStyle: HumorStyle;
   projects: ProjectEntry[];
   onChangeAgentName: (v: string) => void;
@@ -822,6 +852,10 @@ function PersonalizeStep({
   onChangeCountry: (v: string) => void;
   onChangeXHandle: (v: string) => void;
   onChangeGoal: (v: string) => void;
+  onChangeExperienceLevel: (v: '' | 'beginner' | 'intermediate' | 'expert') => void;
+  onChangeLanguages: (v: string[]) => void;
+  onChangeChallenges: (v: string) => void;
+  onChangeTargetAudience: (v: string) => void;
   onChangeHumorStyle: (s: HumorStyle) => void;
   onAddProject: (url: string) => void;
   onRemoveProject: (id: string) => void;
@@ -834,6 +868,19 @@ function PersonalizeStep({
   const t = useTheme();
   const [urlInput, setUrlInput] = useState('');
   const [urlError, setUrlError] = useState<string | null>(null);
+
+  const hasAdvancedData = !!userExperienceLevel || userLanguages.length > 0 || !!userChallenges || !!userTargetAudience;
+  const [advancedOpen, setAdvancedOpen] = useState(() => hasAdvancedData);
+
+  const showAudienceField = AUDIENCE_AWARE_PERSONAS.has(persona.id);
+
+  const toggleLanguage = (lang: string) => {
+    if (userLanguages.includes(lang)) {
+      onChangeLanguages(userLanguages.filter(l => l !== lang));
+    } else {
+      onChangeLanguages([...userLanguages, lang]);
+    }
+  };
 
   const handleAddUrl = () => {
     const raw = urlInput.trim();
@@ -1161,6 +1208,154 @@ function PersonalizeStep({
             )}
           </div>
 
+          {/* Advanced section toggle */}
+          <div>
+            <button
+              onClick={() => setAdvancedOpen(v => !v)}
+              disabled={creating}
+              style={{
+                width: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                background: 'none',
+                border: 'none',
+                borderTop: `1px solid ${t.divider}`,
+                padding: '16px 0 0',
+                cursor: 'pointer',
+                fontFamily: FONT,
+              }}
+            >
+              <span style={{ ...MONO, fontSize: 9, color: t.faint, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                More detail → better research
+              </span>
+              <span style={{
+                fontSize: 11,
+                color: t.faint,
+                transform: advancedOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                transition: 'transform 0.2s ease',
+                display: 'inline-block',
+              }}>▾</span>
+            </button>
+
+            <AnimatePresence initial={false}>
+              {advancedOpen && (
+                <motion.div
+                  key="advanced"
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.22, ease: 'easeInOut' }}
+                  style={{ overflow: 'hidden' }}
+                >
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 20, paddingTop: 20 }}>
+
+                    {/* Experience level */}
+                    <div>
+                      <p style={{ ...MONO, fontSize: 9, color: t.faint, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>
+                        Your experience level
+                      </p>
+                      <div style={{ display: 'flex', gap: 7 }}>
+                        {EXP_LEVELS.map(({ value, label }) => {
+                          const active = userExperienceLevel === value;
+                          return (
+                            <button
+                              key={value}
+                              onClick={() => onChangeExperienceLevel(active ? '' : value)}
+                              disabled={creating}
+                              style={{
+                                flex: 1,
+                                padding: '8px 0',
+                                borderRadius: 100,
+                                border: `1.5px solid ${active ? persona.color : t.divider}`,
+                                background: active ? `${persona.color}18` : 'transparent',
+                                color: active ? persona.color : t.label,
+                                fontSize: 12,
+                                fontWeight: active ? 600 : 400,
+                                letterSpacing: '-0.01em',
+                                cursor: 'pointer',
+                                transition: 'all 0.15s',
+                                fontFamily: FONT,
+                              }}
+                            >
+                              {label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Languages */}
+                    <div>
+                      <p style={{ ...MONO, fontSize: 9, color: t.faint, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>
+                        Languages you work in
+                      </p>
+                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                        {LANGUAGE_CHIPS.map(lang => {
+                          const active = userLanguages.includes(lang);
+                          return (
+                            <button
+                              key={lang}
+                              onClick={() => toggleLanguage(lang)}
+                              disabled={creating}
+                              style={{
+                                padding: '6px 12px',
+                                borderRadius: 100,
+                                border: `1.5px solid ${active ? persona.color : t.divider}`,
+                                background: active ? `${persona.color}18` : 'transparent',
+                                color: active ? persona.color : t.label,
+                                fontSize: 11,
+                                fontWeight: active ? 600 : 400,
+                                letterSpacing: '-0.01em',
+                                cursor: 'pointer',
+                                transition: 'all 0.15s',
+                                fontFamily: FONT,
+                              }}
+                            >
+                              {lang}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Challenges */}
+                    <div>
+                      <p style={{ ...MONO, fontSize: 9, color: t.faint, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
+                        Biggest challenge <span style={{ textTransform: 'none', fontStyle: 'normal', letterSpacing: 0, opacity: 0.6 }}>(optional)</span>
+                      </p>
+                      <input
+                        type="text"
+                        value={userChallenges}
+                        onChange={e => onChangeChallenges(e.target.value)}
+                        placeholder="e.g. Getting my first paying client"
+                        disabled={creating}
+                        style={inputStyle}
+                      />
+                    </div>
+
+                    {/* Target audience — only for commerce/creator personas */}
+                    {showAudienceField && (
+                      <div>
+                        <p style={{ ...MONO, fontSize: 9, color: t.faint, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
+                          Who do you sell to / serve? <span style={{ textTransform: 'none', fontStyle: 'normal', letterSpacing: 0, opacity: 0.6 }}>(optional)</span>
+                        </p>
+                        <input
+                          type="text"
+                          value={userTargetAudience}
+                          onChange={e => onChangeTargetAudience(e.target.value)}
+                          placeholder="e.g. Small business owners in Lagos"
+                          disabled={creating}
+                          style={inputStyle}
+                        />
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
           <div style={{ height: 4 }} />
         </div>
       </div>
@@ -1226,12 +1421,15 @@ function buildDefaultSteps(fields: {
   xHandle?: string;
   urls?: string[];
   location?: string;
-  goals?: string[];
+  domain?: string;
+  experienceLevel?: string;
+  languages?: string[];
 }): SpawningProgressStep[] {
   const steps: SpawningProgressStep[] = [];
   if (fields.xHandle) steps.push({ step: `Researching @${fields.xHandle} on X`, status: 'waiting' });
   if (fields.urls?.length) steps.push({ step: `Analyzing your website${fields.urls.length > 1 ? 's' : ''}`, status: 'waiting' });
   if (fields.location) steps.push({ step: `Mapping local context — ${fields.location}`, status: 'waiting' });
+  if (fields.domain) steps.push({ step: `Researching your domain`, status: 'waiting' });
   steps.push({ step: 'Identifying opportunities & challenges', status: 'waiting' });
   steps.push({ step: 'Building knowledge base', status: 'waiting' });
   steps.push({ step: 'Generating starter tasks', status: 'waiting' });
@@ -1253,7 +1451,7 @@ function SpawningScreen({
   agentName: string;
   agentEmoji: string;
   personaColor: string;
-  providedFields: { xHandle?: string; urls?: string[]; location?: string; goals?: string[] };
+  providedFields: { xHandle?: string; urls?: string[]; location?: string; domain?: string; experienceLevel?: string; languages?: string[] };
   onReady: () => void;
   onFailed: () => void;
 }) {
@@ -1378,8 +1576,12 @@ export function CreateAgentView() {
   const [agentCustomName, setAgentCustomName] = useState('');
   const [userName, setUserName] = useState(() => userProfile.name);
   const [userCountry, setUserCountry] = useState(() => userProfile.country);
-  const [userXHandle, setUserXHandle] = useState('');
+  const [userXHandle, setUserXHandle] = useState(() => userProfile.xHandle);
   const [userGoal, setUserGoal] = useState(() => userProfile.goal);
+  const [userExperienceLevel, setUserExperienceLevel] = useState<'' | 'beginner' | 'intermediate' | 'expert'>(() => userProfile.experienceLevel);
+  const [userLanguages, setUserLanguages] = useState<string[]>(() => userProfile.languages);
+  const [userChallenges, setUserChallenges] = useState('');
+  const [userTargetAudience, setUserTargetAudience] = useState('');
 
   const shuffledPersonas = useMemo(() => {
     const arr = [...PERSONAS];
@@ -1398,7 +1600,8 @@ export function CreateAgentView() {
   useEffect(() => {
     if (selectedPersona) {
       setAgentCustomName('');
-      setUserXHandle('');
+      setUserChallenges('');
+      setUserTargetAudience('');
       setUserHumorStyle(selectedPersona.humorStyle ?? 'straight');
       setUserProjects([]);
     }
@@ -1477,7 +1680,11 @@ export function CreateAgentView() {
     info: UserInfo,
     xHandle: string,
     humor: HumorStyle,
-    projects: ProjectEntry[]
+    projects: ProjectEntry[],
+    experienceLevel: '' | 'beginner' | 'intermediate' | 'expert',
+    languages: string[],
+    challenges: string,
+    targetAudience: string
   ) => {
     if (creating) return;
     setCreating(true);
@@ -1499,7 +1706,11 @@ export function CreateAgentView() {
         location: info.country.trim() || undefined,
         xHandle: xHandle.trim() || undefined,
         urls: urlList.length > 0 ? urlList : undefined,
-        goals: info.goal.trim() ? [info.goal.trim()] : undefined,
+        domain: info.goal.trim() || undefined,
+        experienceLevel: experienceLevel || undefined,
+        languages: languages.length > 0 ? languages : undefined,
+        challenges: challenges.trim() ? [challenges.trim()] : undefined,
+        targetAudience: targetAudience.trim() || undefined,
       });
 
       const newAgent = result.agent;
@@ -1507,7 +1718,15 @@ export function CreateAgentView() {
       const agentEmoji = persona.emoji;
 
       setHasSeenOnboard(true);
-      setUserProfile({ name: info.name.trim(), city: '', country: info.country.trim(), goal: info.goal.trim() });
+      setUserProfile({
+        name: info.name.trim(),
+        city: '',
+        country: info.country.trim(),
+        goal: info.goal.trim(),
+        xHandle: xHandle.trim(),
+        experienceLevel: experienceLevel,
+        languages,
+      });
 
       // Store fallback brief context in case spawning fails
       const briefCtx = buildBriefContext(persona, agentCustomName, info, projects);
@@ -1551,7 +1770,9 @@ export function CreateAgentView() {
           xHandle: userXHandle.trim() || undefined,
           urls: userProjects.map(p => p.url),
           location: userCountry.trim() || undefined,
-          goals: userGoal.trim() ? [userGoal.trim()] : undefined,
+          domain: userGoal.trim() || undefined,
+          experienceLevel: userExperienceLevel || undefined,
+          languages: userLanguages.length > 0 ? userLanguages : undefined,
         }}
         onReady={() => {
           pop();
@@ -1576,6 +1797,10 @@ export function CreateAgentView() {
           userCountry={userCountry}
           userXHandle={userXHandle}
           userGoal={userGoal}
+          userExperienceLevel={userExperienceLevel}
+          userLanguages={userLanguages}
+          userChallenges={userChallenges}
+          userTargetAudience={userTargetAudience}
           humorStyle={userHumorStyle}
           projects={userProjects}
           onChangeAgentName={setAgentCustomName}
@@ -1583,12 +1808,16 @@ export function CreateAgentView() {
           onChangeCountry={setUserCountry}
           onChangeXHandle={setUserXHandle}
           onChangeGoal={setUserGoal}
+          onChangeExperienceLevel={setUserExperienceLevel}
+          onChangeLanguages={setUserLanguages}
+          onChangeChallenges={setUserChallenges}
+          onChangeTargetAudience={setUserTargetAudience}
           onChangeHumorStyle={setUserHumorStyle}
           onAddProject={handleAddProject}
           onRemoveProject={handleRemoveProject}
           onBack={handleBack}
-          onSkip={() => handleLaunch(selectedPersona, '', { name: '', country: '', goal: '' }, '', selectedPersona.humorStyle, [])}
-          onLaunch={() => handleLaunch(selectedPersona, agentCustomName, { name: userName, country: userCountry, goal: userGoal }, userXHandle, userHumorStyle, userProjects)}
+          onSkip={() => handleLaunch(selectedPersona, '', { name: '', country: '', goal: '' }, '', selectedPersona.humorStyle, [], '', [], '', '')}
+          onLaunch={() => handleLaunch(selectedPersona, agentCustomName, { name: userName, country: userCountry, goal: userGoal }, userXHandle, userHumorStyle, userProjects, userExperienceLevel, userLanguages, userChallenges, userTargetAudience)}
           creating={creating}
           error={error}
         />

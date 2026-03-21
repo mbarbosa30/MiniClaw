@@ -110,6 +110,9 @@ export interface UserProfile {
   city: string;
   country: string;
   goal: string;
+  xHandle: string;
+  experienceLevel: '' | 'beginner' | 'intermediate' | 'expert';
+  languages: string[];
 }
 
 const PROFILE_KEY = 'miniclaw-user-profile';
@@ -117,16 +120,19 @@ const PROFILE_KEY = 'miniclaw-user-profile';
 function readProfile(): UserProfile {
   try {
     const raw = localStorage.getItem(PROFILE_KEY);
-    if (!raw) return { name: '', city: '', country: '', goal: '' };
+    if (!raw) return { name: '', city: '', country: '', goal: '', xHandle: '', experienceLevel: '', languages: [] };
     const parsed = JSON.parse(raw);
     return {
       name: typeof parsed.name === 'string' ? parsed.name : '',
       city: typeof parsed.city === 'string' ? parsed.city : '',
       country: typeof parsed.country === 'string' ? parsed.country : '',
       goal: typeof parsed.goal === 'string' ? parsed.goal : '',
+      xHandle: typeof parsed.xHandle === 'string' ? parsed.xHandle : '',
+      experienceLevel: ['beginner', 'intermediate', 'expert'].includes(parsed.experienceLevel) ? parsed.experienceLevel : '',
+      languages: Array.isArray(parsed.languages) ? parsed.languages.filter((l: unknown) => typeof l === 'string') : [],
     };
   } catch {
-    return { name: '', city: '', country: '', goal: '' };
+    return { name: '', city: '', country: '', goal: '', xHandle: '', experienceLevel: '', languages: [] };
   }
 }
 
