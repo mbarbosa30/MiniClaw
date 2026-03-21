@@ -5,7 +5,7 @@ import { useTheme } from '@/lib/theme';
 import { Button } from '@/components/ui';
 import { MoreHorizontal } from 'lucide-react';
 import { apiFetch, apiFetchWithHeaders, apiFetchStream, ApiError } from '@/lib/api-client';
-import type { Agent, ChatMessage } from '@/types';
+import type { Agent, ChatMessage, AgentAwareness } from '@/types';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
@@ -189,7 +189,7 @@ function AgentHeader({
   onOptions,
   onPending,
   quota,
-  agentId,
+  awareness,
   onEconomy,
 }: {
   agent: Agent;
@@ -197,11 +197,11 @@ function AgentHeader({
   onOptions: () => void;
   onPending: () => void;
   quota: QuotaState | null;
-  agentId: string;
+  awareness: AgentAwareness | undefined;
   onEconomy: () => void;
 }) {
   const t = useTheme();
-  const { data: awarenessData } = useAwareness(agentId);
+  const awarenessData = awareness;
   const [showAwareness, setShowAwareness] = useState(false);
   const stats = agent.stats;
   const pendingCount = stats?.pendingTasksCount ?? 0;
@@ -444,10 +444,19 @@ export function AgentDetailView() {
 
   useEffect(() => {
     const vp = window.visualViewport;
-    if (!vp) return;
-    const handleResize = () => setViewportH(vp.height);
-    vp.addEventListener('resize', handleResize);
-    return () => vp.removeEventListener('resize', handleResize);
+    const update = () => setViewportH(vp?.height ?? window.innerHeight);
+    if (vp) {
+      vp.addEventListener('resize', update);
+    } else {
+      window.addEventListener('resize', update);
+    }
+    return () => {
+      if (vp) {
+        vp.removeEventListener('resize', update);
+      } else {
+        window.removeEventListener('resize', update);
+      }
+    };
   }, []);
 
   if (isLoading) {
@@ -499,7 +508,7 @@ export function AgentDetailView() {
         onOptions={() => push('agent-options', { id })}
         onPending={() => push('tasks', { id })}
         quota={quota}
-        agentId={id}
+        awareness={awareness}
         onEconomy={() => push('economy', { id })}
       />
       <div style={{ flex: 1, overflow: 'hidden' }}>
