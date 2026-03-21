@@ -1,11 +1,12 @@
 import { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useTemplates, useCreateAgent, useUpdateSoul } from '@/hooks/use-agents';
 import { apiFetch } from '@/lib/api-client';
 import { useRouter, useAppStore } from '@/lib/store';
 import { useTheme } from '@/lib/theme';
 import { ScreenHeader } from '@/components/ui';
 import { AgentIcon } from '@/lib/agent-icon';
-import { motion } from 'framer-motion';
+import { resolveIcon } from '@/lib/agent-icon';
 
 interface PersonaConfig {
   id: string;
@@ -284,6 +285,153 @@ Every conversation, proactively suggest at least one specific income-generating 
 
 const TOP_PERSONA_COUNT = 4;
 
+const FONT = '-apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif';
+
+const MONO: React.CSSProperties = {
+  fontFamily: 'ui-monospace, Menlo, monospace',
+  letterSpacing: '0.04em',
+};
+
+function OnboardingSpinner({ color }: { color: string }) {
+  return (
+    <motion.div
+      animate={{ rotate: 360 }}
+      transition={{ duration: 0.7, repeat: Infinity, ease: 'linear' }}
+      style={{
+        width: 13,
+        height: 13,
+        borderRadius: '50%',
+        border: `2px solid ${color}30`,
+        borderTopColor: color,
+        flexShrink: 0,
+      }}
+    />
+  );
+}
+
+function OnboardingPersonaRow({
+  persona,
+  selected,
+  launching,
+  onSelect,
+  index,
+  dividerColor,
+  faintColor,
+  textColor,
+}: {
+  persona: PersonaConfig;
+  selected: boolean;
+  launching: boolean;
+  onSelect: () => void;
+  index: number;
+  dividerColor: string;
+  faintColor: string;
+  textColor: string;
+}) {
+  const Icon = resolveIcon(persona.icon);
+
+  return (
+    <motion.button
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.06, duration: 0.32, ease: [0.25, 0.46, 0.45, 0.94] }}
+      onClick={onSelect}
+      style={{
+        width: '100%',
+        background: selected ? `${persona.color}07` : 'none',
+        border: 'none',
+        borderBottom: `1px solid ${dividerColor}`,
+        padding: '24px 32px 24px 20px',
+        cursor: 'pointer',
+        display: 'flex',
+        alignItems: 'flex-start',
+        gap: 0,
+        position: 'relative',
+        textAlign: 'left',
+        transition: 'background 0.2s ease',
+        fontFamily: FONT,
+      }}
+    >
+      <div style={{
+        position: 'absolute',
+        left: 0,
+        top: 0,
+        bottom: 0,
+        width: 2,
+        background: persona.color,
+        borderRadius: '0 1px 1px 0',
+      }} />
+
+      <div style={{ flex: 1, minWidth: 0, paddingLeft: 12 }}>
+        <p style={{
+          fontSize: 30,
+          fontWeight: 300,
+          letterSpacing: '-0.03em',
+          color: textColor,
+          lineHeight: 1.1,
+          marginBottom: 6,
+          whiteSpace: 'nowrap',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+        }}>
+          {persona.name}
+        </p>
+        <p style={{
+          fontSize: 12,
+          fontStyle: 'italic',
+          color: faintColor,
+          letterSpacing: '-0.005em',
+          lineHeight: 1.4,
+        }}>
+          {persona.tagline}
+        </p>
+      </div>
+
+      <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 8, paddingTop: 6 }}>
+        <AnimatePresence mode="wait">
+          {launching && selected ? (
+            <motion.div
+              key="launching"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              style={{ display: 'flex', alignItems: 'center', gap: 7 }}
+            >
+              <OnboardingSpinner color={persona.color} />
+              <span style={{
+                ...MONO,
+                fontSize: 9,
+                color: persona.color,
+                letterSpacing: '0.06em',
+                textTransform: 'uppercase',
+                whiteSpace: 'nowrap',
+              }}>
+                Launching {persona.name}…
+              </span>
+            </motion.div>
+          ) : (
+            <motion.div
+              key="icon"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            >
+              {Icon && (
+                <Icon
+                  size={18}
+                  strokeWidth={1.25}
+                  color={selected ? persona.color : faintColor}
+                  style={{ transition: 'color 0.2s ease' }}
+                />
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </motion.button>
+  );
+}
+
 export function CreateAgentView() {
   const t = useTheme();
   const { data: templates, isLoading: templatesLoading } = useTemplates();
@@ -295,6 +443,7 @@ export function CreateAgentView() {
   const { setHasSeenOnboard } = useAppStore();
 
   const [creating, setCreating] = useState(false);
+  const [creatingPersonaId, setCreatingPersonaId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showAll, setShowAll] = useState(false);
 
@@ -311,6 +460,7 @@ export function CreateAgentView() {
   const handleSelect = async (persona: PersonaConfig) => {
     if (creating) return;
     setCreating(true);
+    setCreatingPersonaId(persona.id);
     setError(null);
 
     try {
@@ -327,10 +477,8 @@ export function CreateAgentView() {
 
       const newAgent = result.agent;
 
-      // Fire-and-forget: soul applies in the background
       updateSoul.mutate({ agentId: newAgent.id, soul: persona.soul });
 
-      // Poll for agent readiness — 2 attempts at 400ms
       let agentReady = false;
       for (let attempt = 0; attempt < 2; attempt++) {
         try {
@@ -347,10 +495,10 @@ export function CreateAgentView() {
       if (!agentReady) {
         setError('Agent created but couldn\'t load — please go back and tap the agent to open it.');
         setCreating(false);
+        setCreatingPersonaId(null);
         return;
       }
 
-      // Mark onboarding complete so HomeView doesn't loop
       setHasSeenOnboard(true);
 
       pop();
@@ -358,6 +506,7 @@ export function CreateAgentView() {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create agent. Please try again.');
       setCreating(false);
+      setCreatingPersonaId(null);
     }
   };
 
@@ -367,6 +516,115 @@ export function CreateAgentView() {
     }
     pop();
   };
+
+  if (fromOnboarding) {
+    return (
+      <div style={{
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        background: t.bg,
+        transition: 'background 0.3s ease',
+        fontFamily: FONT,
+      }}>
+        <div style={{ padding: '56px 32px 28px', flexShrink: 0 }}>
+          <motion.p
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+            style={{
+              fontSize: 34,
+              fontWeight: 200,
+              letterSpacing: '-0.04em',
+              color: t.text,
+              lineHeight: 1.1,
+              marginBottom: 10,
+            }}
+          >
+            Your AI team<br />starts here.
+          </motion.p>
+          <motion.p
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.08 }}
+            style={{ fontSize: 13, color: t.label, letterSpacing: '-0.01em', lineHeight: 1.5 }}
+          >
+            Pick a persona. Start earning.
+          </motion.p>
+        </div>
+
+        <div style={{ height: 1, background: t.divider, flexShrink: 0 }} />
+
+        {error && (
+          <div style={{ padding: '10px 32px', background: 'rgba(248,113,113,0.08)', flexShrink: 0 }}>
+            <p style={{ fontSize: 11, color: '#f87171' }}>{error}</p>
+          </div>
+        )}
+
+        <div className="no-scrollbar" style={{ flex: 1, overflowY: 'auto' }}>
+          {visiblePersonas.map((persona, i) => (
+            <OnboardingPersonaRow
+              key={persona.id}
+              persona={persona}
+              selected={creatingPersonaId === persona.id}
+              launching={creating && creatingPersonaId === persona.id}
+              onSelect={() => handleSelect(persona)}
+              index={i}
+              dividerColor={t.divider}
+              faintColor={t.faint}
+              textColor={t.text}
+            />
+          ))}
+
+          {!showAll && PERSONAS.length > TOP_PERSONA_COUNT && (
+            <motion.button
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.32 }}
+              onClick={() => setShowAll(true)}
+              style={{
+                width: '100%',
+                background: 'none',
+                border: 'none',
+                borderBottom: `1px solid ${t.divider}`,
+                padding: '22px 32px 22px 20px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                position: 'relative',
+                fontFamily: FONT,
+              }}
+            >
+              <div style={{
+                position: 'absolute',
+                left: 0, top: 0, bottom: 0,
+                width: 2,
+                background: t.divider,
+                borderRadius: '0 1px 1px 0',
+              }} />
+              <span style={{
+                paddingLeft: 12,
+                fontSize: 26,
+                fontWeight: 300,
+                letterSpacing: '-0.03em',
+                color: t.faint,
+              }}>
+                + more personas
+              </span>
+            </motion.button>
+          )}
+
+          <div style={{ height: 40 }} />
+        </div>
+
+        <div style={{ flexShrink: 0, padding: '12px 32px 32px', borderTop: `1px solid ${t.divider}` }}>
+          <p style={{ ...MONO, fontSize: 9, color: t.faint, textAlign: 'center', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+            You can switch or add agents anytime
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: t.bg, transition: 'background 0.3s ease' }}>
