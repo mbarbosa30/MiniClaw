@@ -794,20 +794,17 @@ function ChatTab({
 
       if (sseDone || sseEventError) {
         sseSucceeded = true;
-      } else if (firstDataReceived) {
-        // Stream ended without a done event but had partial content — seal it
+      } else {
+        // Stream closed or aborted before done — reset bubble and fall through to poll
         setMessages(prev => {
           const msgs = [...prev];
           const last = msgs[msgs.length - 1];
-          if (last?.role === 'assistant' && last.content) {
-            msgs[msgs.length - 1] = { ...last, _ts: Date.now() };
-            setCachedMessages(agent.id, msgs);
+          if (last?.role === 'assistant') {
+            msgs[msgs.length - 1] = { ...last, content: '', _ts: undefined };
           }
           return msgs;
         });
-        sseSucceeded = true;
       }
-      // else: timeout aborted, no data received — fall through to poll
     } catch (err) {
       if (err instanceof ApiError && err.status === 429) {
         const resetIn = fmtResetAt(quota?.resetAt);
