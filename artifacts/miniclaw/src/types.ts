@@ -74,6 +74,9 @@ export interface Agent {
   // Model info — returned on agent detail, awareness, and settings GET
   modelInfo?: ModelInfo;
 
+  // Suggested quick-reply chips — returned on list and detail endpoints
+  suggestedChips?: string[];
+
   // Detail-only fields — only populated on GET /v1/hosted-agents/:id
   tokenCostUsd?: number | null;
   celoBalance?: number | null;
@@ -151,6 +154,9 @@ export interface UpdateAgentPayload {
   personalContext?: string;
   humorStyle?: HumorStyle;
   premiumModel?: string | null;
+  preferredLanguage?: string | null;
+  webhookUrl?: string | null;
+  personaTemplate?: string;
 }
 
 // PUT /:id/settings — settings-only update

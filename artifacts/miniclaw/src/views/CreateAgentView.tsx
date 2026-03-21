@@ -98,7 +98,7 @@ Your motto: "Every AI tool is a potential income stream. Let's find yours."`,
   {
     id: 'digital-creator-coach',
     emoji: '🎬',
-    icon: 'video',
+    icon: 'clapperboard',
     name: 'Digital Creator Coach',
     tagline: 'Grow on TikTok, YouTube Shorts, turn followers into income',
     color: '#ef4444',
@@ -242,7 +242,7 @@ Your motto: "The right proposal, the right niche, the right rate — that's your
   {
     id: 'distribution-strategist',
     emoji: '📡',
-    icon: 'radio',
+    icon: 'radio-tower',
     name: 'Distribution Strategist',
     tagline: 'Get your product in front of thousands, track virality',
     color: '#10b981',

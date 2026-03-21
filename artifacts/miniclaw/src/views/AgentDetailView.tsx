@@ -357,46 +357,6 @@ function AgentHeader({
   );
 }
 
-// --- Quick reply chips per persona ---
-
-const PERSONA_CHIPS: Record<string, string[]> = {
-  'ai hustle builder': ['Find me a gig', "What's trending in AI?", 'Help me write a proposal', 'Track my income'],
-  'market analyst': ['Latest market update', 'Best opportunities today', 'Analyze this token', 'Portfolio summary'],
-  'content creator': ['Content ideas for today', 'Help me write a post', 'What is trending?', 'Schedule my week'],
-  'researcher': ['Summarize recent news', 'Deep dive on topic', 'Find sources', 'Latest developments'],
-  'reminder bot': ['Set a reminder', 'What do I have today?', 'Morning briefing', 'Upcoming tasks'],
-  'default': ['What can you do?', 'Give me a summary', 'What did you find?', 'Anything new?'],
-};
-
-function getPersonaChips(agent: Agent): string[] {
-  const nameLower = agent.name?.toLowerCase() ?? '';
-  const descLower = agent.description?.toLowerCase() ?? '';
-  const combined = `${nameLower} ${descLower}`;
-
-  for (const [key, chips] of Object.entries(PERSONA_CHIPS)) {
-    if (key === 'default') continue;
-    if (combined.includes(key)) return chips;
-  }
-
-  // Fallback based on keywords
-  if (combined.includes('gig') || combined.includes('hustle') || combined.includes('income')) {
-    return PERSONA_CHIPS['ai hustle builder'];
-  }
-  if (combined.includes('market') || combined.includes('crypto') || combined.includes('price')) {
-    return PERSONA_CHIPS['market analyst'];
-  }
-  if (combined.includes('content') || combined.includes('post') || combined.includes('write')) {
-    return PERSONA_CHIPS['content creator'];
-  }
-  if (combined.includes('research') || combined.includes('news') || combined.includes('analys')) {
-    return PERSONA_CHIPS['researcher'];
-  }
-  if (combined.includes('remind') || combined.includes('schedule') || combined.includes('task')) {
-    return PERSONA_CHIPS['reminder bot'];
-  }
-
-  return PERSONA_CHIPS['default'];
-}
 
 // --- localStorage message cache ---
 
@@ -546,8 +506,8 @@ function ChatTab({
   const [messages, setMessages] = useState<LocalMessage[]>(initialMessages);
   const [input, setInput] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
+  const [chips, setChips] = useState<string[]>(agent.suggestedChips ?? []);
   const endRef = useRef<HTMLDivElement>(null);
-  const chips = getPersonaChips(agent);
 
   useEffect(() => {
     if (conversations && conversations.length > 0 && !activeConversationId) {
@@ -671,23 +631,30 @@ function ChatTab({
           if (data === '[DONE]') continue;
           try {
             const parsed: {
-              type: string;
+              type?: string;
+              done?: boolean;
               content?: string;
               conversationId?: number;
               messageId?: number | string;
               tokensUsed?: number;
               message?: string;
+              error?: string;
+              suggestedChips?: string[];
             } = JSON.parse(data);
 
             if (parsed.messageId) {
               pendingMessageId = String(parsed.messageId);
             }
 
-            if (parsed.type === 'done') {
+            const isDone = parsed.type === 'done' || parsed.done === true;
+            if (isDone) {
               clearTimeout(sseTimeout);
               if (parsed.conversationId != null && !activeConversationId) {
                 setActiveConversationId(String(parsed.conversationId));
                 refetchConversations();
+              }
+              if (parsed.suggestedChips && parsed.suggestedChips.length > 0) {
+                setChips(parsed.suggestedChips);
               }
               setMessages(prev => {
                 const msgs = [...prev];
@@ -701,19 +668,18 @@ function ChatTab({
               continue;
             }
 
-            if (parsed.type === 'error') {
+            const isError = parsed.type === 'error' || (parsed.error != null && !isDone);
+            if (isError) {
               clearTimeout(sseTimeout);
               setMessages(prev => [
                 ...prev.slice(0, -1),
-                { role: 'system', content: parsed.message ?? 'The agent encountered an error.', _ts: Date.now() }
+                { role: 'system', content: parsed.error ?? parsed.message ?? 'The agent encountered an error.', _ts: Date.now() }
               ]);
               continue;
             }
 
-            if (parsed.type !== 'stream') continue;
-
             const chunk = parsed.content ?? '';
-            if (chunk) {
+            if (chunk && parsed.type !== 'done' && !parsed.done) {
               gotAnyData = true;
               setMessages(prev => {
                 const msgs = [...prev];
