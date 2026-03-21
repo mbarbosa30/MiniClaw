@@ -15,6 +15,7 @@ import {
   useIdentity, useRegisterIdentity,
   useToken,
   useEconomy,
+  useGiftOwner,
   useCommerceRequest,
 } from '@/hooks/use-agents';
 import { apiFetch } from '@/lib/api-client';

@@ -28,7 +28,7 @@ function phaseColor(phase: string): string {
 
 // --- Awareness section ---
 
-function AwarenessSection({ agentId }: { agentId: string }) {
+function AwarenessSection({ agentId, onEconomy }: { agentId: string; onEconomy: () => void }) {
   const t = useTheme();
   const { data, isLoading } = useAwareness(agentId);
 
@@ -154,15 +154,18 @@ function AwarenessSection({ agentId }: { agentId: string }) {
         }} />
       </div>
 
-      {/* Onchain dots + stats */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+      {/* Onchain dots + Economy shortcut */}
+      <button
+        onClick={onEconomy}
+        style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', background: 'none', border: 'none', padding: 0, cursor: 'pointer', width: '100%', textAlign: 'left' }}
+      >
         <OnchainDot done={onchain.wallet} label="wallet" />
         <OnchainDot done={onchain.token} label="token" />
         <OnchainDot done={onchain.identity} label="identity" />
         <span style={{ marginLeft: 'auto', fontFamily: 'ui-monospace, Menlo, monospace', fontSize: 9, color: t.faint, letterSpacing: '0.02em' }}>
-          {data.memoriesLearned ?? 0}m · {data.conversationCount ?? 0}c · {data.messageCount ?? 0}msg
+          economy →
         </span>
-      </div>
+      </button>
 
       {/* Economy awareness badge + tools */}
       {(economyAware || visibleTools.length > 0) && (
@@ -513,7 +516,7 @@ export function AgentDetailView() {
         onPending={() => push('tasks', { id })}
         quota={quota}
       />
-      <AwarenessSection agentId={id} />
+      <AwarenessSection agentId={id} onEconomy={() => push('economy', { id })} />
       <div style={{ flex: 1, overflow: 'hidden' }}>
         <ChatTab
           agent={agent}
