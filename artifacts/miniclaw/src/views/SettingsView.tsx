@@ -14,10 +14,10 @@ const NOTIF_LABEL: Record<TelegramNotificationLevel, string> = {
 };
 
 const LANGUAGE_CHIPS = ['English', 'French', 'Swahili', 'Hausa', 'Yoruba', 'Amharic', 'Portuguese', 'Arabic'];
-const EXP_LEVELS = [
+const EXP_LEVELS: { value: 'beginner' | 'intermediate' | 'expert'; label: string }[] = [
   { value: 'beginner', label: 'Beginner' },
-  { value: 'intermediate', label: 'Intermediate' },
-  { value: 'expert', label: 'Expert' },
+  { value: 'intermediate', label: 'Growing' },
+  { value: 'expert', label: 'Advanced' },
 ];
 
 const FONT = 'ui-monospace, Menlo, monospace';
