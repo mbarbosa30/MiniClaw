@@ -144,7 +144,7 @@ function Hero() {
           Join the waitlist →
         </button>
         <span style={{ ...MONO, fontSize: 10, color: T.faint, letterSpacing: '0.05em' }}>
-          Free during beta · No setup · Works in MiniPay on Celo
+          Free during beta · No setup · Built for MiniPay on Celo
         </span>
       </div>
     </section>
