@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, MoreHorizontal, X, TrendingUp, Bot } from 'lucide-react';
 import { useTheme } from '@/lib/theme';
@@ -309,10 +309,6 @@ function AgentRow({
               letterSpacing: '0.07em',
               textTransform: 'uppercase',
               color: pColor,
-              background: `${pColor}1a`,
-              border: `1px solid ${pColor}40`,
-              borderRadius: 3,
-              padding: '2px 5px',
               whiteSpace: 'nowrap',
             }}>
               {awareness.label || awareness.phase}
@@ -383,6 +379,17 @@ export function HomeView() {
   const agents = apiAgents.length > 0 ? apiAgents : cachedAgents;
   const showSkeleton = isLoading && agents.length === 0;
 
+  const quotaGradient = useMemo(() => {
+    const withQuota = agents.filter(a => a.quota?.tokensLimit);
+    if (withQuota.length === 0) return null;
+    const totalUsed = withQuota.reduce((s, a) => s + (a.quota?.tokensUsed ?? 0), 0);
+    const totalLimit = withQuota.reduce((s, a) => s + (a.quota?.tokensLimit ?? 0), 0);
+    const remaining = Math.max(0, Math.min(1, (totalLimit - totalUsed) / totalLimit));
+    const color = remaining > 0.5 ? '#6366f1' : remaining > 0.2 ? '#f59e0b' : '#ef4444';
+    const opacity = 0.12 + remaining * 0.32;
+    return { color, opacity };
+  }, [agents]);
+
   const briefItem: DailyBriefItem | null = briefDismissed ? null : (briefs?.[0] ?? null);
 
   const handleDismissBrief = () => {
@@ -444,7 +451,7 @@ export function HomeView() {
       style={{ padding: '40px 32px 0', background: t.bg, transition: 'background 0.3s ease' }}
     >
       {/* Title + Growth button row */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 40 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
         <p style={{
           fontSize: 22,
           fontWeight: 200,
@@ -473,6 +480,19 @@ export function HomeView() {
           </span>
         </button>
       </div>
+
+      {/* Quota gradient separator */}
+      {quotaGradient && (
+        <div style={{
+          height: 1,
+          background: `linear-gradient(to right, transparent, ${quotaGradient.color})`,
+          opacity: quotaGradient.opacity,
+          marginLeft: -32,
+          marginRight: -32,
+          marginBottom: 28,
+        }} />
+      )}
+      {!quotaGradient && <div style={{ marginBottom: 28 }} />}
 
       {/* Daily Brief */}
       <AnimatePresence>
