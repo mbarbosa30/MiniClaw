@@ -331,7 +331,7 @@ function AgentHeader({
         {/* Center */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, overflow: 'hidden' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 5, maxWidth: '100%', overflow: 'hidden' }}>
-            {(() => { const Icon = resolveIcon(agent.icon) ?? Bot; return <Icon size={12} strokeWidth={1.5} color={t.faint} style={{ flexShrink: 0 }} />; })()}
+            {(() => { const Icon = resolveIcon(agent.icon) ?? Bot; return <Icon size={13} strokeWidth={1.5} color={t.faint} style={{ flexShrink: 0 }} />; })()}
             <span style={{
               fontSize: 13,
               fontWeight: 300,
