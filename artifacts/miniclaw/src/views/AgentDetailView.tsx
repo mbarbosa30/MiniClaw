@@ -3,9 +3,9 @@ import { useAgent, useConversations, useMessages, useAwareness } from '@/hooks/u
 import { useRouter } from '@/lib/store';
 import { useTheme } from '@/lib/theme';
 import { Button } from '@/components/ui';
-import { MoreHorizontal } from 'lucide-react';
+import { MoreHorizontal, Bot } from 'lucide-react';
 import { apiFetchStream, apiFetch, ApiError } from '@/lib/api-client';
-import { AgentIcon } from '@/lib/agent-icon';
+import { resolveIcon } from '@/lib/agent-icon';
 import type { Agent, ChatMessage } from '@/types';
 
 const DOT_COLOR: Record<string, string> = {
@@ -329,15 +329,9 @@ function AgentHeader({
         </div>
 
         {/* Center */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4, overflow: 'hidden' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, maxWidth: '100%', overflow: 'hidden' }}>
-            <AgentIcon
-              iconName={agent.icon}
-              emoji={agent.emoji}
-              size={11}
-              containerSize={20}
-              borderRadius={5}
-            />
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, overflow: 'hidden' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5, maxWidth: '100%', overflow: 'hidden' }}>
+            {(() => { const Icon = resolveIcon(agent.icon) ?? Bot; return <Icon size={12} strokeWidth={1.5} color={t.faint} style={{ flexShrink: 0 }} />; })()}
             <span style={{
               fontSize: 13,
               fontWeight: 300,
@@ -352,10 +346,10 @@ function AgentHeader({
               {agent.name || 'Agent'}
             </span>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 5, maxWidth: '100%', overflow: 'hidden' }}>
-            <span style={{ display: 'block', width: 5, height: 5, borderRadius: '50%', background: dotColor, flexShrink: 0 }} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4, maxWidth: '100%', overflow: 'hidden' }}>
+            <span style={{ display: 'block', width: 4, height: 4, borderRadius: '50%', background: dotColor, flexShrink: 0 }} />
             <span style={{
-              fontSize: 11,
+              fontSize: 9,
               fontWeight: 300,
               color: t.faint,
               letterSpacing: '0.01em',
