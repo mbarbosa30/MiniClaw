@@ -283,6 +283,18 @@ function ProfileSection() {
                 {lang}
               </button>
             ))}
+            {currentLangs
+              .filter(lang => !LANGUAGE_CHIPS.includes(lang))
+              .map(lang => (
+                <button
+                  key={lang}
+                  onClick={() => toggleLanguage(lang)}
+                  style={{ ...chipStyle(true), display: 'flex', alignItems: 'center', gap: 4 }}
+                >
+                  {lang}
+                  <span style={{ opacity: 0.7, fontSize: 12, lineHeight: 1 }}>×</span>
+                </button>
+              ))}
           </div>
         </div>
       </div>
