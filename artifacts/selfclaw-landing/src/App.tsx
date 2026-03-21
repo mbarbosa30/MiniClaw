@@ -144,7 +144,7 @@ function Hero() {
           Join the waitlist →
         </button>
         <span style={{ ...MONO, fontSize: 10, color: T.faint, letterSpacing: '0.05em' }}>
-          Free during beta · No setup · Frontier models included
+          Freemium · No setup · Start in seconds
         </span>
       </div>
     </section>
