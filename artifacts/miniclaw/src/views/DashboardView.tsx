@@ -122,7 +122,7 @@ function AgentCard({ agent, i }: { agent: Agent; i: number }) {
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 14 }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 }}>
-            <span style={{ fontSize: 16, fontWeight: 400, color: t.text, letterSpacing: '-0.015em', lineHeight: 1 }}>
+            <span style={{ fontSize: 16, fontWeight: 300, color: t.text, letterSpacing: '-0.015em', lineHeight: 1 }}>
               {agent.name}
             </span>
             <StateIndicator state={state} />
@@ -190,7 +190,6 @@ function AgentCard({ agent, i }: { agent: Agent; i: number }) {
           label="PoC Score"
           value={`${agent.pocScore.totalScore} pts`}
           bar={agent.pocScore.totalScore / 100}
-          barColor="#818cf8"
         />
       )}
 

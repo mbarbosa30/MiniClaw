@@ -485,7 +485,7 @@ export function HomeView() {
       </AnimatePresence>
 
       {isError && (
-        <p style={{ fontSize: 11, color: '#f87171', letterSpacing: '-0.01em', marginBottom: 16 }}>
+        <p style={{ fontSize: 11, color: '#ef4444', letterSpacing: '-0.01em', marginBottom: 16 }}>
           Could not load agents. Check your connection.
         </p>
       )}

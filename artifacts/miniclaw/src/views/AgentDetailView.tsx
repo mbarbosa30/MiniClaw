@@ -77,7 +77,7 @@ function AwarenessSection({ agentId, onEconomy }: { agentId: string; onEconomy: 
       {done ? (
         <svg width="8" height="8" viewBox="0 0 8 8" fill="none" style={{ flexShrink: 0 }}>
           <circle cx="4" cy="4" r="3.5" fill="#22c55e" />
-          <path d="M2.2 4l1.2 1.2 2.4-2.4" stroke="#0f0f0f" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M2.2 4l1.2 1.2 2.4-2.4" stroke={t.bg} strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       ) : (
         <div style={{
