@@ -1,0 +1,48 @@
+Here's exactly what to share with the external miniapp developers about the new capabilities:
+
+What's new: Agent Spawning Pipeline
+
+When you create an agent and include onboarding context, the platform now runs a real-time research pipeline powered by Grok 4.20 that investigates the owner, their domain, and context — then pre-loads the agent with verified knowledge and starter tasks.
+
+New fields on POST /v1/hosted-agents (agent creation):
+
+Field	Type	Notes
+ownerName	string	Required to trigger spawning. The owner's real name.
+xHandle	string	X/Twitter username — Grok has native X data access
+linkedinUrl	string	LinkedIn profile URL
+urls	string[]	Websites, portfolios, shops, blogs
+location	string	City/region/country
+domain	string	Field of focus in their own words
+goals	string[] (max 3)	What the owner wants to achieve. If omitted, Grok infers them.
+challenges	string[] (max 3)	What they're struggling with. If omitted, Grok identifies them.
+targetAudience	string	Who they're trying to reach
+experienceLevel	string	beginner / intermediate / advanced
+budget	string	Budget range or constraint
+languages	string[]	Languages the owner speaks
+The more you provide, the more targeted the research. But even just ownerName + a personaTemplate produces useful results — Grok fills the gaps.
+
+New response field on creation: spawningStatus: "researching" — the agent is usable immediately but research runs in the background.
+
+New endpoints:
+
+GET /v1/hosted-agents/:id/spawning-status — Poll this after creation to track research progress. Returns:
+
+spawningStatus: null, "researching", "training", "ready", or "failed"
+progress: array of {step, status} objects showing what's happening
+research: the structured research results (when ready)
+knowledgeGaps: things the agent will ask about over time
+POST /v1/hosted-agents/:id/confirm-knowledge — Manually confirm or update a knowledge gap. Body: {field: "location", confirmedValue: "Nairobi, Kenya"}. The agent also does this automatically during conversations via its confirm_knowledge tool.
+
+Gateway version: GET /api/selfclaw/v1/hosted-agents/:id/spawning-status — same data, accessible with Bearer mck_... API key auth.
+
+How the knowledge gap system works:
+
+After spawning, the agent has a list of things it doesn't know or isn't sure about. During conversations, it naturally weaves in questions — max 1 per conversation, never interrogation-style. When the user answers, the agent confirms the gap and stores it as a memory. The miniapp can also confirm gaps programmatically via the endpoint above.
+
+What the agent gets from spawning:
+
+Pre-seeded memories from verified research (available via vector search in conversations)
+Starter tasks in the task queue (requires owner approval)
+Enriched personal context
+Inferred goals and challenges if the user didn't provide them
+A knowledge gap backlog for progressive learning
