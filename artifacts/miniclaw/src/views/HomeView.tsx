@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, MoreHorizontal, X, TrendingUp, Bot } from 'lucide-react';
 import { useTheme } from '@/lib/theme';
 import { useRouter, useAppStore } from '@/lib/store';
-import { useAgents, useTasks, useActivity, useAwareness } from '@/hooks/use-agents';
+import { useAgents, useTasks, useAwareness, useDailyBrief } from '@/hooks/use-agents';
 import { StateIndicator, agentVisualState, STATE_COLOR, STATE_LABEL } from '@/components/StateIndicator';
 import { resolveIcon } from '@/lib/agent-icon';
 import type { Agent, DailyBriefItem } from '@/types';
@@ -113,40 +113,6 @@ function DailyBriefCard({
   );
 }
 
-// --- Agent Brief Fetcher (per agent) ---
-
-function useAgentBrief(agent: Agent | null) {
-  const { data: pendingTasks } = useTasks(agent?.id, 'pending');
-  const { data: activity } = useActivity(agent?.id);
-
-  if (!agent) return null;
-
-  const mostRecentTask = pendingTasks?.[0];
-  const mostRecentActivity = activity?.[0];
-
-  const taskFinding = mostRecentTask
-    ? (mostRecentTask.title || mostRecentTask.description || mostRecentTask.action || 'Found a pending task that needs your attention.')
-    : null;
-
-  const activityFinding = mostRecentActivity
-    ? (mostRecentActivity.summary || mostRecentActivity.description || mostRecentActivity.content || null)
-    : null;
-
-  const summary = taskFinding || activityFinding;
-  if (!summary) return null;
-
-  return {
-    agentId: agent.id,
-    agentName: agent.name,
-    highlight: {
-      type: taskFinding ? 'pending_task' : 'activity',
-      source: mostRecentTask?.skillId ?? mostRecentActivity?.type ?? '',
-      summary,
-      id: mostRecentTask?.id,
-      createdAt: mostRecentTask?.createdAt ?? (mostRecentActivity?.timestamp ?? mostRecentActivity?.createdAt),
-    },
-  } as import('@/types').DailyBriefItem;
-}
 
 // --- Phase pill helpers (mirrors AgentDetailView) ---
 
@@ -332,24 +298,6 @@ function SkeletonRow({ index }: { index: number }) {
   );
 }
 
-// --- Brief loading sub-component (fetches per-agent data) ---
-function BriefLoader({
-  agents,
-  onBriefReady,
-}: {
-  agents: Agent[];
-  onBriefReady: (brief: DailyBriefItem | null) => void;
-}) {
-  const firstAgent = agents[0] ?? null;
-  const brief = useAgentBrief(firstAgent);
-
-  useEffect(() => {
-    onBriefReady(brief ?? null);
-  }, [brief]);
-
-  return null;
-}
-
 const BRIEF_DISMISSED_KEY = 'miniclaw_brief_dismissed';
 
 function getBriefDismissedDate(): string | null {
@@ -375,7 +323,7 @@ export function HomeView() {
   const { data, isLoading, isError } = useAgents();
 
   const [cachedAgents, setCachedAgentsState] = useState<Agent[]>(() => getCachedAgents() ?? []);
-  const [briefItem, setBriefItem] = useState<DailyBriefItem | null>(null);
+  const { data: briefs } = useDailyBrief();
   const [briefDismissed, setBriefDismissedState] = useState(() => {
     const dismissed = getBriefDismissedDate();
     return dismissed === new Date().toDateString();
@@ -394,6 +342,8 @@ export function HomeView() {
   const agents = apiAgents.length > 0 ? apiAgents : cachedAgents;
   const showSkeleton = isLoading && agents.length === 0;
 
+  const briefItem: DailyBriefItem | null = briefDismissed ? null : (briefs?.[0] ?? null);
+
   const handleDismissBrief = () => {
     setBriefDismissedState(true);
     setBriefDismissed();
@@ -408,7 +358,7 @@ export function HomeView() {
     }
   };
 
-  const showBrief = briefItem && !briefDismissed && agents.length > 0;
+  const showBrief = briefItem && agents.length > 0;
 
   useEffect(() => {
     if (!isLoading && !isError && agents.length === 0 && !hasSeenOnboard) {
@@ -494,16 +444,6 @@ export function HomeView() {
           />
         )}
       </AnimatePresence>
-
-      {/* Load brief data (only when agents are loaded) */}
-      {agents.length > 0 && !briefDismissed && (
-        <BriefLoader
-          agents={agents}
-          onBriefReady={(b) => {
-            if (b && !briefItem) setBriefItem(b);
-          }}
-        />
-      )}
 
       {isError && (
         <p style={{ fontSize: 11, color: '#f87171', letterSpacing: '-0.01em', marginBottom: 16 }}>
