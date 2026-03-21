@@ -275,7 +275,7 @@ function AgentRow({
           const time = dotIdx >= 0 ? cleaned.slice(dotIdx) : null;
           return (
             <span style={{ fontSize: 10, color: t.label, fontStyle: 'italic', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0, flex: 1 }}>
-              {desc}{time && <span style={{ color: t.faint, opacity: 0.7 }}>{time}</span>}
+              {desc}{time && <span style={{ color: t.faint, opacity: 0.7, fontSize: 9 }}>{time}</span>}
             </span>
           );
         })()}
