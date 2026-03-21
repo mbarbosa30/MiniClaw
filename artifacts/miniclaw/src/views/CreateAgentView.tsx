@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTemplates, useCreateAgent, useUpdateSoul, useAddKnowledge } from '@/hooks/use-agents';
 import { apiFetch } from '@/lib/api-client';
 import { useRouter, useAppStore } from '@/lib/store';
 import { useTheme } from '@/lib/theme';
 import { resolveIcon } from '@/lib/agent-icon';
+import type { HumorStyle } from '@/types';
 
 interface PersonaConfig {
   id: string;
@@ -17,7 +18,7 @@ interface PersonaConfig {
   enabledSkills: string[];
   interests: string[];
   topicsToWatch: string[];
-  humorStyle: 'straight';
+  humorStyle: HumorStyle;
   soul: string;
 }
 
@@ -26,6 +27,24 @@ interface UserInfo {
   country: string;
   goal: string;
 }
+
+interface ProjectEntry {
+  url: string;
+  title?: string;
+  description?: string;
+  fetchStatus: 'loading' | 'ready' | 'error';
+}
+
+const HUMOR_STYLES: HumorStyle[] = ['straight', 'dry-wit', 'playful', 'sarcastic', 'absurdist'];
+const HUMOR_LABEL: Record<HumorStyle, string> = {
+  straight: 'No fluff',
+  'dry-wit': 'Sharp',
+  playful: 'Fun',
+  sarcastic: 'Edgy',
+  absurdist: 'Weird',
+};
+
+const MAX_PROJECTS = 5;
 
 const PERSONAS: PersonaConfig[] = [
   {
@@ -586,9 +605,14 @@ function PersonalizeStep({
   userName,
   userCountry,
   userGoal,
+  humorStyle,
+  projects,
   onChangeName,
   onChangeCountry,
   onChangeGoal,
+  onChangeHumorStyle,
+  onAddProject,
+  onRemoveProject,
   onBack,
   onSkip,
   onLaunch,
@@ -599,9 +623,14 @@ function PersonalizeStep({
   userName: string;
   userCountry: string;
   userGoal: string;
+  humorStyle: HumorStyle;
+  projects: ProjectEntry[];
   onChangeName: (v: string) => void;
   onChangeCountry: (v: string) => void;
   onChangeGoal: (v: string) => void;
+  onChangeHumorStyle: (s: HumorStyle) => void;
+  onAddProject: (url: string) => void;
+  onRemoveProject: (idx: number) => void;
   onBack: () => void;
   onSkip: () => void;
   onLaunch: () => void;
@@ -609,6 +638,30 @@ function PersonalizeStep({
   error: string | null;
 }) {
   const t = useTheme();
+  const [urlInput, setUrlInput] = useState('');
+
+  const handleAddUrl = () => {
+    const raw = urlInput.trim();
+    if (!raw) return;
+    const url = raw.startsWith('http://') || raw.startsWith('https://') ? raw : `https://${raw}`;
+    setUrlInput('');
+    onAddProject(url);
+  };
+
+  const inputStyle: React.CSSProperties = {
+    width: '100%',
+    background: t.surface,
+    border: `1px solid ${t.divider}`,
+    borderRadius: 10,
+    padding: '13px 16px',
+    fontSize: 15,
+    color: t.text,
+    fontFamily: FONT,
+    letterSpacing: '-0.01em',
+    outline: 'none',
+    boxSizing: 'border-box',
+  };
+
   return (
     <motion.div
       key="personalize"
@@ -624,6 +677,7 @@ function PersonalizeStep({
         fontFamily: FONT,
       }}
     >
+      {/* ── HEADER ── */}
       <div style={{ padding: '56px 32px 24px', flexShrink: 0, position: 'relative' }}>
         <button
           onClick={onBack}
@@ -646,25 +700,12 @@ function PersonalizeStep({
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
           <div style={{ width: 3, height: 28, background: persona.color, borderRadius: 2, flexShrink: 0 }} />
-          <p style={{
-            fontSize: 20,
-            fontWeight: 300,
-            letterSpacing: '-0.03em',
-            color: t.text,
-            lineHeight: 1.1,
-          }}>
+          <p style={{ fontSize: 20, fontWeight: 300, letterSpacing: '-0.03em', color: t.text, lineHeight: 1.1 }}>
             {persona.name}
           </p>
         </div>
 
-        <p style={{
-          fontSize: 28,
-          fontWeight: 200,
-          letterSpacing: '-0.04em',
-          color: t.text,
-          lineHeight: 1.1,
-          marginBottom: 8,
-        }}>
+        <p style={{ fontSize: 28, fontWeight: 200, letterSpacing: '-0.04em', color: t.text, lineHeight: 1.1, marginBottom: 8 }}>
           Tell us a bit<br />about yourself.
         </p>
         <p style={{ fontSize: 12, color: t.label, letterSpacing: '-0.01em', lineHeight: 1.5 }}>
@@ -680,88 +721,234 @@ function PersonalizeStep({
         </div>
       )}
 
-      <div className="no-scrollbar" style={{ flex: 1, overflowY: 'auto', padding: '24px 32px' }}>
+      {/* ── SCROLLABLE BODY ── */}
+      <div className="no-scrollbar" style={{ flex: 1, overflowY: 'auto', padding: '24px 32px 8px' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+
+          {/* First name */}
           <div>
             <p style={{ ...MONO, fontSize: 9, color: t.faint, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
               First name
             </p>
-            <input
-              type="text"
-              value={userName}
-              onChange={e => onChangeName(e.target.value)}
-              placeholder="e.g. Amara"
-              disabled={creating}
-              style={{
-                width: '100%',
-                background: t.surface,
-                border: `1px solid ${t.divider}`,
-                borderRadius: 10,
-                padding: '13px 16px',
-                fontSize: 15,
-                color: t.text,
-                fontFamily: FONT,
-                letterSpacing: '-0.01em',
-                outline: 'none',
-                boxSizing: 'border-box',
-              }}
-            />
+            <input type="text" value={userName} onChange={e => onChangeName(e.target.value)}
+              placeholder="e.g. Amara" disabled={creating} style={inputStyle} />
           </div>
 
+          {/* Country */}
           <div>
             <p style={{ ...MONO, fontSize: 9, color: t.faint, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
               Country / Region
             </p>
-            <input
-              type="text"
-              value={userCountry}
-              onChange={e => onChangeCountry(e.target.value)}
-              placeholder="e.g. Nigeria, Kenya, Brazil"
-              disabled={creating}
-              style={{
-                width: '100%',
-                background: t.surface,
-                border: `1px solid ${t.divider}`,
-                borderRadius: 10,
-                padding: '13px 16px',
-                fontSize: 15,
-                color: t.text,
-                fontFamily: FONT,
-                letterSpacing: '-0.01em',
-                outline: 'none',
-                boxSizing: 'border-box',
-              }}
-            />
+            <input type="text" value={userCountry} onChange={e => onChangeCountry(e.target.value)}
+              placeholder="e.g. Nigeria, Kenya, Brazil" disabled={creating} style={inputStyle} />
           </div>
 
+          {/* Goal */}
           <div>
             <p style={{ ...MONO, fontSize: 9, color: t.faint, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
               What are you working on?
             </p>
-            <input
-              type="text"
-              value={userGoal}
-              onChange={e => onChangeGoal(e.target.value)}
-              placeholder="e.g. Starting a TikTok shop, freelancing on Fiverr…"
-              disabled={creating}
-              style={{
-                width: '100%',
-                background: t.surface,
-                border: `1px solid ${t.divider}`,
-                borderRadius: 10,
-                padding: '13px 16px',
-                fontSize: 15,
-                color: t.text,
-                fontFamily: FONT,
-                letterSpacing: '-0.01em',
-                outline: 'none',
-                boxSizing: 'border-box',
-              }}
-            />
+            <input type="text" value={userGoal} onChange={e => onChangeGoal(e.target.value)}
+              placeholder="e.g. Starting a TikTok shop, freelancing on Fiverr…" disabled={creating} style={inputStyle} />
           </div>
+
+          {/* ── VIBE ── */}
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+              <div style={{ flex: 1, height: 1, background: t.divider }} />
+              <p style={{ ...MONO, fontSize: 9, color: t.faint, textTransform: 'uppercase', letterSpacing: '0.08em', flexShrink: 0 }}>
+                Vibe
+              </p>
+              <div style={{ flex: 1, height: 1, background: t.divider }} />
+            </div>
+            <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
+              {HUMOR_STYLES.map(style => {
+                const active = humorStyle === style;
+                return (
+                  <button
+                    key={style}
+                    onClick={() => onChangeHumorStyle(style)}
+                    disabled={creating}
+                    style={{
+                      padding: '7px 14px',
+                      borderRadius: 100,
+                      border: `1.5px solid ${active ? persona.color : t.divider}`,
+                      background: active ? `${persona.color}18` : 'transparent',
+                      color: active ? persona.color : t.label,
+                      fontSize: 12,
+                      fontWeight: active ? 600 : 400,
+                      letterSpacing: '-0.01em',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s',
+                      fontFamily: FONT,
+                    }}
+                  >
+                    {HUMOR_LABEL[style]}
+                  </button>
+                );
+              })}
+            </div>
+            <p style={{ fontSize: 10, color: t.faint, marginTop: 8, letterSpacing: '-0.005em' }}>
+              How your agent communicates — optional, change anytime.
+            </p>
+          </div>
+
+          {/* ── PROJECTS ── */}
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+              <div style={{ flex: 1, height: 1, background: t.divider }} />
+              <p style={{ ...MONO, fontSize: 9, color: t.faint, textTransform: 'uppercase', letterSpacing: '0.08em', flexShrink: 0 }}>
+                My projects
+              </p>
+              <div style={{ flex: 1, height: 1, background: t.divider }} />
+            </div>
+
+            <p style={{ fontSize: 11, color: t.label, letterSpacing: '-0.005em', lineHeight: 1.5, marginBottom: 12 }}>
+              Share links to your work — your agent will read them so it knows your projects from the start.
+            </p>
+
+            {/* URL input row */}
+            {projects.length < MAX_PROJECTS && (
+              <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+                <input
+                  type="url"
+                  value={urlInput}
+                  onChange={e => setUrlInput(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddUrl(); } }}
+                  placeholder="e.g. tiktok.com/@yourhandle"
+                  disabled={creating}
+                  style={{
+                    flex: 1,
+                    background: t.surface,
+                    border: `1px solid ${t.divider}`,
+                    borderRadius: 10,
+                    padding: '11px 14px',
+                    fontSize: 13,
+                    color: t.text,
+                    fontFamily: FONT,
+                    letterSpacing: '-0.01em',
+                    outline: 'none',
+                    minWidth: 0,
+                  }}
+                />
+                <button
+                  onClick={handleAddUrl}
+                  disabled={creating || !urlInput.trim()}
+                  style={{
+                    flexShrink: 0,
+                    padding: '11px 16px',
+                    background: urlInput.trim() ? persona.color : t.surface,
+                    border: 'none',
+                    borderRadius: 10,
+                    color: urlInput.trim() ? '#fff' : t.faint,
+                    fontSize: 12,
+                    fontWeight: 500,
+                    cursor: urlInput.trim() ? 'pointer' : 'default',
+                    fontFamily: FONT,
+                    transition: 'all 0.15s',
+                    letterSpacing: '-0.01em',
+                  }}
+                >
+                  Add
+                </button>
+              </div>
+            )}
+
+            {projects.length >= MAX_PROJECTS && (
+              <p style={{ ...MONO, fontSize: 10, color: t.faint, marginBottom: 10 }}>
+                Max {MAX_PROJECTS} projects reached.
+              </p>
+            )}
+
+            {/* Project cards */}
+            {projects.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {projects.map((p, idx) => (
+                  <motion.div
+                    key={`${p.url}-${idx}`}
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.2 }}
+                    style={{
+                      background: t.surface,
+                      border: `1px solid ${t.divider}`,
+                      borderRadius: 10,
+                      padding: '10px 14px',
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: 10,
+                    }}
+                  >
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      {p.fetchStatus === 'loading' ? (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <OnboardingSpinner color={t.faint} />
+                          <span style={{ fontSize: 11, color: t.faint, letterSpacing: '-0.01em' }}>
+                            Fetching info…
+                          </span>
+                        </div>
+                      ) : (
+                        <>
+                          <p style={{
+                            fontSize: 12,
+                            fontWeight: 500,
+                            color: p.fetchStatus === 'error' ? t.faint : t.text,
+                            letterSpacing: '-0.01em',
+                            marginBottom: p.description ? 2 : 0,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                          }}>
+                            {p.title ?? new URL(p.url).hostname}
+                          </p>
+                          {p.description && (
+                            <p style={{
+                              fontSize: 10,
+                              color: t.faint,
+                              letterSpacing: '-0.005em',
+                              lineHeight: 1.4,
+                              display: '-webkit-box',
+                              WebkitLineClamp: 2,
+                              WebkitBoxOrient: 'vertical',
+                              overflow: 'hidden',
+                            }}>
+                              {p.description}
+                            </p>
+                          )}
+                          <p style={{ ...MONO, fontSize: 9, color: t.faint, marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {p.url}
+                          </p>
+                        </>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => onRemoveProject(idx)}
+                      disabled={creating}
+                      style={{
+                        flexShrink: 0,
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        color: t.faint,
+                        fontSize: 16,
+                        lineHeight: 1,
+                        padding: '0 2px',
+                        fontFamily: FONT,
+                      }}
+                    >
+                      ×
+                    </button>
+                  </motion.div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div style={{ height: 4 }} />
         </div>
       </div>
 
+      {/* ── BOTTOM CTA ── */}
       <div style={{ flexShrink: 0, padding: '16px 32px 32px', borderTop: `1px solid ${t.divider}` }}>
         <button
           onClick={onLaunch}
@@ -835,9 +1022,18 @@ export function CreateAgentView() {
   const [userName, setUserName] = useState('');
   const [userCountry, setUserCountry] = useState('');
   const [userGoal, setUserGoal] = useState('');
+  const [userHumorStyle, setUserHumorStyle] = useState<HumorStyle>('straight');
+  const [userProjects, setUserProjects] = useState<ProjectEntry[]>([]);
 
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (selectedPersona) {
+      setUserHumorStyle(selectedPersona.humorStyle ?? 'straight');
+      setUserProjects([]);
+    }
+  }, [selectedPersona]);
 
   const resolveTemplate = (preferredTemplateId: string): string => {
     if (!templates || templates.length === 0) return preferredTemplateId;
@@ -847,7 +1043,47 @@ export function CreateAgentView() {
     return fallback?.id ?? preferredTemplateId;
   };
 
-  const buildBriefContext = (persona: PersonaConfig, info: UserInfo): string => {
+  const fetchProjectMeta = async (url: string): Promise<{ title?: string; description?: string }> => {
+    try {
+      const res = await fetch(`https://api.microlink.io/?url=${encodeURIComponent(url)}`);
+      const data = await res.json();
+      if (data.status === 'success') {
+        return {
+          title: data.data?.title ?? undefined,
+          description: data.data?.description ?? undefined,
+        };
+      }
+    } catch {
+      // best-effort
+    }
+    return {};
+  };
+
+  const handleAddProject = (url: string) => {
+    if (userProjects.length >= MAX_PROJECTS) return;
+    const entry: ProjectEntry = { url, fetchStatus: 'loading' };
+    setUserProjects(prev => [...prev, entry]);
+    const idx = userProjects.length;
+    fetchProjectMeta(url).then(meta => {
+      setUserProjects(prev =>
+        prev.map((p, i) =>
+          i === idx
+            ? { ...p, ...meta, fetchStatus: 'ready' }
+            : p
+        )
+      );
+    }).catch(() => {
+      setUserProjects(prev =>
+        prev.map((p, i) => i === idx ? { ...p, fetchStatus: 'error' } : p)
+      );
+    });
+  };
+
+  const handleRemoveProject = (idx: number) => {
+    setUserProjects(prev => prev.filter((_, i) => i !== idx));
+  };
+
+  const buildBriefContext = (persona: PersonaConfig, info: UserInfo, projects: ProjectEntry[]): string => {
     const namePart = info.name.trim();
     const countryPart = info.country.trim();
     const goalPart = info.goal.trim();
@@ -860,21 +1096,43 @@ export function CreateAgentView() {
     let context = `${intro} `;
     if (goalPart) context += `I'm working on: ${goalPart}. `;
 
+    const readyProjects = projects.filter(p => p.fetchStatus === 'ready' || p.fetchStatus === 'error');
+    if (readyProjects.length > 0) {
+      const projectList = readyProjects.map(p => `${p.title ?? new URL(p.url).hostname} (${p.url})`).join(', ');
+      context += `My projects: ${projectList}. `;
+    }
+
     context += `Please introduce yourself as my ${persona.name} — ${persona.tagline.endsWith('.') ? persona.tagline.slice(0, -1).toLowerCase() : persona.tagline.toLowerCase()} — and ask me one focused question to understand what I want to achieve with you.`;
 
     return context;
   };
 
-  const buildUserContextSoul = (persona: PersonaConfig, info: UserInfo): string => {
+  const buildUserContextSoul = (persona: PersonaConfig, info: UserInfo, projects: ProjectEntry[]): string => {
     const lines: string[] = [];
     if (info.name.trim()) lines.push(`User's name: ${info.name.trim()}`);
     if (info.country.trim()) lines.push(`Location: ${info.country.trim()}`);
     if (info.goal.trim()) lines.push(`Currently working on: ${info.goal.trim()}`);
-    if (lines.length === 0) return persona.soul;
-    return `${persona.soul}\n\n## About the User\n${lines.join('\n')}\n\nGreet the user by name when they first message you, introduce yourself in your persona voice, and ask one focused follow-up question about their goal.`;
+
+    const readyProjects = projects.filter(p => p.fetchStatus === 'ready' || p.fetchStatus === 'error');
+
+    let soul = persona.soul;
+
+    if (lines.length > 0) {
+      soul += `\n\n## About the User\n${lines.join('\n')}\n\nGreet the user by name when they first message you, introduce yourself in your persona voice, and ask one focused follow-up question about their goal.`;
+    }
+
+    if (readyProjects.length > 0) {
+      const projectLines = readyProjects.map(p => {
+        const name = p.title ?? new URL(p.url).hostname;
+        return p.description ? `- ${name} (${p.url}): ${p.description}` : `- ${name} (${p.url})`;
+      });
+      soul += `\n\n## User's Projects\n${projectLines.join('\n')}\n\nReference the user's projects when relevant to give contextual, specific advice.`;
+    }
+
+    return soul;
   };
 
-  const handleLaunch = async (persona: PersonaConfig, info: UserInfo) => {
+  const handleLaunch = async (persona: PersonaConfig, info: UserInfo, humor: HumorStyle, projects: ProjectEntry[]) => {
     if (creating) return;
     setCreating(true);
     setError(null);
@@ -884,7 +1142,7 @@ export function CreateAgentView() {
       const result = await create.mutateAsync({
         name: persona.name,
         description: persona.tagline,
-        humorStyle: persona.humorStyle,
+        humorStyle: humor,
         personaTemplate: templateId,
         interests: persona.interests,
         topicsToWatch: persona.topicsToWatch,
@@ -892,13 +1150,23 @@ export function CreateAgentView() {
       });
 
       const newAgent = result.agent;
-      const enrichedSoul = buildUserContextSoul(persona, info);
+      const enrichedSoul = buildUserContextSoul(persona, info, projects);
       updateSoul.mutate({ agentId: newAgent.id, soul: enrichedSoul });
 
       const knowledgeTasks: Array<{ title: string; content: string }> = [];
       if (info.name.trim()) knowledgeTasks.push({ title: 'User name', content: info.name.trim() });
       if (info.country.trim()) knowledgeTasks.push({ title: 'User location', content: info.country.trim() });
       if (info.goal.trim()) knowledgeTasks.push({ title: 'Current focus', content: info.goal.trim() });
+
+      const readyProjects = projects.filter(p => p.fetchStatus === 'ready' || p.fetchStatus === 'error');
+      for (const p of readyProjects) {
+        let hostname = p.url;
+        try { hostname = new URL(p.url).hostname; } catch { /* noop */ }
+        knowledgeTasks.push({
+          title: `Project: ${p.title ?? hostname}`,
+          content: [p.url, p.description].filter(Boolean).join('\n'),
+        });
+      }
 
       for (const k of knowledgeTasks) {
         try {
@@ -929,7 +1197,7 @@ export function CreateAgentView() {
 
       setHasSeenOnboard(true);
 
-      const briefContext = buildBriefContext(persona, info);
+      const briefContext = buildBriefContext(persona, info, projects);
 
       pop();
       push('agent-detail', { id: String(newAgent.id), briefContext });
@@ -967,12 +1235,17 @@ export function CreateAgentView() {
           userName={userName}
           userCountry={userCountry}
           userGoal={userGoal}
+          humorStyle={userHumorStyle}
+          projects={userProjects}
           onChangeName={setUserName}
           onChangeCountry={setUserCountry}
           onChangeGoal={setUserGoal}
+          onChangeHumorStyle={setUserHumorStyle}
+          onAddProject={handleAddProject}
+          onRemoveProject={handleRemoveProject}
           onBack={handleBack}
-          onSkip={() => handleLaunch(selectedPersona, { name: '', country: '', goal: '' })}
-          onLaunch={() => handleLaunch(selectedPersona, { name: userName, country: userCountry, goal: userGoal })}
+          onSkip={() => handleLaunch(selectedPersona, { name: '', country: '', goal: '' }, selectedPersona.humorStyle, [])}
+          onLaunch={() => handleLaunch(selectedPersona, { name: userName, country: userCountry, goal: userGoal }, userHumorStyle, userProjects)}
           creating={creating}
           error={error}
         />
