@@ -24,7 +24,7 @@ export function AppNav() {
       style={{
         borderTop: `1px solid ${t.navBorder}`,
         display: 'flex',
-        paddingBottom: 20,
+        paddingBottom: 'calc(16px + env(safe-area-inset-bottom, 0px))',
         paddingTop: 12,
         background: t.bg,
         transition: 'background 0.3s ease, border-color 0.3s ease',

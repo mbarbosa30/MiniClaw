@@ -1144,12 +1144,13 @@ function ChatTab({
             disabled={!input.trim() || isStreaming}
             style={{
               fontFamily: 'ui-monospace, Menlo, monospace',
-              fontSize: 14,
+              fontSize: 22,
               letterSpacing: '0.02em',
+              lineHeight: 1,
               color: input.trim() && !isStreaming ? t.text : t.faint,
               background: 'none',
               border: 'none',
-              padding: '0 0 2px',
+              padding: '0 0 3px',
               cursor: input.trim() && !isStreaming ? 'pointer' : 'default',
               flexShrink: 0,
               transition: 'color 0.15s',

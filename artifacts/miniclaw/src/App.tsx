@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { WagmiProvider } from "wagmi";
 import { Toaster } from "@/components/ui/toaster";
@@ -29,11 +30,31 @@ const queryClient = new QueryClient({
 
 const MAIN_VIEWS = new Set(['home', 'dashboard', 'settings', 'growth']);
 
+function useVisualViewport() {
+  const [h, setH] = useState(() => window.visualViewport?.height ?? window.innerHeight);
+  const [top, setTop] = useState(0);
+  useEffect(() => {
+    const vp = window.visualViewport;
+    const update = () => {
+      if (vp) { setH(vp.height); setTop(vp.offsetTop); }
+      else { setH(window.innerHeight); setTop(0); }
+    };
+    if (vp) { vp.addEventListener('resize', update); vp.addEventListener('scroll', update); }
+    else { window.addEventListener('resize', update); }
+    return () => {
+      if (vp) { vp.removeEventListener('resize', update); vp.removeEventListener('scroll', update); }
+      else { window.removeEventListener('resize', update); }
+    };
+  }, []);
+  return { h, top };
+}
+
 function MainLayout() {
   const view = useRouter((s) => s.currentView.name);
+  const { h, top } = useVisualViewport();
   return (
-    <div className="flex flex-col h-full overflow-hidden">
-      <div className="flex-1 overflow-hidden flex flex-col">
+    <div style={{ position: 'fixed', top, left: 0, right: 0, height: h, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
         {view === 'home' && <HomeView />}
         {view === 'dashboard' && <DashboardView />}
         {view === 'settings' && <SettingsView />}

@@ -336,3 +336,8 @@
     inset: -1px;
   }
 }
+
+/* Prevent iOS/WebView zoom on input focus (zoom triggers when font-size < 16px) */
+input, textarea, select {
+  font-size: 16px !important;
+}
