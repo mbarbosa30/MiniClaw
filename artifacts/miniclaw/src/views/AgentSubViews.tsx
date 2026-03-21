@@ -1317,6 +1317,7 @@ export function EconomyView() {
   const createWallet = useCreateWallet();
   const requestGas = useRequestGas();
   const registerIdentity = useRegisterIdentity();
+  const giftOwner = useGiftOwner();
   const commerceRequest = useCommerceRequest();
 
   const phase = awareness?.phase ?? 'curious';
@@ -1332,16 +1333,25 @@ export function EconomyView() {
   const [commerceResult, setCommerceResult] = useState<string | null>(null);
 
   const [walletError, setWalletError] = useState<string | null>(null);
+  const [walletCreated, setWalletCreated] = useState(false);
   const [gasError, setGasError] = useState<string | null>(null);
   const [gasSuccess, setGasSuccess] = useState(false);
+
+  const [giftAmount, setGiftAmount] = useState('');
+  const [giftMessage, setGiftMessage] = useState('');
+  const [giftError, setGiftError] = useState<string | null>(null);
+  const [giftSuccess, setGiftSuccess] = useState(false);
 
   const clearAfter = (setter: (v: null) => void, ms = 4000) => {
     setTimeout(() => setter(null), ms);
   };
 
   const handleCreateWallet = async () => {
+    setWalletCreated(false);
     try {
       await createWallet.mutateAsync(agentId);
+      setWalletCreated(true);
+      setTimeout(() => setWalletCreated(false), 4000);
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Failed to create wallet';
       setWalletError(msg);
@@ -1359,6 +1369,28 @@ export function EconomyView() {
       const msg = e instanceof Error ? e.message : 'Failed to request gas';
       setGasError(msg);
       clearAfter(setGasError);
+    }
+  };
+
+  const handleGiftOwner = async () => {
+    const amt = parseFloat(giftAmount);
+    if (isNaN(amt) || amt <= 0) {
+      setGiftError('Enter a valid CELO amount.');
+      clearAfter(setGiftError);
+      return;
+    }
+    setGiftError(null);
+    setGiftSuccess(false);
+    try {
+      await giftOwner.mutateAsync({ agentId, amount: amt, message: giftMessage.trim() || undefined });
+      setGiftSuccess(true);
+      setGiftAmount('');
+      setGiftMessage('');
+      setTimeout(() => setGiftSuccess(false), 4000);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Failed to send gift';
+      setGiftError(msg);
+      clearAfter(setGiftError);
     }
   };
 
@@ -1455,6 +1487,7 @@ export function EconomyView() {
                 <EcoRow label="Balance" value={`${wallet.balanceCelo ?? wallet.balance} CELO`} />
               )}
               {walletError && <p style={{ fontSize: 11, color: '#f87171', marginTop: 8 }}>{walletError}</p>}
+              {walletCreated && <p style={{ fontSize: 11, color: '#22c55e', marginTop: 8 }}>Wallet created successfully.</p>}
               {!wallet?.created && (
                 <EcoActionBtn
                   label={createWallet.isPending ? 'Creating…' : 'Create Wallet'}
@@ -1471,6 +1504,7 @@ export function EconomyView() {
                     onClick={handleRequestGas}
                     disabled={!isPhase3 || requestGas.isPending}
                   />
+                  <p style={{ fontSize: 10, color: t.faint, marginTop: 6, fontFamily: 'ui-monospace, Menlo, monospace' }}>5 requests/hour limit</p>
                 </>
               )}
             </EcoCard>
@@ -1532,15 +1566,15 @@ export function EconomyView() {
                     <EcoRow label="Total value" value={`${economy.totalGiftsValueCelo} CELO`} />
                   )}
                   {economy.gifts && economy.gifts.length > 0 && (
-                    <div style={{ marginTop: 10 }}>
-                      {economy.gifts.slice(0, 3).map((g, i) => (
-                        <div key={i} style={{ paddingTop: 8, paddingBottom: 8, borderBottom: `1px solid ${t.divider}`, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <div style={{ marginTop: 10, maxHeight: 200, overflowY: 'auto' }}>
+                      {economy.gifts.slice(0, 5).map((g, i) => (
+                        <div key={g.id ?? i} style={{ paddingTop: 8, paddingBottom: 8, borderBottom: `1px solid ${t.divider}`, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                           <div>
                             <p style={{ fontSize: 12, color: t.text }}>{g.amount} {g.currency ?? 'CELO'}</p>
                             {g.message && <p style={{ fontSize: 11, color: t.label, marginTop: 2 }}>{g.message}</p>}
                           </div>
                           {g.fromAddress && (
-                            <span style={{ fontSize: 10, color: t.faint, fontFamily: 'ui-monospace, Menlo, monospace' }}>
+                            <span style={{ fontSize: 10, color: t.faint, fontFamily: 'ui-monospace, Menlo, monospace', flexShrink: 0, marginLeft: 8 }}>
                               {g.fromAddress.slice(0, 6)}…
                             </span>
                           )}
@@ -1552,6 +1586,32 @@ export function EconomyView() {
               ) : (
                 <p style={{ fontSize: 12, color: t.faint }}>No gift data yet.</p>
               )}
+
+              <div style={{ marginTop: 14, paddingTop: 14, borderTop: `1px solid ${t.divider}` }}>
+                <p style={{ fontSize: 10, fontWeight: 600, color: t.faint, letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: 'ui-monospace, Menlo, monospace', marginBottom: 8 }}>Send Gift to Owner</p>
+                <input
+                  placeholder="Amount in CELO"
+                  type="number"
+                  value={giftAmount}
+                  onChange={e => setGiftAmount(e.target.value)}
+                  disabled={!isPhase3}
+                  style={{ ...inputStyle, opacity: isPhase3 ? 1 : 0.4 }}
+                />
+                <input
+                  placeholder="Message (optional)"
+                  value={giftMessage}
+                  onChange={e => setGiftMessage(e.target.value)}
+                  disabled={!isPhase3}
+                  style={{ ...inputStyle, opacity: isPhase3 ? 1 : 0.4 }}
+                />
+                {giftError && <p style={{ fontSize: 11, color: '#f87171', marginTop: 6 }}>{giftError}</p>}
+                {giftSuccess && <p style={{ fontSize: 11, color: '#22c55e', marginTop: 6 }}>Gift sent successfully.</p>}
+                <EcoActionBtn
+                  label={giftOwner.isPending ? 'Sending…' : 'Send Gift'}
+                  onClick={handleGiftOwner}
+                  disabled={!isPhase3 || !giftAmount || giftOwner.isPending}
+                />
+              </div>
             </EcoCard>
 
             <EcoCard title="Commerce" icon={<ShoppingCart size={14} />}>
