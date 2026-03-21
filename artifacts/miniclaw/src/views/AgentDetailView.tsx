@@ -517,43 +517,6 @@ export function AgentDetailView() {
         quota={quota}
       />
       <AwarenessSection agentId={id} onEconomy={() => push('economy', { id })} />
-      {/* Tab strip — Chat is active; all other tabs navigate to their view */}
-      <div className="no-scrollbar" style={{
-        flexShrink: 0,
-        display: 'flex',
-        overflowX: 'auto',
-        borderBottom: `1px solid ${t.divider}`,
-        padding: '0 8px',
-        gap: 0,
-      }}>
-        {([
-          { label: 'Chat',     active: true,  action: null },
-          { label: 'Economy',  active: false, action: () => push('economy', { id }) },
-          { label: 'Skills',   active: false, action: () => push('skills', { id }) },
-          { label: 'Settings', active: false, action: () => push('agent-settings', { id }) },
-          { label: 'Growth',   active: false, action: () => push('growth') },
-        ] as { label: string; active: boolean; action: (() => void) | null }[]).map(tab => (
-          <button
-            key={tab.label}
-            onClick={tab.action ?? undefined}
-            style={{
-              flexShrink: 0,
-              padding: '10px 14px',
-              fontSize: 12,
-              fontWeight: tab.active ? 600 : 400,
-              color: tab.active ? t.text : t.faint,
-              background: 'none',
-              border: 'none',
-              borderBottom: tab.active ? `2px solid ${t.text}` : '2px solid transparent',
-              cursor: tab.active ? 'default' : 'pointer',
-              letterSpacing: '-0.01em',
-              marginBottom: -1,
-            }}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
       <div style={{ flex: 1, overflow: 'hidden' }}>
         <ChatTab
           agent={agent}
@@ -990,7 +953,37 @@ function ChatTab({
             );
           }
 
-          const roleLabel = m.role === 'user' ? 'YOU' : agentLabel;
+          const isUser = m.role === 'user';
+
+          if (isUser) {
+            return (
+              <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 3 }}>
+                <p style={{
+                  fontSize: 14,
+                  fontWeight: 400,
+                  lineHeight: 1.6,
+                  color: t.text,
+                  margin: 0,
+                  whiteSpace: 'pre-wrap',
+                  textAlign: 'right',
+                  maxWidth: '80%',
+                }}>
+                  {m.content}
+                </p>
+                {timestamp && (
+                  <span style={{
+                    fontSize: 9,
+                    fontFamily: 'ui-monospace, Menlo, monospace',
+                    letterSpacing: '0.04em',
+                    color: t.faint,
+                    opacity: 0.5,
+                  }}>
+                    {timestamp}
+                  </span>
+                )}
+              </div>
+            );
+          }
 
           return (
             <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -1003,7 +996,7 @@ function ChatTab({
                   textTransform: 'uppercase',
                   color: t.faint,
                 }}>
-                  {roleLabel}
+                  {agentLabel}
                 </span>
                 {timestamp && (
                   <span style={{
@@ -1033,7 +1026,7 @@ function ChatTab({
                   </span>
                 ) : m.content}
               </p>
-              {m.role === 'assistant' && !isActiveStream && (m.model || m.latencyMs !== undefined || m.tokensUsed !== undefined) && (
+              {!isActiveStream && m.latencyMs !== undefined && (
                 <p style={{
                   fontFamily: 'ui-monospace, Menlo, monospace',
                   fontSize: 9,
@@ -1044,8 +1037,8 @@ function ChatTab({
                 }}>
                   {[
                     m.model,
-                    m.latencyMs !== undefined ? `${(m.latencyMs / 1000).toFixed(1)}s` : undefined,
-                    m.tokensUsed !== undefined && m.tokensUsed > 0 ? `${m.tokensUsed.toLocaleString()} tok` : undefined,
+                    `${(m.latencyMs / 1000).toFixed(1)}s`,
+                    m.tokensUsed != null && m.tokensUsed > 0 ? `${m.tokensUsed.toLocaleString()} tok` : undefined,
                   ].filter(Boolean).join(' · ')}
                 </p>
               )}
