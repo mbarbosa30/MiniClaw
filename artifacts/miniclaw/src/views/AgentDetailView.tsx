@@ -552,7 +552,7 @@ function ChatTab({
   const t = useTheme();
   const { data: conversations, refetch: refetchConversations } = useConversations(agent.id);
   const [activeConversationId, setActiveConversationId] = useState<string | undefined>();
-  const { data: history } = useMessages(agent.id, activeConversationId);
+  const { data: history, refetch: refetchMessages } = useMessages(agent.id, activeConversationId);
   const [historyLoaded, setHistoryLoaded] = useState(false);
 
   const makeGreeting = (name: string) => `Hi! I'm ${name}. How can I help you today?`;
@@ -620,11 +620,17 @@ function ChatTab({
       const res = await compact.mutateAsync({ agentId: agent.id, conversationId: activeConversationId });
       setCompactBanner({ tokensSaved: res.estimatedTokensSaved });
       setTimeout(() => setCompactBanner(null), 5000);
-      setHistoryLoaded(false);
+      // Explicitly refetch and apply fresh message list — bypass historyLoaded gate
+      const { data: freshHistory } = await refetchMessages();
+      if (freshHistory && freshHistory.length > 0) {
+        setMessages(freshHistory);
+        setHistoryLoaded(true);
+        setCachedMessages(agent.id, freshHistory);
+      }
     } catch {
       // silent — compact is a best-effort feature
     }
-  }, [activeConversationId, agent.id, compact]);
+  }, [activeConversationId, agent.id, compact, refetchMessages]);
 
   const pollForResult = async (messageId: string) => {
     const maxAttempts = 15;
