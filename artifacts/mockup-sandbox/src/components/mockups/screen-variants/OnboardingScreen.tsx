@@ -9,12 +9,14 @@ const T = {
   divider: '#f5f5f5', surface: '#f0f0f0',
 };
 
+const FONT = '-apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif';
+
 const MONO: React.CSSProperties = {
   fontFamily: 'ui-monospace, Menlo, monospace',
   letterSpacing: '0.04em',
 };
 
-/* ─── Persona data (icons from ICON_MAP, matching CreateAgentView) ─── */
+/* ─── Persona data ─── */
 
 interface Persona {
   id: string;
@@ -62,7 +64,7 @@ const PERSONAS: Persona[] = [
   },
 ];
 
-/* ─── Loading spinner ─── */
+/* ─── Spinner ─── */
 
 function Spinner({ color }: { color: string }) {
   return (
@@ -70,8 +72,8 @@ function Spinner({ color }: { color: string }) {
       animate={{ rotate: 360 }}
       transition={{ duration: 0.7, repeat: Infinity, ease: 'linear' }}
       style={{
-        width: 14,
-        height: 14,
+        width: 13,
+        height: 13,
         borderRadius: '50%',
         border: `2px solid ${color}30`,
         borderTopColor: color,
@@ -81,9 +83,9 @@ function Spinner({ color }: { color: string }) {
   );
 }
 
-/* ─── Persona card ─── */
+/* ─── Persona row ─── */
 
-function PersonaCard({
+function PersonaRow({
   persona,
   selected,
   launching,
@@ -100,61 +102,46 @@ function PersonaCard({
 
   return (
     <motion.button
-      initial={{ opacity: 0, y: 10 }}
+      initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.07, duration: 0.35, ease: [0.25, 0.46, 0.45, 0.94] }}
+      transition={{ delay: index * 0.06, duration: 0.32, ease: [0.25, 0.46, 0.45, 0.94] }}
       onClick={onSelect}
       style={{
         width: '100%',
-        background: selected ? `${persona.color}08` : 'none',
+        background: selected ? `${persona.color}07` : 'none',
         border: 'none',
         borderBottom: `1px solid ${T.divider}`,
-        padding: '18px 32px 18px 36px',
+        padding: '24px 32px 24px 20px',
         cursor: 'pointer',
         display: 'flex',
-        alignItems: 'center',
-        gap: 16,
+        alignItems: 'flex-start',
+        gap: 0,
         position: 'relative',
         textAlign: 'left',
         transition: 'background 0.2s ease',
+        fontFamily: FONT,
       }}
     >
-      {/* Accent strip — always visible in persona color, full opacity */}
+      {/* Accent strip */}
       <div style={{
         position: 'absolute',
         left: 0,
         top: 0,
         bottom: 0,
-        width: 2,
+        width: 3,
         background: persona.color,
         borderRadius: '0 1px 1px 0',
       }} />
 
-      {/* Icon */}
-      <div style={{
-        width: 36,
-        height: 36,
-        borderRadius: 8,
-        background: selected ? `${persona.color}15` : T.surface,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        flexShrink: 0,
-        color: selected ? persona.color : T.label,
-        transition: 'background 0.2s ease, color 0.2s ease',
-      }}>
-        <Icon size={16} strokeWidth={1.5} />
-      </div>
-
-      {/* Text */}
-      <div style={{ flex: 1, minWidth: 0 }}>
+      {/* Text block */}
+      <div style={{ flex: 1, minWidth: 0, paddingLeft: 12 }}>
         <p style={{
-          fontSize: 18,
+          fontSize: 30,
           fontWeight: 300,
-          letterSpacing: '-0.02em',
+          letterSpacing: '-0.03em',
           color: T.text,
-          lineHeight: 1.2,
-          marginBottom: 4,
+          lineHeight: 1.1,
+          marginBottom: 6,
           whiteSpace: 'nowrap',
           overflow: 'hidden',
           textOverflow: 'ellipsis',
@@ -162,7 +149,7 @@ function PersonaCard({
           {persona.name}
         </p>
         <p style={{
-          fontSize: 11,
+          fontSize: 12,
           fontStyle: 'italic',
           color: T.faint,
           letterSpacing: '-0.005em',
@@ -172,29 +159,46 @@ function PersonaCard({
         </p>
       </div>
 
-      {/* Launching overlay */}
-      <AnimatePresence>
-        {launching && selected && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            style={{ display: 'flex', alignItems: 'center', gap: 7, flexShrink: 0 }}
-          >
-            <Spinner color={persona.color} />
-            <span style={{
-              ...MONO,
-              fontSize: 9,
-              color: persona.color,
-              letterSpacing: '0.06em',
-              textTransform: 'uppercase',
-              whiteSpace: 'nowrap',
-            }}>
-              Launching {persona.name}…
-            </span>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Right side: icon (faint) or launching state */}
+      <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 8, paddingTop: 6 }}>
+        <AnimatePresence mode="wait">
+          {launching && selected ? (
+            <motion.div
+              key="launching"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              style={{ display: 'flex', alignItems: 'center', gap: 7 }}
+            >
+              <Spinner color={persona.color} />
+              <span style={{
+                ...MONO,
+                fontSize: 9,
+                color: persona.color,
+                letterSpacing: '0.06em',
+                textTransform: 'uppercase',
+                whiteSpace: 'nowrap',
+              }}>
+                Launching…
+              </span>
+            </motion.div>
+          ) : (
+            <motion.div
+              key="icon"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            >
+              <Icon
+                size={18}
+                strokeWidth={1.25}
+                color={selected ? persona.color : T.faint}
+                style={{ transition: 'color 0.2s ease' }}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
     </motion.button>
   );
 }
@@ -222,7 +226,7 @@ export function OnboardingScreen() {
       flexDirection: 'column',
       background: T.bg,
       overflow: 'hidden',
-      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+      fontFamily: FONT,
     }}>
       <style>{`
         .no-scrollbar::-webkit-scrollbar { display: none; }
@@ -230,18 +234,18 @@ export function OnboardingScreen() {
       `}</style>
 
       {/* Header */}
-      <div style={{ padding: '52px 32px 32px', flexShrink: 0 }}>
+      <div style={{ padding: '56px 32px 28px', flexShrink: 0 }}>
         <motion.p
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
           style={{
-            fontSize: 22,
+            fontSize: 34,
             fontWeight: 200,
-            letterSpacing: '-0.03em',
+            letterSpacing: '-0.04em',
             color: T.text,
-            lineHeight: 1.15,
-            marginBottom: 8,
+            lineHeight: 1.1,
+            marginBottom: 10,
           }}
         >
           Your AI team<br />starts here.
@@ -250,7 +254,7 @@ export function OnboardingScreen() {
           initial={{ opacity: 0, y: 6 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.08 }}
-          style={{ fontSize: 12, color: T.faint, letterSpacing: '-0.01em', lineHeight: 1.5 }}
+          style={{ fontSize: 13, color: T.label, letterSpacing: '-0.01em', lineHeight: 1.5 }}
         >
           Pick a persona. Start earning.
         </motion.p>
@@ -261,7 +265,7 @@ export function OnboardingScreen() {
       {/* Persona list */}
       <div className="no-scrollbar" style={{ flex: 1, overflowY: 'auto' }}>
         {visible.map((persona, i) => (
-          <PersonaCard
+          <PersonaRow
             key={persona.id}
             persona={persona}
             selected={selectedId === persona.id}
@@ -275,47 +279,37 @@ export function OnboardingScreen() {
           <motion.button
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 0.35 }}
+            transition={{ delay: 0.32 }}
             onClick={() => setShowMore(true)}
             style={{
               width: '100%',
               background: 'none',
               border: 'none',
               borderBottom: `1px solid ${T.divider}`,
-              padding: '16px 32px 16px 36px',
+              padding: '22px 32px 22px 20px',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: 16,
+              gap: 12,
               position: 'relative',
+              fontFamily: FONT,
             }}
           >
-            {/* Gray accent strip placeholder */}
             <div style={{
               position: 'absolute',
-              left: 0,
-              top: 0,
-              bottom: 0,
-              width: 2,
+              left: 0, top: 0, bottom: 0,
+              width: 3,
               background: T.divider,
               borderRadius: '0 1px 1px 0',
             }} />
-            <div style={{
-              width: 36,
-              height: 36,
-              borderRadius: 8,
-              background: T.surface,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0,
+            <span style={{
+              paddingLeft: 12,
+              fontSize: 26,
+              fontWeight: 300,
+              letterSpacing: '-0.03em',
+              color: T.faint,
             }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={T.faint} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="10"/><path d="M12 8v8"/><path d="M8 12h8"/>
-              </svg>
-            </div>
-            <span style={{ fontSize: 14, fontWeight: 300, color: T.faint, letterSpacing: '-0.01em' }}>
-              Show more personas
+              + more personas
             </span>
           </motion.button>
         )}
