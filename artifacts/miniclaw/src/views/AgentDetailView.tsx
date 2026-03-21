@@ -718,7 +718,11 @@ function ChatTab({
     if (activeConversationId) body.conversationId = Number(activeConversationId);
 
     // ─── Primary: SSE streaming ──────────────────────────────────────────
+    // sseSucceeded: SSE stream delivered a complete done/error event
+    // nonSseJson: server returned JSON (not SSE) — messageId extracted, no re-POST needed
     let sseSucceeded = false;
+    let nonSseJson: { messageId?: string; conversationId?: number } | null = null;
+
     try {
       const abortCtrl = new AbortController();
 
@@ -729,106 +733,118 @@ function ChatTab({
 
       const usedAfterSSE = parseQuotaHeaders(sseRes.headers);
 
-      // 4s timeout — abort if no data arrives
-      let firstDataReceived = false;
-      const sseTimeout = setTimeout(() => {
-        if (!firstDataReceived) abortCtrl.abort();
-      }, 4000);
-
-      let sseDone = false;
-      let sseEventError = false;
-      const reader = sseRes.body!.getReader();
-      const decoder = new TextDecoder();
-      let buf = '';
-
-      try {
-        outer: while (true) {
-          let chunk: ReadableStreamReadResult<Uint8Array>;
-          try {
-            chunk = await reader.read();
-          } catch {
-            break; // network error or abort — fall through to poll
-          }
-          if (chunk.done) break;
-
-          buf += decoder.decode(chunk.value, { stream: true });
-          const lines = buf.split('\n');
-          buf = lines.pop() ?? '';
-
-          for (const line of lines) {
-            if (!line.startsWith('data: ')) continue;
-            const jsonStr = line.slice(6).trim();
-            if (!jsonStr) continue;
-            let evt: { content?: string; done?: boolean; conversationId?: number; suggestedChips?: string[]; error?: string };
-            try { evt = JSON.parse(jsonStr); } catch { continue; }
-
-            // Only mark SSE as active when we receive a valid parsed event
-            if (!firstDataReceived) {
-              firstDataReceived = true;
-              clearTimeout(sseTimeout);
-            }
-
-            if (evt.content !== undefined) {
-              setMessages(prev => {
-                const msgs = [...prev];
-                const last = msgs[msgs.length - 1];
-                if (last?.role === 'assistant') {
-                  msgs[msgs.length - 1] = { ...last, content: last.content + evt.content };
-                }
-                return msgs;
-              });
-            }
-
-            if (evt.done) {
-              sseDone = true;
-              if (evt.conversationId != null && !activeConversationId) {
-                setActiveConversationId(String(evt.conversationId));
-                refetchConversations();
-              }
-              setChips(evt.suggestedChips ?? []);
-              const latencyMs = Date.now() - sendTime;
-              const tokensUsed = usedAfterSSE !== undefined && quotaUsedBefore !== undefined
-                ? Math.max(0, usedAfterSSE - quotaUsedBefore)
-                : undefined;
-              setMessages(prev => {
-                const msgs = [...prev];
-                const last = msgs[msgs.length - 1];
-                if (last?.role === 'assistant') {
-                  msgs[msgs.length - 1] = { ...last, _ts: Date.now(), latencyMs, tokensUsed, model: msgModel };
-                }
-                setCachedMessages(agent.id, msgs);
-                return msgs;
-              });
-            }
-
-            if (evt.error) {
-              sseEventError = true;
-              setMessages(prev => [
-                ...prev.slice(0, -1),
-                { role: 'system' as const, content: evt.error!, _ts: Date.now() },
-              ]);
-            }
-
-            if (sseDone || sseEventError) break outer;
-          }
+      // If the server returned JSON instead of SSE, parse it now and skip streaming.
+      // This avoids a second POST in the fallback path.
+      const contentType = sseRes.headers.get('content-type') ?? '';
+      if (!contentType.includes('text/event-stream')) {
+        try {
+          const parsed = await sseRes.json() as { messageId?: string; conversationId?: number };
+          nonSseJson = parsed;
+        } catch {
+          // couldn't parse; will fall through to poll POST below
         }
-      } finally {
-        clearTimeout(sseTimeout);
-        reader.releaseLock();
-      }
-
-      if (sseDone || sseEventError) {
-        sseSucceeded = true;
       } else {
-        // Stream closed or aborted before done — reset bubble and fall through to poll
-        setMessages(prev => {
-          const msgs = [...prev];
-          const last = msgs[msgs.length - 1];
-          if (last?.role === 'assistant') {
-            msgs[msgs.length - 1] = { ...last, content: '', _ts: undefined };
+        // Real SSE stream — process events
+        let firstDataReceived = false;
+        const sseTimeout = setTimeout(() => {
+          if (!firstDataReceived) abortCtrl.abort();
+        }, 4000);
+
+        let sseDone = false;
+        let sseEventError = false;
+        const reader = sseRes.body!.getReader();
+        const decoder = new TextDecoder();
+        let buf = '';
+
+        try {
+          outer: while (true) {
+            let chunk: ReadableStreamReadResult<Uint8Array>;
+            try {
+              chunk = await reader.read();
+            } catch {
+              break; // network error or abort — fall through to poll
+            }
+            if (chunk.done) break;
+
+            buf += decoder.decode(chunk.value, { stream: true });
+            const lines = buf.split('\n');
+            buf = lines.pop() ?? '';
+
+            for (const line of lines) {
+              if (!line.startsWith('data: ')) continue;
+              const jsonStr = line.slice(6).trim();
+              if (!jsonStr) continue;
+              let evt: { content?: string; done?: boolean; conversationId?: number; suggestedChips?: string[]; error?: string };
+              try { evt = JSON.parse(jsonStr); } catch { continue; }
+
+              // Only mark SSE active when a valid event is parsed (not on raw bytes)
+              if (!firstDataReceived) {
+                firstDataReceived = true;
+                clearTimeout(sseTimeout);
+              }
+
+              if (evt.content !== undefined) {
+                setMessages(prev => {
+                  const msgs = [...prev];
+                  const last = msgs[msgs.length - 1];
+                  if (last?.role === 'assistant') {
+                    msgs[msgs.length - 1] = { ...last, content: last.content + evt.content };
+                  }
+                  return msgs;
+                });
+              }
+
+              if (evt.done) {
+                sseDone = true;
+                if (evt.conversationId != null && !activeConversationId) {
+                  setActiveConversationId(String(evt.conversationId));
+                  refetchConversations();
+                }
+                setChips(evt.suggestedChips ?? []);
+                const latencyMs = Date.now() - sendTime;
+                const tokensUsed = usedAfterSSE !== undefined && quotaUsedBefore !== undefined
+                  ? Math.max(0, usedAfterSSE - quotaUsedBefore)
+                  : undefined;
+                setMessages(prev => {
+                  const msgs = [...prev];
+                  const last = msgs[msgs.length - 1];
+                  if (last?.role === 'assistant') {
+                    msgs[msgs.length - 1] = { ...last, _ts: Date.now(), latencyMs, tokensUsed, model: msgModel };
+                  }
+                  setCachedMessages(agent.id, msgs);
+                  return msgs;
+                });
+              }
+
+              if (evt.error) {
+                sseEventError = true;
+                setMessages(prev => [
+                  ...prev.slice(0, -1),
+                  { role: 'system' as const, content: evt.error!, _ts: Date.now() },
+                ]);
+              }
+
+              if (sseDone || sseEventError) break outer;
+            }
           }
-          return msgs;
-        });
+        } finally {
+          clearTimeout(sseTimeout);
+          reader.releaseLock();
+        }
+
+        if (sseDone || sseEventError) {
+          sseSucceeded = true;
+        } else {
+          // Stream closed/aborted before done — reset bubble, fall through to poll
+          setMessages(prev => {
+            const msgs = [...prev];
+            const last = msgs[msgs.length - 1];
+            if (last?.role === 'assistant') {
+              msgs[msgs.length - 1] = { ...last, content: '', _ts: undefined };
+            }
+            return msgs;
+          });
+        }
       }
     } catch (err) {
       if (err instanceof ApiError && err.status === 429) {
@@ -852,25 +868,40 @@ function ChatTab({
       return;
     }
 
-    // ─── Fallback: POST → poll ───────────────────────────────────────────
+    // ─── Fallback: poll ──────────────────────────────────────────────────
+    // If the server returned JSON (non-SSE) we already have a messageId —
+    // use it directly to avoid a second POST.
     try {
-      const postRes = await apiFetchWithHeaders<{
-        messageId: string;
-        conversationId: number;
-        status: string;
-      }>(`/api/selfclaw/v1/hosted-agents/${agent.id}/chat`, {
-        method: 'POST',
-        body: JSON.stringify(body),
-      });
+      let pollMessageId: string;
 
-      parseQuotaHeaders(postRes.headers);
+      if (nonSseJson?.messageId) {
+        // Message already submitted via SSE endpoint — just poll for result
+        if (nonSseJson.conversationId != null && !activeConversationId) {
+          setActiveConversationId(String(nonSseJson.conversationId));
+          refetchConversations();
+        }
+        pollMessageId = nonSseJson.messageId;
+      } else {
+        // No prior submission — POST now
+        const postRes = await apiFetchWithHeaders<{
+          messageId: string;
+          conversationId: number;
+          status: string;
+        }>(`/api/selfclaw/v1/hosted-agents/${agent.id}/chat`, {
+          method: 'POST',
+          body: JSON.stringify(body),
+        });
 
-      if (postRes.data.conversationId != null && !activeConversationId) {
-        setActiveConversationId(String(postRes.data.conversationId));
-        refetchConversations();
+        parseQuotaHeaders(postRes.headers);
+
+        if (postRes.data.conversationId != null && !activeConversationId) {
+          setActiveConversationId(String(postRes.data.conversationId));
+          refetchConversations();
+        }
+        pollMessageId = String(postRes.data.messageId);
       }
 
-      await pollForResult(String(postRes.data.messageId), String(agent.id), { sendTime, quotaUsedBefore, model: msgModel });
+      await pollForResult(pollMessageId, String(agent.id), { sendTime, quotaUsedBefore, model: msgModel });
     } catch (err) {
       const is429 = err instanceof ApiError && err.status === 429;
       const resetIn = fmtResetAt(quota?.resetAt);
