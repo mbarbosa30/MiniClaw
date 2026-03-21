@@ -4,7 +4,7 @@ import { Bot, Loader2, RefreshCw } from 'lucide-react';
 import { useAuthStore, useRouter } from '@/lib/store';
 import { useTheme } from '@/lib/theme';
 
-const TIMEOUT_MS = 8000;
+const TIMEOUT_MS = import.meta.env.DEV ? 0 : 8000;
 
 function resolveAuthErrorMessage(raw: string): { text: string; canRetry: boolean } {
   if (
@@ -32,20 +32,14 @@ const DEV_WALLET = '0xDEADBEEF00000000000000000000000000000001';
 
 export function ConnectView() {
   const t = useTheme();
-  const [timedOut, setTimedOut] = useState(false);
+  const [timedOut, setTimedOut] = useState(import.meta.env.DEV);
   const authError = useAuthStore(s => s.authError);
   const setAuthenticated = useAuthStore(s => s.setAuthenticated);
   const resetRoute = useRouter(s => s.reset);
-  const [tapCount, setTapCount] = useState(0);
 
-  const handleLogoTap = () => {
-    if (!import.meta.env.DEV) return;
-    const next = tapCount + 1;
-    setTapCount(next);
-    if (next >= 5) {
-      setAuthenticated(DEV_WALLET);
-      resetRoute('home');
-    }
+  const handleDevBypass = () => {
+    setAuthenticated(DEV_WALLET);
+    resetRoute('home');
   };
 
   useEffect(() => {
@@ -55,7 +49,6 @@ export function ConnectView() {
   }, [authError]);
 
   const resolved = authError ? resolveAuthErrorMessage(authError) : null;
-  const isConnecting = !resolved && !timedOut;
 
   return (
     <div
@@ -71,7 +64,6 @@ export function ConnectView() {
         transition: 'background 0.3s ease',
       }}
     >
-      {/* Ambient orb */}
       <div
         aria-hidden="true"
         style={{
@@ -82,12 +74,10 @@ export function ConnectView() {
         }}
       />
 
-      {/* Logo */}
       <motion.div
         initial={{ scale: 0.80, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ type: 'spring', bounce: 0.35, duration: 0.55 }}
-        onClick={handleLogoTap}
         style={{
           width: 72,
           height: 72,
@@ -99,15 +89,9 @@ export function ConnectView() {
           justifyContent: 'center',
           marginBottom: 28,
           userSelect: 'none',
-          cursor: import.meta.env.DEV ? 'pointer' : 'default',
         }}
       >
         <Bot size={32} color={t.text} strokeWidth={1.5} />
-        {import.meta.env.DEV && tapCount > 0 && tapCount < 5 && (
-          <span style={{ position: 'absolute', fontSize: 8, color: t.faint, marginTop: 80, fontFamily: 'ui-monospace, Menlo, monospace' }}>
-            {5 - tapCount} more
-          </span>
-        )}
       </motion.div>
 
       <motion.div
@@ -150,6 +134,27 @@ export function ConnectView() {
               >
                 <RefreshCw size={12} />
                 retry
+              </button>
+            )}
+            {import.meta.env.DEV && (
+              <button
+                style={{
+                  marginTop: 12,
+                  padding: '8px 20px',
+                  borderRadius: 8,
+                  fontSize: 11,
+                  fontWeight: 700,
+                  color: t.bg,
+                  background: t.text,
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontFamily: 'ui-monospace, Menlo, monospace',
+                  letterSpacing: '0.05em',
+                  textTransform: 'uppercase',
+                }}
+                onClick={handleDevBypass}
+              >
+                dev preview
               </button>
             )}
           </>
@@ -199,6 +204,27 @@ export function ConnectView() {
               <RefreshCw size={12} />
               retry
             </button>
+            {import.meta.env.DEV && (
+              <button
+                style={{
+                  marginTop: 12,
+                  padding: '8px 20px',
+                  borderRadius: 8,
+                  fontSize: 11,
+                  fontWeight: 700,
+                  color: t.bg,
+                  background: t.text,
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontFamily: 'ui-monospace, Menlo, monospace',
+                  letterSpacing: '0.05em',
+                  textTransform: 'uppercase',
+                }}
+                onClick={handleDevBypass}
+              >
+                dev preview
+              </button>
+            )}
           </>
         )}
       </motion.div>
