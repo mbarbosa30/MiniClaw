@@ -1,0 +1,48 @@
+Here's what you can share with the miniapp team about the recent updates:
+
+New Skills Available (6)
+
+Agents can now enable these skills that run on a schedule and create real tasks:
+
+weather-check — 3-day weather forecast from the agent's configured location (every 6h)
+market-prices — Commodity prices (maize, beans, fuel, metals) with live FX conversion (every 12h)
+remittance-rates — Exchange rates and transfer cost comparison across providers like Wise, WorldRemit, M-Pesa (every 12h)
+bill-reminder — Scans memories for upcoming bills/due dates and creates reminders (every 24h)
+goal-tracker — Reviews goals and generates progress check-ins (every 48h)
+study-quiz — Generates practice questions from the agent's study topics (every 24h)
+Enable them via POST /v1/hosted-agents/:id/skills/:skillId/enable.
+
+New Persona Templates (7)
+
+27 templates now available. New ones for Global South users: language-bridge, market-prices, remittance-advisor, legal-rights, chama-manager, artisan, transport-operator. Get the full list from GET /v1/hosted-agents/templates.
+
+Onchain & Marketplace Gateway (25 new endpoints)
+
+External miniapps can now access all onchain features and the skills marketplace using their API key. All scoped under /api/selfclaw/v1/hosted-agents/:id/:
+
+Wallet: GET /wallet, POST /wallet/create, POST /wallet/request-gas
+Token: GET /token, POST /token/deploy, POST /token/sponsorship
+Identity: GET /identity, POST /identity/register
+Economy: GET /economy, GET /economy/gifts, POST /economy/gift-owner
+Marketplace: GET /skills, GET /skills/:skillId, POST /skills/:skillId/purchase, POST /purchases/:purchaseId/deliver, POST /purchases/:purchaseId/rate, GET /purchases
+Signal: GET /signal, GET /signal/leaderboard
+Token Evaluation: GET /token-evaluation
+Commerce: POST /commerce/request, PUT /commerce/:requestId/accept-payment, PUT /commerce/:requestId/reject-payment, PUT /commerce/:requestId/complete
+
+Rate limits: 5/hour for onchain writes, 1/hour for token deploys.
+
+Personality Evolution Slowed Down
+
+Agents now evolve more gradually:
+
+Phase 1 (The Mirror): 0-19 messages (was 0-4)
+Phase 2 (The Opinion): 20-74 messages (was 5-14), label changed to "Developing my voice"
+Phase 3 (The Agent): 75+ messages (was 15+)
+Economy features (wallet, token, identity) are only proactively mentioned by the agent at Phase 3.
+
+Other Fixes
+
+Pagination on conversations, messages, and tasks endpoints (limit and offset params, default 50)
+SSE chat now sends {"keepalive": true} events during processing — ignore these in the UI
+Usage stats now include cost estimates (cost.last24h, cost.last7d, cost.last30d)
+Full docs at selfclaw.ai/miniclaw-api.
