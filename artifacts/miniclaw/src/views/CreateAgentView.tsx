@@ -882,6 +882,17 @@ function PersonalizeStep({
     }
   };
 
+  const [otherLangInput, setOtherLangInput] = useState('');
+
+  const commitOtherLang = () => {
+    const trimmed = otherLangInput.trim();
+    if (!trimmed) return;
+    if (!userLanguages.includes(trimmed)) {
+      onChangeLanguages([...userLanguages, trimmed]);
+    }
+    setOtherLangInput('');
+  };
+
   const handleAddUrl = () => {
     const raw = urlInput.trim();
     if (!raw) return;
@@ -1316,6 +1327,47 @@ function PersonalizeStep({
                             </button>
                           );
                         })}
+                        {/* Custom (non-preset) selected languages */}
+                        {userLanguages
+                          .filter(l => !LANGUAGE_CHIPS.includes(l))
+                          .map(lang => (
+                            <button
+                              key={lang}
+                              onClick={() => toggleLanguage(lang)}
+                              disabled={creating}
+                              style={{
+                                padding: '6px 10px',
+                                borderRadius: 100,
+                                border: `1.5px solid ${persona.color}`,
+                                background: `${persona.color}18`,
+                                color: persona.color,
+                                fontSize: 11,
+                                fontWeight: 600,
+                                letterSpacing: '-0.01em',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 4,
+                                fontFamily: FONT,
+                              }}
+                            >
+                              {lang}
+                              <span style={{ opacity: 0.7, fontSize: 12, lineHeight: 1 }}>×</span>
+                            </button>
+                          ))}
+                      </div>
+                      {/* Other language free-text */}
+                      <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
+                        <input
+                          type="text"
+                          value={otherLangInput}
+                          onChange={e => setOtherLangInput(e.target.value)}
+                          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); commitOtherLang(); } }}
+                          onBlur={commitOtherLang}
+                          placeholder="Other language…"
+                          disabled={creating}
+                          style={{ ...inputStyle, flex: 1, marginBottom: 0 }}
+                        />
                       </div>
                     </div>
 
@@ -1424,6 +1476,7 @@ function buildDefaultSteps(fields: {
   domain?: string;
   experienceLevel?: string;
   languages?: string[];
+  targetAudience?: string;
 }): SpawningProgressStep[] {
   const steps: SpawningProgressStep[] = [];
   if (fields.xHandle) steps.push({ step: `Researching @${fields.xHandle} on X`, status: 'waiting' });
@@ -1451,7 +1504,7 @@ function SpawningScreen({
   agentName: string;
   agentEmoji: string;
   personaColor: string;
-  providedFields: { xHandle?: string; urls?: string[]; location?: string; domain?: string; experienceLevel?: string; languages?: string[] };
+  providedFields: { xHandle?: string; urls?: string[]; location?: string; domain?: string; experienceLevel?: string; languages?: string[]; targetAudience?: string };
   onReady: () => void;
   onFailed: () => void;
 }) {
@@ -1773,6 +1826,7 @@ export function CreateAgentView() {
           domain: userGoal.trim() || undefined,
           experienceLevel: userExperienceLevel || undefined,
           languages: userLanguages.length > 0 ? userLanguages : undefined,
+          targetAudience: userTargetAudience.trim() || undefined,
         }}
         onReady={() => {
           pop();
