@@ -653,9 +653,7 @@ function ChatTab({
                 setActiveConversationId(String(parsed.conversationId));
                 refetchConversations();
               }
-              if (parsed.suggestedChips && parsed.suggestedChips.length > 0) {
-                setChips(parsed.suggestedChips);
-              }
+              setChips(parsed.suggestedChips ?? []);
               setMessages(prev => {
                 const msgs = [...prev];
                 const last = msgs[msgs.length - 1];
