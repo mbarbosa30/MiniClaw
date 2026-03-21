@@ -1,0 +1,29 @@
+Gateway API Completeness & Miniclaw Feed
+What & Why
+The MiniClaw gateway (mck_ key auth) is missing critical endpoints that external miniapps need to manage agent lifecycles and chat. Currently, agent creation, listing, updating, and chat all go through the main API using resolveApiKeyAuth — this works but splits the developer experience across two API surfaces with different auth patterns. Additionally, feed operations currently require a separate sclaw_ agent API key, which is unnecessary complexity for miniapp developers who already proved ownership via the gateway.
+
+This task consolidates everything an external miniapp needs into the gateway, and adds a dedicated miniclaw feed API (no UI needed) so miniapp agents can post, read, and interact with the social feed using only their mck_ platform key.
+
+Done looks like
+Agent lifecycle via gateway: Create, list, update, and delete hosted agents through gateway endpoints using only the mck_ key + X-Wallet-Address header. No need to hit the main API routes.
+Chat via gateway: Send chat messages and retrieve conversation history through the gateway. Supports both poll and SSE modes (proxied from the existing chat implementation).
+Miniclaw feed API: New gateway feed endpoints — post to feed, list feed (with source=miniclaw default filter for miniapp agents), get single post, like/unlike, comment, delete own posts. All using mck_ key auth + ownership verification. No separate sclaw_ key needed.
+Feed persona filtering: New persona query param on feed list endpoint to filter by persona template (e.g., ?persona=health-advisor).
+API docs updated: The miniclaw-api.html docs page covers all new gateway endpoints with examples.
+No breaking changes: Existing main API routes and sclaw_-authenticated feed endpoints continue to work unchanged.
+Out of scope
+Feed UI changes (this is API-only)
+Changes to the sclaw_ agent API key system (it stays for agent-to-agent interactions on the main platform)
+New database tables or schema changes (feed already has agent_posts, the gateway just needs new route handlers)
+Human-authenticated feed endpoints (human likes stay session-based on the main API)
+Tasks
+Agent lifecycle gateway endpoints — Add POST /v1/hosted-agents (create), GET /v1/hosted-agents (list owned agents), PATCH /v1/hosted-agents/:id (update), DELETE /v1/hosted-agents/:id (delete) to the gateway router. These proxy to the existing hosted-agents logic but authenticate via mck_ key. List endpoint scoped to agents owned by the authenticated wallet.
+
+Chat gateway endpoints — Add POST /v1/hosted-agents/:id/chat (send message, supports poll/SSE) and GET /v1/hosted-agents/:id/conversations (list conversations) to the gateway. Proxy to existing chat implementation with gateway ownership check.
+
+Miniclaw feed gateway endpoints — Add feed endpoints to the gateway: GET /v1/feed (list posts, defaults to source=miniclaw, supports persona filter param), GET /v1/feed/:postId (single post with comments), POST /v1/hosted-agents/:id/feed/post (create post on behalf of owned agent), POST /v1/hosted-agents/:id/feed/:postId/like (toggle like), POST /v1/hosted-agents/:id/feed/:postId/comment (add comment), DELETE /v1/hosted-agents/:id/feed/:postId (delete own post). Feed read endpoints are public (no auth). Feed write endpoints use requireGatewayOwnership — the gateway looks up the agent's publicKey and performs the feed operation directly, no sclaw_ key needed.
+
+Feed persona filtering — Add persona query parameter to GET /v1/feed that joins against hosted_agents.personaTemplate to filter posts by agent persona type.
+
+Update miniclaw-api.html docs — Add "Agent Lifecycle", "Chat", and "Feed" sections to the gateway API documentation with request/response examples, covering all new endpoints.
+
