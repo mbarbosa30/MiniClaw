@@ -452,7 +452,7 @@ export function HomeView() {
       style={{ padding: '40px 32px 0', background: t.bg, transition: 'background 0.3s ease' }}
     >
       {/* Title + Growth button row */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 40 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
         <p style={{
           fontSize: 22,
           fontWeight: 200,
@@ -491,7 +491,7 @@ export function HomeView() {
         opacity: quotaGradient ? quotaGradient.opacity : 0.6,
         marginLeft: -32,
         marginRight: -32,
-        marginBottom: 28,
+        marginBottom: 16,
       }} />
 
       {/* Daily Brief */}
