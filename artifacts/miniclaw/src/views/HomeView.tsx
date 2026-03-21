@@ -146,7 +146,7 @@ function ActivitySection({
       ...task,
       agentId: agent.id,
       agentName: agent.name,
-      agentColor: agent.color,
+      agentColor: undefined,
     });
     (result.data.pending?.items ?? []).forEach(t => pending.push(attach(t)));
     (result.data.running?.items ?? []).forEach(t => running.push(attach(t)));
@@ -243,6 +243,7 @@ function AgentRow({
   const isIdle = state === 'idle';
 
   const { data: awareness } = useAwareness(agent.id);
+  const isSpawning = agent.spawningStatus === 'researching' || agent.spawningStatus === 'training';
   const { data: pendingTasks } = useTasks(agent.id, 'pending');
   const pendingCount = pendingTasks?.length ?? 0;
 
@@ -307,16 +308,17 @@ function AgentRow({
       {/* Row 2: status label + pending badge + activity text + ⋯ right */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 6 }}>
         <span style={{
+          fontFamily: isSpawning ? 'ui-monospace, Menlo, monospace' : undefined,
           fontSize: 9,
           fontWeight: 600,
           letterSpacing: '0.09em',
           textTransform: 'uppercase',
-          color,
+          color: isSpawning ? '#a78bfa' : color,
           flexShrink: 0,
         }}>
-          {STATE_LABEL[state]}
+          {isSpawning ? 'TRAINING…' : STATE_LABEL[state]}
         </span>
-        {pendingCount > 0 && (
+        {!isSpawning && pendingCount > 0 && (
           <span style={{
             fontFamily: 'ui-monospace, Menlo, monospace',
             fontSize: 9,
@@ -426,10 +428,10 @@ export function HomeView() {
   const taskSummaries = useAllTaskSummaries(agents.map(a => a.id));
 
   const quotaGradient = useMemo(() => {
-    const withQuota = agents.filter(a => a.quota?.tokensLimit);
+    const withQuota = agents.filter(a => (a as Agent & { quota?: { tokensLimit?: number } }).quota?.tokensLimit);
     if (withQuota.length === 0) return null;
-    const totalUsed = withQuota.reduce((s, a) => s + (a.quota?.tokensUsed ?? 0), 0);
-    const totalLimit = withQuota.reduce((s, a) => s + (a.quota?.tokensLimit ?? 0), 0);
+    const totalUsed = withQuota.reduce((s, a) => s + ((a as Agent & { quota?: { tokensUsed?: number } }).quota?.tokensUsed ?? 0), 0);
+    const totalLimit = withQuota.reduce((s, a) => s + ((a as Agent & { quota?: { tokensLimit?: number } }).quota?.tokensLimit ?? 0), 0);
     const remaining = Math.max(0, Math.min(1, (totalLimit - totalUsed) / totalLimit));
     const color = remaining > 0.5 ? '#6366f1' : remaining > 0.2 ? '#f59e0b' : '#ef4444';
     const opacity = 0.12 + remaining * 0.32;

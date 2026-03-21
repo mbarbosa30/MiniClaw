@@ -1,12 +1,11 @@
 import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useTemplates, useCreateAgent, useUpdateSoul, useAddKnowledge } from '@/hooks/use-agents';
-import { apiFetch } from '@/lib/api-client';
+import { useTemplates, useCreateAgent, useSpawningStatus } from '@/hooks/use-agents';
 import { useRouter, useAppStore } from '@/lib/store';
 import { useTheme } from '@/lib/theme';
 import { resolveIcon } from '@/lib/agent-icon';
 import { ScreenHeader } from '@/components/ui';
-import type { HumorStyle } from '@/types';
+import type { HumorStyle, SpawningProgressStep } from '@/types';
 
 interface PersonaConfig {
   id: string;
@@ -792,12 +791,14 @@ function PersonalizeStep({
   agentCustomName,
   userName,
   userCountry,
+  userXHandle,
   userGoal,
   humorStyle,
   projects,
   onChangeAgentName,
   onChangeName,
   onChangeCountry,
+  onChangeXHandle,
   onChangeGoal,
   onChangeHumorStyle,
   onAddProject,
@@ -812,12 +813,14 @@ function PersonalizeStep({
   agentCustomName: string;
   userName: string;
   userCountry: string;
+  userXHandle: string;
   userGoal: string;
   humorStyle: HumorStyle;
   projects: ProjectEntry[];
   onChangeAgentName: (v: string) => void;
   onChangeName: (v: string) => void;
   onChangeCountry: (v: string) => void;
+  onChangeXHandle: (v: string) => void;
   onChangeGoal: (v: string) => void;
   onChangeHumorStyle: (s: HumorStyle) => void;
   onAddProject: (url: string) => void;
@@ -929,6 +932,29 @@ function PersonalizeStep({
             </p>
             <input type="text" value={userCountry} onChange={e => onChangeCountry(e.target.value)}
               placeholder="e.g. Nigeria, Kenya, Brazil" disabled={creating} style={inputStyle} />
+          </div>
+
+          {/* X / Twitter handle */}
+          <div>
+            <p style={{ ...MONO, fontSize: 9, color: t.faint, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
+              X / Twitter handle <span style={{ textTransform: 'none', fontStyle: 'normal', letterSpacing: 0, opacity: 0.6 }}>(optional)</span>
+            </p>
+            <div style={{ position: 'relative' }}>
+              <span style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', fontSize: 15, color: t.faint, pointerEvents: 'none', fontFamily: FONT }}>
+                @
+              </span>
+              <input
+                type="text"
+                value={userXHandle}
+                onChange={e => onChangeXHandle(e.target.value.replace(/^@/, ''))}
+                placeholder="yourhandle"
+                disabled={creating}
+                style={{ ...inputStyle, paddingLeft: 28 }}
+              />
+            </div>
+            <p style={{ fontSize: 10, color: t.faint, marginTop: 6, letterSpacing: '-0.005em' }}>
+              Helps your agent research your public profile and voice.
+            </p>
           </div>
 
           {/* Goal */}
@@ -1194,24 +1220,165 @@ function PersonalizeStep({
   );
 }
 
+// --- Spawning screen helpers ---
+
+function buildDefaultSteps(fields: {
+  xHandle?: string;
+  urls?: string[];
+  location?: string;
+  goals?: string[];
+}): SpawningProgressStep[] {
+  const steps: SpawningProgressStep[] = [];
+  if (fields.xHandle) steps.push({ step: `Researching @${fields.xHandle} on X`, status: 'waiting' });
+  if (fields.urls?.length) steps.push({ step: `Analyzing your website${fields.urls.length > 1 ? 's' : ''}`, status: 'waiting' });
+  if (fields.location) steps.push({ step: `Mapping local context — ${fields.location}`, status: 'waiting' });
+  steps.push({ step: 'Identifying opportunities & challenges', status: 'waiting' });
+  steps.push({ step: 'Building knowledge base', status: 'waiting' });
+  steps.push({ step: 'Generating starter tasks', status: 'waiting' });
+  steps.push({ step: 'Training complete', status: 'waiting' });
+  if (steps.length > 0) steps[0] = { ...steps[0], status: 'active' };
+  return steps;
+}
+
+function SpawningScreen({
+  agentId,
+  agentName,
+  agentEmoji,
+  personaColor,
+  providedFields,
+  onReady,
+  onFailed,
+}: {
+  agentId: string | number;
+  agentName: string;
+  agentEmoji: string;
+  personaColor: string;
+  providedFields: { xHandle?: string; urls?: string[]; location?: string; goals?: string[] };
+  onReady: () => void;
+  onFailed: () => void;
+}) {
+  const t = useTheme();
+  const { data } = useSpawningStatus(agentId);
+  const status = data?.status ?? 'researching';
+  const isReady = status === 'ready';
+  const isFailed = status === 'failed';
+
+  const steps: SpawningProgressStep[] = (data?.progress?.length)
+    ? data.progress
+    : buildDefaultSteps(providedFields);
+
+  return (
+    <motion.div
+      key="spawning"
+      initial={{ opacity: 0, x: 24 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: -24 }}
+      transition={{ duration: 0.28, ease: [0.25, 0.46, 0.45, 0.94] }}
+      style={{ height: '100%', display: 'flex', flexDirection: 'column', background: t.bg, fontFamily: FONT }}
+    >
+      {/* Identity */}
+      <div style={{ flexShrink: 0, padding: '56px 32px 28px', textAlign: 'center' }}>
+        <div style={{ fontSize: 52, lineHeight: 1, marginBottom: 14 }}>{agentEmoji}</div>
+        <p style={{ fontSize: 27, fontWeight: 300, letterSpacing: '-0.025em', color: t.text, lineHeight: 1.1, marginBottom: 6 }}>
+          {agentName}
+        </p>
+        <p style={{ fontSize: 12, color: t.faint, letterSpacing: '-0.005em' }}>
+          {isFailed ? 'Your agent is ready' : isReady ? 'Research complete' : 'Getting to know you…'}
+        </p>
+      </div>
+
+      <div style={{ height: 1, background: t.divider, flexShrink: 0 }} />
+
+      {/* Progress steps */}
+      <div className="no-scrollbar" style={{ flex: 1, overflowY: 'auto', padding: '8px 32px' }}>
+        {steps.map((s, i) => {
+          const isDone = s.status === 'done';
+          const isActive = s.status === 'active';
+          return (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, x: 8 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: i * 0.04, duration: 0.25 }}
+              style={{ display: 'flex', alignItems: 'center', gap: 12, paddingTop: 14, paddingBottom: 14, borderBottom: i < steps.length - 1 ? `1px solid ${t.divider}` : 'none' }}
+            >
+              <div style={{
+                width: 7,
+                height: 7,
+                borderRadius: '50%',
+                flexShrink: 0,
+                background: isDone ? '#22c55e' : isActive ? personaColor : t.divider,
+                transition: 'background 0.4s ease',
+              }} />
+              <p style={{
+                fontSize: 13,
+                fontWeight: isActive ? 400 : 300,
+                color: isDone ? t.label : isActive ? t.text : t.faint,
+                letterSpacing: '-0.01em',
+                transition: 'color 0.3s ease',
+              }}>
+                {s.step}{isActive && !isReady ? '…' : ''}
+              </p>
+              {isDone && (
+                <span style={{ marginLeft: 'auto', fontSize: 11, color: '#22c55e', flexShrink: 0 }}>✓</span>
+              )}
+            </motion.div>
+          );
+        })}
+      </div>
+
+      <div style={{ height: 1, background: t.divider, flexShrink: 0 }} />
+
+      {/* CTA */}
+      <div style={{ flexShrink: 0, padding: '20px 32px 32px' }}>
+        {isFailed && (
+          <p style={{ fontSize: 11, color: t.faint, letterSpacing: '-0.005em', textAlign: 'center', marginBottom: 14, lineHeight: 1.5 }}>
+            Your agent is ready — some research is still processing in the background.
+          </p>
+        )}
+        <button
+          onClick={isReady ? onReady : isFailed ? onFailed : undefined}
+          disabled={!isReady && !isFailed}
+          style={{
+            width: '100%',
+            padding: '16px',
+            background: (isReady || isFailed) ? personaColor : t.surface,
+            border: 'none',
+            borderRadius: 14,
+            cursor: (isReady || isFailed) ? 'pointer' : 'default',
+            opacity: (isReady || isFailed) ? 1 : 0.5,
+            transition: 'all 0.3s ease',
+            fontFamily: FONT,
+          }}
+        >
+          <span style={{ fontSize: 14, fontWeight: 500, color: (isReady || isFailed) ? '#fff' : t.faint, letterSpacing: '-0.01em' }}>
+            {isReady ? `Meet ${agentName}` : isFailed ? 'Continue anyway' : 'Preparing your agent…'}
+          </span>
+        </button>
+      </div>
+    </motion.div>
+  );
+}
+
 export function CreateAgentView() {
   const t = useTheme();
   const { data: templates, isLoading: templatesLoading } = useTemplates();
   const create = useCreateAgent();
-  const updateSoul = useUpdateSoul();
-  const addKnowledge = useAddKnowledge();
   const pop = useRouter(s => s.pop);
   const push = useRouter(s => s.push);
   const fromOnboarding = useRouter(s => s.currentView.params?.fromOnboarding === 'true');
   const { setHasSeenOnboard, userProfile, setUserProfile } = useAppStore();
 
-  type Step = 'persona' | 'personalize';
+  type Step = 'persona' | 'personalize' | 'spawning';
   const [step, setStep] = useState<Step>('persona');
   const [selectedPersona, setSelectedPersona] = useState<PersonaConfig | null>(null);
+  const [spawningAgent, setSpawningAgent] = useState<{ id: string | number; name: string; emoji: string } | null>(null);
+  const [spawningBriefContext, setSpawningBriefContext] = useState<string>('');
 
   const [agentCustomName, setAgentCustomName] = useState('');
   const [userName, setUserName] = useState(() => userProfile.name);
   const [userCountry, setUserCountry] = useState(() => userProfile.country);
+  const [userXHandle, setUserXHandle] = useState('');
   const [userGoal, setUserGoal] = useState(() => userProfile.goal);
 
   const shuffledPersonas = useMemo(() => {
@@ -1231,6 +1398,7 @@ export function CreateAgentView() {
   useEffect(() => {
     if (selectedPersona) {
       setAgentCustomName('');
+      setUserXHandle('');
       setUserHumorStyle(selectedPersona.humorStyle ?? 'straight');
       setUserProjects([]);
     }
@@ -1303,38 +1471,21 @@ export function CreateAgentView() {
     return context;
   };
 
-  const buildUserContextSoul = (persona: PersonaConfig, info: UserInfo, projects: ProjectEntry[]): string => {
-    const lines: string[] = [];
-    if (info.name.trim()) lines.push(`User's name: ${info.name.trim()}`);
-    if (info.country.trim()) lines.push(`Location: ${info.country.trim()}`);
-    if (info.goal.trim()) lines.push(`Currently working on: ${info.goal.trim()}`);
-
-    const readyProjects = projects.filter(p => p.fetchStatus === 'ready' || p.fetchStatus === 'error');
-
-    let soul = persona.soul;
-
-    if (lines.length > 0) {
-      soul += `\n\n## About the User\n${lines.join('\n')}\n\nGreet the user by name when they first message you, introduce yourself in your persona voice, and ask one focused follow-up question about their goal.`;
-    }
-
-    if (readyProjects.length > 0) {
-      const projectLines = readyProjects.map(p => {
-        const name = p.title ?? safeHostname(p.url);
-        return p.description ? `- ${name} (${p.url}): ${p.description}` : `- ${name} (${p.url})`;
-      });
-      soul += `\n\n## Projects\n${projectLines.join('\n')}\n\nReference the user's projects when relevant to give contextual, specific advice.`;
-    }
-
-    return soul;
-  };
-
-  const handleLaunch = async (persona: PersonaConfig, agentCustomName: string, info: UserInfo, humor: HumorStyle, projects: ProjectEntry[]) => {
+  const handleLaunch = async (
+    persona: PersonaConfig,
+    agentCustomName: string,
+    info: UserInfo,
+    xHandle: string,
+    humor: HumorStyle,
+    projects: ProjectEntry[]
+  ) => {
     if (creating) return;
     setCreating(true);
     setError(null);
 
     try {
       const templateId = resolveTemplate(persona.personaTemplate);
+      const urlList = projects.map(p => p.url);
       const result = await create.mutateAsync({
         name: agentCustomName.trim() || persona.name,
         description: persona.tagline,
@@ -1343,59 +1494,27 @@ export function CreateAgentView() {
         interests: persona.interests,
         topicsToWatch: persona.topicsToWatch,
         enabledSkills: persona.enabledSkills,
+        // Spawning pipeline fields
+        ownerName: info.name.trim() || undefined,
+        location: info.country.trim() || undefined,
+        xHandle: xHandle.trim() || undefined,
+        urls: urlList.length > 0 ? urlList : undefined,
+        goals: info.goal.trim() ? [info.goal.trim()] : undefined,
       });
 
       const newAgent = result.agent;
-      const enrichedSoul = buildUserContextSoul(persona, info, projects);
-      updateSoul.mutate({ agentId: newAgent.id, soul: enrichedSoul });
-
-      const knowledgeTasks: Array<{ title: string; content: string }> = [];
-      if (info.name.trim()) knowledgeTasks.push({ title: 'User name', content: info.name.trim() });
-      if (info.country.trim()) knowledgeTasks.push({ title: 'User location', content: info.country.trim() });
-      if (info.goal.trim()) knowledgeTasks.push({ title: 'Current focus', content: info.goal.trim() });
-
-      const readyProjects = projects.filter(p => p.fetchStatus === 'ready' || p.fetchStatus === 'error');
-      for (const p of readyProjects) {
-        knowledgeTasks.push({
-          title: `Project: ${p.title ?? safeHostname(p.url)}`,
-          content: [p.url, p.description].filter(Boolean).join('\n'),
-        });
-      }
-
-      for (const k of knowledgeTasks) {
-        try {
-          await addKnowledge.mutateAsync({ agentId: newAgent.id, data: k });
-        } catch {
-          // non-blocking — knowledge enrichment is best-effort
-        }
-      }
-
-      let agentReady = false;
-      for (let attempt = 0; attempt < 2; attempt++) {
-        try {
-          await apiFetch(`/api/selfclaw/v1/hosted-agents/${newAgent.id}`);
-          agentReady = true;
-          break;
-        } catch {
-          if (attempt < 1) {
-            await new Promise(resolve => setTimeout(resolve, 400));
-          }
-        }
-      }
-
-      if (!agentReady) {
-        setError('Agent created but couldn\'t load — please go back and tap the agent to open it.');
-        setCreating(false);
-        return;
-      }
+      const agentName = agentCustomName.trim() || persona.name;
+      const agentEmoji = persona.emoji;
 
       setHasSeenOnboard(true);
-      setUserProfile({ name: info.name.trim(), country: info.country.trim(), goal: info.goal.trim() });
+      setUserProfile({ name: info.name.trim(), city: '', country: info.country.trim(), goal: info.goal.trim() });
 
-      const briefContext = buildBriefContext(persona, agentCustomName, info, projects);
-
-      pop();
-      push('agent-detail', { id: String(newAgent.id), briefContext });
+      // Store fallback brief context in case spawning fails
+      const briefCtx = buildBriefContext(persona, agentCustomName, info, projects);
+      setSpawningBriefContext(briefCtx);
+      setSpawningAgent({ id: newAgent.id, name: agentName, emoji: agentEmoji });
+      setCreating(false);
+      setStep('spawning');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create agent. Please try again.');
       setCreating(false);
@@ -1421,6 +1540,31 @@ export function CreateAgentView() {
     pop();
   };
 
+  if (step === 'spawning' && spawningAgent && selectedPersona) {
+    return (
+      <SpawningScreen
+        agentId={spawningAgent.id}
+        agentName={spawningAgent.name}
+        agentEmoji={spawningAgent.emoji}
+        personaColor={selectedPersona.color}
+        providedFields={{
+          xHandle: userXHandle.trim() || undefined,
+          urls: userProjects.map(p => p.url),
+          location: userCountry.trim() || undefined,
+          goals: userGoal.trim() ? [userGoal.trim()] : undefined,
+        }}
+        onReady={() => {
+          pop();
+          push('agent-detail', { id: String(spawningAgent.id) });
+        }}
+        onFailed={() => {
+          pop();
+          push('agent-detail', { id: String(spawningAgent.id), briefContext: spawningBriefContext });
+        }}
+      />
+    );
+  }
+
   if (step === 'personalize' && selectedPersona) {
     return (
       <AnimatePresence mode="wait">
@@ -1430,19 +1574,21 @@ export function CreateAgentView() {
           agentCustomName={agentCustomName}
           userName={userName}
           userCountry={userCountry}
+          userXHandle={userXHandle}
           userGoal={userGoal}
           humorStyle={userHumorStyle}
           projects={userProjects}
           onChangeAgentName={setAgentCustomName}
           onChangeName={setUserName}
           onChangeCountry={setUserCountry}
+          onChangeXHandle={setUserXHandle}
           onChangeGoal={setUserGoal}
           onChangeHumorStyle={setUserHumorStyle}
           onAddProject={handleAddProject}
           onRemoveProject={handleRemoveProject}
           onBack={handleBack}
-          onSkip={() => handleLaunch(selectedPersona, '', { name: '', country: '', goal: '' }, selectedPersona.humorStyle, [])}
-          onLaunch={() => handleLaunch(selectedPersona, agentCustomName, { name: userName, country: userCountry, goal: userGoal }, userHumorStyle, userProjects)}
+          onSkip={() => handleLaunch(selectedPersona, '', { name: '', country: '', goal: '' }, '', selectedPersona.humorStyle, [])}
+          onLaunch={() => handleLaunch(selectedPersona, agentCustomName, { name: userName, country: userCountry, goal: userGoal }, userXHandle, userHumorStyle, userProjects)}
           creating={creating}
           error={error}
         />

@@ -90,6 +90,20 @@ export interface Agent {
   holdingsUsd?: number | null;
   uptimePercent?: number | null;
   progressPercent?: number | null;
+
+  // Spawning pipeline state
+  spawningStatus?: 'researching' | 'training' | 'ready' | 'failed' | null;
+}
+
+// GET /:id/spawning-status — live research pipeline progress
+export interface SpawningProgressStep {
+  step: string;
+  status: 'done' | 'active' | 'waiting';
+}
+
+export interface SpawningStatusResponse {
+  status: 'researching' | 'training' | 'ready' | 'failed' | null;
+  progress?: SpawningProgressStep[];
 }
 
 // Per API docs: straight | dry-wit | playful | sarcastic | absurdist
@@ -139,6 +153,19 @@ export interface CreateAgentPayload {
   enabledSkills?: string[];
   personaTemplate?: string;
   humorStyle?: HumorStyle;
+  // Spawning pipeline fields — used by the Grok research pipeline at creation time
+  ownerName?: string;
+  xHandle?: string;
+  linkedinUrl?: string;
+  location?: string;
+  domain?: string;
+  urls?: string[];
+  goals?: string[];
+  challenges?: string[];
+  targetAudience?: string;
+  experienceLevel?: 'beginner' | 'intermediate' | 'expert';
+  budget?: 'bootstrapping' | 'small' | 'moderate' | 'established';
+  languages?: string[];
 }
 
 // POST /v1/hosted-agents response — agent + one-time privateKey

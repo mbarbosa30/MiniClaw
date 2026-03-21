@@ -20,6 +20,7 @@ import type {
   ChatMessage,
   AgentTask,
   TaskSummary,
+  SpawningStatusResponse,
   ActivityItem,
   GrowthSummary,
   TelegramStatus,
@@ -530,6 +531,26 @@ export function useDailyBrief() {
       return (raw as DailyBriefResponse).briefs ?? [];
     },
     staleTime: 300_000,
+  });
+}
+
+// GET /:id/spawning-status — live research pipeline progress
+export function useSpawningStatus(
+  agentId: string | number | undefined,
+  enabled: boolean = true
+) {
+  return useQuery<SpawningStatusResponse>({
+    queryKey: ['spawning-status', qid(agentId)],
+    queryFn: () => apiFetch<SpawningStatusResponse>(
+      `/api/selfclaw/v1/hosted-agents/${sid(agentId!)}/spawning-status`
+    ),
+    enabled: enabled && agentId != null && agentId !== '',
+    refetchInterval: (query) => {
+      const s = (query.state.data as SpawningStatusResponse | undefined)?.status;
+      if (s === 'ready' || s === 'failed') return false;
+      return 2500;
+    },
+    staleTime: 0,
   });
 }
 
