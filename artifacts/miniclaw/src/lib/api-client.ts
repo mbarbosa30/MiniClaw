@@ -54,16 +54,17 @@ async function withRetryAfter(fn: () => Promise<Response>): Promise<Response> {
   let retryAfterMs: number | null = null;
   try {
     const data = await response.clone().json();
-    if (data.code === 'SERVICE_UNAVAILABLE' && typeof data.retryAfterMs === 'number') {
-      retryAfterMs = data.retryAfterMs;
+    const ms = data.retryAfterMs;
+    if (typeof ms === 'number' && Number.isFinite(ms) && ms >= 0) {
+      retryAfterMs = ms;
     }
   } catch {
-    // Not JSON or missing fields — fall through and surface the 503 normally
+    // Not JSON or missing retryAfterMs — fall through and surface the 503 normally
   }
 
   if (retryAfterMs == null) return response;
 
-  await new Promise<void>(resolve => setTimeout(resolve, retryAfterMs as number));
+  await new Promise<void>(resolve => setTimeout(resolve, retryAfterMs!));
   return fn();
 }
 
