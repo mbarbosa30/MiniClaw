@@ -28,199 +28,6 @@ function phaseColor(phase: string): string {
   return PHASE_COLOR[phase] ?? '#555555';
 }
 
-// --- Awareness section ---
-
-function AwarenessSection({ agentId, onEconomy }: { agentId: string; onEconomy: () => void }) {
-  const t = useTheme();
-  const { data, isLoading } = useAwareness(agentId);
-
-  if (isLoading) {
-    return (
-      <div style={{
-        flexShrink: 0,
-        padding: '10px 20px 12px',
-        borderBottom: `1px solid ${t.divider}`,
-      }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-          <div style={{ height: 16, width: '28%', background: t.surface, borderRadius: 3 }} />
-          <div style={{ height: 9, width: '10%', background: t.surface, borderRadius: 2 }} />
-        </div>
-        <div style={{ height: 1.5, background: t.surface, borderRadius: 1, marginBottom: 8 }} />
-        <div style={{ display: 'flex', gap: 16 }}>
-          <div style={{ height: 9, width: '45%', background: t.surface, borderRadius: 2 }} />
-          <div style={{ height: 9, width: '35%', background: t.surface, borderRadius: 2 }} />
-        </div>
-      </div>
-    );
-  }
-
-  if (!data) return null;
-
-  const color = phaseColor(data.phase);
-  const pct = Math.min(Math.max(data.progress ?? 0, 0), 100);
-
-  const onchain = data.onChain ?? { wallet: false, token: false, identity: false };
-
-  // Economy capabilities — prefer economyCapabilities, fall back to legacy phaseDetails
-  const ec = data.economyCapabilities;
-  const phaseBehavior = ec?.currentPhase?.behavior ?? ec?.currentPhase?.description ?? data.phaseDetails?.behavior ?? null;
-  const economyAware = ec?.economyAwareness ?? data.phaseDetails?.economyAwareness ?? false;
-  const allTools = ec?.toolsAvailable ?? data.toolsAvailable ?? [];
-  const visibleTools = allTools.slice(0, 3);
-  const extraTools = allTools.length > 3 ? allTools.length - 3 : 0;
-
-  const formatTool = (name: string) =>
-    name.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-
-  const OnchainDot = ({ done, label }: { done: boolean; label: string }) => (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-      {done ? (
-        <svg width="8" height="8" viewBox="0 0 8 8" fill="none" style={{ flexShrink: 0 }}>
-          <circle cx="4" cy="4" r="3.5" fill="#22c55e" />
-          <path d="M2.2 4l1.2 1.2 2.4-2.4" stroke={t.bg} strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      ) : (
-        <div style={{
-          width: 6,
-          height: 6,
-          borderRadius: '50%',
-          background: 'transparent',
-          border: `1px solid ${t.faint}`,
-          flexShrink: 0,
-        }} />
-      )}
-      <span style={{
-        fontFamily: 'ui-monospace, Menlo, monospace',
-        fontSize: 9,
-        color: done ? t.label : t.faint,
-        letterSpacing: '0.04em',
-        textTransform: 'uppercase',
-      }}>
-        {label}
-      </span>
-    </div>
-  );
-
-  return (
-    <div style={{
-      flexShrink: 0,
-      padding: '10px 20px 12px',
-      borderBottom: `1px solid ${t.divider}`,
-    }}>
-      {/* Phase pill + percentage */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: phaseBehavior ? 5 : 6 }}>
-        <span style={{
-          fontFamily: 'ui-monospace, Menlo, monospace',
-          fontSize: 8,
-          color,
-          letterSpacing: '0.07em',
-          textTransform: 'uppercase',
-          background: `${color}1a`,
-          border: `1px solid ${color}40`,
-          borderRadius: 3,
-          padding: '2px 5px',
-        }}>
-          {data.label || data.phase}
-        </span>
-        <span style={{
-          fontFamily: 'ui-monospace, Menlo, monospace',
-          fontSize: 9,
-          color: t.faint,
-          letterSpacing: '0.02em',
-        }}>
-          {pct}%
-        </span>
-      </div>
-
-      {/* Phase behavior text */}
-      {phaseBehavior && (
-        <p style={{
-          fontSize: 10,
-          color: t.label,
-          lineHeight: 1.5,
-          letterSpacing: '-0.005em',
-          marginBottom: 6,
-        }}>
-          {phaseBehavior}
-        </p>
-      )}
-
-      {/* Progress bar */}
-      <div style={{ height: 1.5, background: t.surface, borderRadius: 1, marginBottom: 8, overflow: 'hidden' }}>
-        <div style={{
-          height: '100%',
-          width: `${pct}%`,
-          background: color,
-          borderRadius: 1,
-          transition: 'width 0.6s ease',
-        }} />
-      </div>
-
-      {/* Onchain dots + Economy shortcut */}
-      <button
-        onClick={onEconomy}
-        style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', background: 'none', border: 'none', padding: 0, cursor: 'pointer', width: '100%', textAlign: 'left' }}
-      >
-        <OnchainDot done={onchain.wallet} label="wallet" />
-        <OnchainDot done={onchain.token} label="token" />
-        <OnchainDot done={onchain.identity} label="identity" />
-        <span style={{ marginLeft: 'auto', fontFamily: 'ui-monospace, Menlo, monospace', fontSize: 9, color: t.faint, letterSpacing: '0.02em' }}>
-          economy →
-        </span>
-      </button>
-
-      {/* Economy awareness badge + tools */}
-      {(economyAware || visibleTools.length > 0) && (
-        <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-          {economyAware && (
-            <span style={{
-              fontFamily: 'ui-monospace, Menlo, monospace',
-              fontSize: 8,
-              fontWeight: 600,
-              letterSpacing: '0.07em',
-              textTransform: 'uppercase',
-              color: '#22c55e',
-              background: '#22c55e1a',
-              border: '1px solid #22c55e40',
-              borderRadius: 3,
-              padding: '2px 5px',
-            }}>
-              Economy aware
-            </span>
-          )}
-          {visibleTools.map(tool => (
-            <span
-              key={tool}
-              style={{
-                fontFamily: 'ui-monospace, Menlo, monospace',
-                fontSize: 8,
-                letterSpacing: '0.04em',
-                color: t.faint,
-                background: t.surface,
-                border: `1px solid ${t.divider}`,
-                borderRadius: 3,
-                padding: '2px 5px',
-              }}
-            >
-              {formatTool(tool)}
-            </span>
-          ))}
-          {extraTools > 0 && (
-            <span style={{
-              fontFamily: 'ui-monospace, Menlo, monospace',
-              fontSize: 8,
-              letterSpacing: '0.04em',
-              color: t.faint,
-            }}>
-              +{extraTools} more
-            </span>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
 // --- Quota bar ---
 
 interface QuotaState {
@@ -382,17 +189,53 @@ function AgentHeader({
   onOptions,
   onPending,
   quota,
+  agentId,
+  onEconomy,
 }: {
   agent: Agent;
   onBack: () => void;
   onOptions: () => void;
   onPending: () => void;
   quota: QuotaState | null;
+  agentId: string;
+  onEconomy: () => void;
 }) {
   const t = useTheme();
+  const { data: awarenessData } = useAwareness(agentId);
+  const [showAwareness, setShowAwareness] = useState(false);
   const stats = agent.stats;
   const pendingCount = stats?.pendingTasksCount ?? 0;
   const SIDE_W = 72;
+
+  const awarenessLabel = awarenessData ? (awarenessData.label || awarenessData.phase) : null;
+  const aColor = awarenessData ? phaseColor(awarenessData.phase) : t.faint;
+  const pct = Math.min(Math.max(awarenessData?.progress ?? 0, 0), 100);
+  const onchain = awarenessData?.onChain ?? { wallet: false, token: false, identity: false };
+  const ec = awarenessData?.economyCapabilities;
+  const phaseBehavior = ec?.currentPhase?.behavior ?? ec?.currentPhase?.description ?? awarenessData?.phaseDetails?.behavior ?? null;
+  const economyAware = ec?.economyAwareness ?? awarenessData?.phaseDetails?.economyAwareness ?? false;
+  const allTools = ec?.toolsAvailable ?? awarenessData?.toolsAvailable ?? [];
+  const visibleTools = allTools.slice(0, 3);
+  const extraTools = allTools.length > 3 ? allTools.length - 3 : 0;
+
+  const formatTool = (name: string) =>
+    name.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+
+  const OnchainDot = ({ done, label }: { done: boolean; label: string }) => (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+      {done ? (
+        <svg width="8" height="8" viewBox="0 0 8 8" fill="none" style={{ flexShrink: 0 }}>
+          <circle cx="4" cy="4" r="3.5" fill="#22c55e" />
+          <path d="M2.2 4l1.2 1.2 2.4-2.4" stroke={t.bg} strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      ) : (
+        <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'transparent', border: `1px solid ${t.faint}`, flexShrink: 0 }} />
+      )}
+      <span style={{ fontFamily: 'ui-monospace, Menlo, monospace', fontSize: 9, color: done ? t.label : t.faint, letterSpacing: '0.04em', textTransform: 'uppercase' as const }}>
+        {label}
+      </span>
+    </div>
+  );
 
   return (
     <div style={{
@@ -402,12 +245,8 @@ function AgentHeader({
       paddingLeft: 8,
       paddingRight: 8,
     }}>
-      <div style={{
-        height: 52,
-        display: 'flex',
-        alignItems: 'center',
-      }}>
-        {/* Left — fixed width, back button */}
+      <div style={{ height: 52, display: 'flex', alignItems: 'center' }}>
+        {/* Left — back button */}
         <div style={{ width: SIDE_W, flexShrink: 0, display: 'flex', alignItems: 'center' }}>
           <button
             onClick={onBack}
@@ -426,45 +265,23 @@ function AgentHeader({
             const isActive = rts === 'thinking' || rts === 'running' || rts === 'waiting';
             return (
               <span style={{
-                width: 6,
-                height: 6,
-                borderRadius: '50%',
-                flexShrink: 0,
+                width: 6, height: 6, borderRadius: '50%', flexShrink: 0,
                 background: isActive ? '#f59e0b' : '#22c55e',
                 animation: isActive ? 'statusPulse 1.6s ease-in-out infinite' : undefined,
               }} />
             );
           })()}
-          <span style={{
-            fontSize: 15,
-            fontWeight: 300,
-            letterSpacing: '-0.015em',
-            lineHeight: 1,
-            color: t.text,
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-          }}>
+          <span style={{ fontSize: 15, fontWeight: 300, letterSpacing: '-0.015em', lineHeight: 1, color: t.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {agent.name || 'Agent'}
           </span>
         </div>
 
-        {/* Right — fixed width */}
+        {/* Right — pending count + options */}
         <div style={{ width: SIDE_W, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}>
           {pendingCount > 0 && (
             <button
               onClick={onPending}
-              style={{
-                padding: '2px 5px',
-                background: 'none',
-                border: `1px solid ${t.divider}`,
-                borderRadius: 4,
-                cursor: 'pointer',
-                ...MONO,
-                color: t.label,
-                lineHeight: 1.4,
-                flexShrink: 0,
-              }}
+              style={{ padding: '2px 5px', background: 'none', border: `1px solid ${t.divider}`, borderRadius: 4, cursor: 'pointer', ...MONO, color: t.label, lineHeight: 1.4, flexShrink: 0 }}
             >
               {pendingCount}
             </button>
@@ -479,9 +296,89 @@ function AgentHeader({
       </div>
 
       {/* Quota bar */}
-      <div style={{ paddingLeft: 8, paddingRight: 8, paddingBottom: quota ? 0 : undefined }}>
+      <div style={{ paddingLeft: 8, paddingRight: 8 }}>
         <QuotaBar quota={quota} />
       </div>
+
+      {/* Collapsible awareness — phase tag toggle row */}
+      {awarenessLabel && (
+        <div style={{ paddingLeft: 8, paddingRight: 8, paddingBottom: 8 }}>
+          <button
+            onClick={() => setShowAwareness(v => !v)}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
+          >
+            <span style={{
+              fontFamily: 'ui-monospace, Menlo, monospace',
+              fontSize: 8,
+              color: aColor,
+              letterSpacing: '0.07em',
+              textTransform: 'uppercase',
+              background: `${aColor}1a`,
+              border: `1px solid ${aColor}40`,
+              borderRadius: 3,
+              padding: '2px 5px',
+            }}>
+              {awarenessLabel}
+            </span>
+            <span style={{ fontSize: 8, color: t.faint, lineHeight: 1 }}>
+              {showAwareness ? '▴' : '▾'}
+            </span>
+          </button>
+
+          {showAwareness && (
+            <div style={{ paddingTop: 8 }}>
+              {/* Phase behavior text */}
+              {phaseBehavior && (
+                <p style={{ fontSize: 10, color: t.label, lineHeight: 1.5, letterSpacing: '-0.005em', marginBottom: 6, marginTop: 0 }}>
+                  {phaseBehavior}
+                </p>
+              )}
+
+              {/* Progress bar */}
+              <div style={{ height: 1.5, background: t.surface, borderRadius: 1, marginBottom: 8, overflow: 'hidden' }}>
+                <div style={{ height: '100%', width: `${pct}%`, background: aColor, borderRadius: 1, transition: 'width 0.6s ease' }} />
+              </div>
+              <span style={{ fontFamily: 'ui-monospace, Menlo, monospace', fontSize: 9, color: t.faint, letterSpacing: '0.02em', display: 'block', marginBottom: 8 }}>
+                {pct}%
+              </span>
+
+              {/* Onchain dots + economy link */}
+              <button
+                onClick={onEconomy}
+                style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', background: 'none', border: 'none', padding: 0, cursor: 'pointer', width: '100%', textAlign: 'left' }}
+              >
+                <OnchainDot done={onchain.wallet} label="wallet" />
+                <OnchainDot done={onchain.token} label="token" />
+                <OnchainDot done={onchain.identity} label="identity" />
+                <span style={{ marginLeft: 'auto', fontFamily: 'ui-monospace, Menlo, monospace', fontSize: 9, color: t.faint, letterSpacing: '0.02em' }}>
+                  economy →
+                </span>
+              </button>
+
+              {/* Economy awareness badge + tools */}
+              {(economyAware || visibleTools.length > 0) && (
+                <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                  {economyAware && (
+                    <span style={{ fontFamily: 'ui-monospace, Menlo, monospace', fontSize: 8, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: '#22c55e', background: '#22c55e1a', border: '1px solid #22c55e40', borderRadius: 3, padding: '2px 5px' }}>
+                      Economy aware
+                    </span>
+                  )}
+                  {visibleTools.map(tool => (
+                    <span key={tool} style={{ fontFamily: 'ui-monospace, Menlo, monospace', fontSize: 8, letterSpacing: '0.04em', color: t.faint, background: t.surface, border: `1px solid ${t.divider}`, borderRadius: 3, padding: '2px 5px' }}>
+                      {formatTool(tool)}
+                    </span>
+                  ))}
+                  {extraTools > 0 && (
+                    <span style={{ fontFamily: 'ui-monospace, Menlo, monospace', fontSize: 8, letterSpacing: '0.04em', color: t.faint }}>
+                      +{extraTools} more
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -524,6 +421,7 @@ export function AgentDetailView() {
   const { data: awareness } = useAwareness(id);
   const [newChatTrigger, setNewChatTrigger] = useState(0);
   const [quota, setQuota] = useState<QuotaState | null>(null);
+  const [viewportH, setViewportH] = useState<number>(() => window.visualViewport?.height ?? window.innerHeight);
 
   useEffect(() => {
     if (newChatAt) setNewChatTrigger(n => n + 1);
@@ -543,6 +441,14 @@ export function AgentDetailView() {
       });
     }
   }, [awareness]);
+
+  useEffect(() => {
+    const vp = window.visualViewport;
+    if (!vp) return;
+    const handleResize = () => setViewportH(vp.height);
+    vp.addEventListener('resize', handleResize);
+    return () => vp.removeEventListener('resize', handleResize);
+  }, []);
 
   if (isLoading) {
     return (
@@ -586,15 +492,16 @@ export function AgentDetailView() {
   const agentName = agent.name || 'Agent';
 
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: t.bg, transition: 'background 0.3s ease' }}>
+    <div style={{ height: viewportH, display: 'flex', flexDirection: 'column', background: t.bg, transition: 'background 0.3s ease', overflow: 'hidden' }}>
       <AgentHeader
         agent={agent}
         onBack={pop}
         onOptions={() => push('agent-options', { id })}
         onPending={() => push('tasks', { id })}
         quota={quota}
+        agentId={id}
+        onEconomy={() => push('economy', { id })}
       />
-      <AwarenessSection agentId={id} onEconomy={() => push('economy', { id })} />
       <div style={{ flex: 1, overflow: 'hidden' }}>
         <ChatTab
           agent={agent}
@@ -615,16 +522,6 @@ type LocalMessage = ChatMessage & {
   tokensUsed?: number;
   model?: string;
 };
-
-function fmtTime(ts?: number, iso?: string): string {
-  try {
-    const d = iso ? new Date(iso) : ts ? new Date(ts) : null;
-    if (!d || isNaN(d.getTime())) return '';
-    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
-  } catch {
-    return '';
-  }
-}
 
 function fmtRelative(ts?: number, iso?: string): string {
   try {
@@ -1052,9 +949,8 @@ function ChatTab({
           const isUser = m.role === 'user';
 
           if (isUser) {
-            const timestamp = fmtTime(m._ts, m.createdAt);
             return (
-              <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+              <div key={i} style={{ display: 'flex', justifyContent: 'flex-end' }}>
                 <div style={{
                   background: t.surface,
                   borderRadius: 14,
@@ -1072,17 +968,6 @@ function ChatTab({
                     {m.content}
                   </p>
                 </div>
-                {timestamp && (
-                  <span style={{
-                    fontSize: 9,
-                    fontFamily: 'ui-monospace, Menlo, monospace',
-                    letterSpacing: '0.04em',
-                    color: t.faint,
-                    opacity: 0.5,
-                  }}>
-                    {timestamp}
-                  </span>
-                )}
               </div>
             );
           }
