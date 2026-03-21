@@ -500,6 +500,14 @@ export interface EconomyData {
   gifts?: GiftEntry[];
 }
 
+// GET /v1/gateway/endpoints — manifest entry
+export interface GatewayEndpoint {
+  method: string;
+  path: string;
+  auth?: string;
+  description?: string;
+}
+
 // POST /:id/commerce/request response
 export interface CommerceRequestResult {
   id: string;

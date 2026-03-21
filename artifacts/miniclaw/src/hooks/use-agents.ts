@@ -34,6 +34,7 @@ import type {
   TokenStatus,
   EconomyData,
   CommerceRequestResult,
+  GatewayEndpoint,
 } from '@/types';
 
 export type { Agent, AgentListSummary, PersonaTemplate, SkillDef };
@@ -685,6 +686,38 @@ export function useCommerceRequest() {
       }),
     onSuccess: (_, variables) => qc.invalidateQueries({ queryKey: ['economy', qid(variables.agentId)] }),
   });
+}
+
+// --- GATEWAY ENDPOINT DISCOVERY ---
+
+// Fetched once per session (staleTime: Infinity). Normalises to a Set of
+// "METHOD /path" keys for O(1) lookups via useHasEndpoint.
+export function useGatewayEndpoints() {
+  return useQuery<Set<string>>({
+    queryKey: ['gateway-endpoints'],
+    queryFn: async () => {
+      const raw = await apiFetch<{ endpoints?: GatewayEndpoint[] } | GatewayEndpoint[]>(
+        '/api/selfclaw/v1/gateway/endpoints',
+      );
+      const list: GatewayEndpoint[] = Array.isArray(raw)
+        ? raw
+        : (raw as { endpoints?: GatewayEndpoint[] }).endpoints ?? [];
+      return new Set(list.map(e => `${e.method.toUpperCase()} ${e.path}`));
+    },
+    staleTime: Infinity,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    retry: 1,
+  });
+}
+
+// Convenience hook — returns true when the endpoint is present in the manifest,
+// or undefined while the manifest is still loading.
+export function useHasEndpoint(method: string, path: string): boolean | undefined {
+  const { data, isLoading } = useGatewayEndpoints();
+  if (isLoading) return undefined;
+  if (!data) return false;
+  return data.has(`${method.toUpperCase()} ${path}`);
 }
 
 // --- COMPACT CONVERSATION ---

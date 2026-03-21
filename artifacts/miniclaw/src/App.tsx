@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 
 import { wagmiConfig } from "@/lib/wagmi";
 import { useAutoConnect, useRestoreSession } from "@/hooks/use-auth";
+import { useGatewayEndpoints } from "@/hooks/use-agents";
 import { useRouter, useAppStore } from "@/lib/store";
 import { ThemeCtx, LIGHT, DARK } from "@/lib/theme";
 
@@ -69,6 +70,9 @@ function MainLayout() {
 function ViewManager() {
   useAutoConnect();
   useRestoreSession();
+  // Prefetch the gateway manifest once at startup — no blocking, result cached
+  // for the session. Views use useHasEndpoint() to read it reactively.
+  useGatewayEndpoints();
 
   const view = useRouter((s) => s.currentView.name);
 

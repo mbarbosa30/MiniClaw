@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { useTheme } from '@/lib/theme';
-import { useAgents, useGrowthSummary, useUsageStats } from '@/hooks/use-agents';
+import { useAgents, useGrowthSummary, useUsageStats, useHasEndpoint } from '@/hooks/use-agents';
 import type { GrowthSummary, AgentUsageStats } from '@/types';
 
 // --- Helpers ---
@@ -125,6 +125,9 @@ export function GrowthView() {
   const t = useTheme();
   const { data, isLoading: agentsLoading } = useAgents();
   const agents = data?.agents ?? [];
+
+  // Gate feed section on manifest availability — undefined while loading, true/false once known
+  const feedAvailable = useHasEndpoint('GET', '/v1/feed');
 
   const [summaryByAgent, setSummaryByAgent] = useState<Record<string, GrowthSummary>>({});
   const [resolvedAgents, setResolvedAgents] = useState<Set<string>>(new Set());
@@ -535,6 +538,23 @@ export function GrowthView() {
               </motion.div>
             )}
           </>
+        )}
+        {/* Feed section — only rendered when manifest confirms the feed endpoint is live */}
+        {feedAvailable && (
+          <div style={{ marginTop: 8 }}>
+            <div style={{ height: 1, background: t.divider, margin: '12px 0 28px' }} />
+            <p style={{
+              ...MONO_STYLE,
+              fontSize: 9,
+              color: t.faint,
+              textTransform: 'uppercase',
+              letterSpacing: '0.08em',
+              marginBottom: 20,
+            }}>
+              Feed
+            </p>
+            {/* FeedSection placeholder — populated by Task #77 */}
+          </div>
         )}
       </div>
     </div>
