@@ -148,7 +148,7 @@ function AgentHeader({
   const pendingCount = stats?.pendingTasksCount ?? 0;
   const SIDE_W = 72;
 
-  const awarenessLabel = awarenessData ? (awarenessData.label || awarenessData.phase) : null;
+  const awarenessLabel = awarenessData ? (awarenessData.label || awarenessData.phase || 'phase') : null;
   const aColor = awarenessData ? phaseColor(awarenessData.phase) : t.faint;
   const phasePct = Math.min(Math.max(awarenessData?.progress ?? 0, 0), 100);
   const onchain = awarenessData?.onChain ?? { wallet: false, token: false, identity: false };
@@ -235,118 +235,123 @@ function AgentHeader({
       </div>
 
       {/* Compact sub-row: phase pill left | compact quota right | tappable to expand */}
-      {(awarenessLabel || hasQuota) ? (
-        <div style={{ marginLeft: -8, marginRight: -8 }}>
-          <div style={{ height: 1, background: t.divider, opacity: 0.25, marginLeft: 8, marginRight: 8 }} />
-          <button
-            onClick={() => awarenessLabel && setShowAwareness(v => !v)}
-            style={{
-              width: '100%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              paddingLeft: 16,
-              paddingRight: 16,
-              paddingTop: 6,
-              paddingBottom: 8,
-              background: 'none',
-              border: 'none',
-              cursor: awarenessLabel ? 'pointer' : 'default',
-            }}
-          >
-            {/* Left: phase pill + SVG chevron */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-              {awarenessLabel && (
-                <>
-                  <span style={{
-                    fontFamily: 'ui-monospace, Menlo, monospace',
-                    fontSize: 8,
-                    color: aColor,
-                    letterSpacing: '0.07em',
-                    textTransform: 'uppercase' as const,
-                    background: `${aColor}1a`,
-                    border: `1px solid ${aColor}40`,
-                    borderRadius: 3,
-                    padding: '2px 5px',
-                    lineHeight: 1.4,
-                  }}>
-                    {awarenessLabel}
-                  </span>
-                  <svg
-                    width="9" height="9" viewBox="0 0 9 9" fill="none"
-                    stroke={t.faint} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"
-                  >
-                    {showAwareness
-                      ? <path d="M1.5 6L4.5 3 7.5 6" />
-                      : <path d="M1.5 3L4.5 6 7.5 3" />}
-                  </svg>
-                </>
-              )}
-            </div>
-            {/* Right: compact quota */}
-            {hasQuota && (
-              <span style={{
-                fontFamily: 'ui-monospace, Menlo, monospace',
-                fontSize: 8,
-                color: isExhausted ? '#ef4444' : isWarning ? '#f59e0b' : t.faint,
-                letterSpacing: '0.04em',
-              }}>
-                {fmtCompact(quota!.used)}/{fmtCompact(quota!.limit)}{resetIn ? ` · ${resetIn}` : ''}{isExhausted ? ' · limit reached' : isWarning ? ' · approaching' : ''}
-              </span>
-            )}
-          </button>
-
-          {/* Expanded awareness content */}
-          {awarenessLabel && showAwareness && (
-            <div style={{ paddingLeft: 16, paddingRight: 16, paddingBottom: 10 }}>
-              {phaseBehavior && (
-                <p style={{ fontSize: 10, color: t.label, lineHeight: 1.5, letterSpacing: '-0.005em', marginBottom: 8, marginTop: 0 }}>
-                  {phaseBehavior}
-                </p>
-              )}
-              <button
-                onClick={onEconomy}
-                style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', background: 'none', border: 'none', padding: 0, cursor: 'pointer', width: '100%', textAlign: 'left', marginBottom: 8 }}
-              >
-                <OnchainDot done={onchain.wallet} label="wallet" />
-                <OnchainDot done={onchain.token} label="token" />
-                <OnchainDot done={onchain.identity} label="identity" />
-                <span style={{ marginLeft: 'auto', fontFamily: 'ui-monospace, Menlo, monospace', fontSize: 9, color: t.faint, letterSpacing: '0.02em' }}>
-                  economy →
+      <div style={{ marginLeft: -8, marginRight: -8 }}>
+        <div style={{ height: 1, background: t.divider, opacity: 0.25, marginLeft: 8, marginRight: 8 }} />
+        <button
+          onClick={() => awarenessLabel && setShowAwareness(v => !v)}
+          style={{
+            width: '100%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            paddingLeft: 16,
+            paddingRight: 16,
+            paddingTop: 6,
+            paddingBottom: 8,
+            background: 'none',
+            border: 'none',
+            cursor: awarenessLabel ? 'pointer' : 'default',
+          }}
+        >
+          {/* Left: phase pill + SVG chevron */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+            {awarenessLabel ? (
+              <>
+                <span style={{
+                  fontFamily: 'ui-monospace, Menlo, monospace',
+                  fontSize: 8,
+                  color: aColor,
+                  letterSpacing: '0.07em',
+                  textTransform: 'uppercase' as const,
+                  background: `${aColor}1a`,
+                  border: `1px solid ${aColor}40`,
+                  borderRadius: 3,
+                  padding: '2px 5px',
+                  lineHeight: 1.4,
+                }}>
+                  {awarenessLabel}
                 </span>
-              </button>
-              {(economyAware || visibleTools.length > 0) && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                  {economyAware && (
-                    <span style={{ fontFamily: 'ui-monospace, Menlo, monospace', fontSize: 8, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: '#22c55e', background: '#22c55e1a', border: '1px solid #22c55e40', borderRadius: 3, padding: '2px 5px' }}>
-                      Economy aware
-                    </span>
-                  )}
-                  {visibleTools.map(tool => (
-                    <span key={tool} style={{ fontFamily: 'ui-monospace, Menlo, monospace', fontSize: 8, letterSpacing: '0.04em', color: t.faint, background: t.surface, border: `1px solid ${t.divider}`, borderRadius: 3, padding: '2px 5px' }}>
-                      {formatTool(tool)}
-                    </span>
-                  ))}
-                  {extraTools > 0 && (
-                    <span style={{ fontFamily: 'ui-monospace, Menlo, monospace', fontSize: 8, letterSpacing: '0.04em', color: t.faint }}>
-                      +{extraTools} more
-                    </span>
-                  )}
-                </div>
-              )}
-            </div>
+                <svg
+                  width="9" height="9" viewBox="0 0 9 9" fill="none"
+                  stroke={t.faint} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"
+                >
+                  {showAwareness
+                    ? <path d="M1.5 6L4.5 3 7.5 6" />
+                    : <path d="M1.5 3L4.5 6 7.5 3" />}
+                </svg>
+              </>
+            ) : !awarenessData ? (
+              <span style={{
+                display: 'inline-block',
+                width: 64,
+                height: 14,
+                borderRadius: 3,
+                background: t.surface,
+                opacity: 0.5,
+              }} />
+            ) : null}
+          </div>
+          {/* Right: compact quota */}
+          {hasQuota && (
+            <span style={{
+              fontFamily: 'ui-monospace, Menlo, monospace',
+              fontSize: 8,
+              color: isExhausted ? '#ef4444' : isWarning ? '#f59e0b' : t.faint,
+              letterSpacing: '0.04em',
+            }}>
+              {fmtCompact(quota!.used)}/{fmtCompact(quota!.limit)}{resetIn ? ` · ${resetIn}` : ''}{isExhausted ? ' · limit reached' : isWarning ? ' · approaching' : ''}
+            </span>
           )}
+        </button>
 
-          {/* Phase progress bar — always at bottom of sub-row section */}
-          {awarenessLabel && (
-            <div style={{ height: 2, background: t.surface, overflow: 'hidden' }}>
-              <div style={{ height: '100%', width: `${phasePct}%`, background: aColor, transition: 'width 0.6s ease' }} />
-            </div>
-          )}
-        </div>
-      ) : (
-        <div style={{ height: 1, background: t.divider, marginLeft: -8, marginRight: -8 }} />
-      )}
+        {/* Expanded awareness content */}
+        {awarenessLabel && showAwareness && (
+          <div style={{ paddingLeft: 16, paddingRight: 16, paddingBottom: 10 }}>
+            {phaseBehavior && (
+              <p style={{ fontSize: 10, color: t.label, lineHeight: 1.5, letterSpacing: '-0.005em', marginBottom: 8, marginTop: 0 }}>
+                {phaseBehavior}
+              </p>
+            )}
+            <button
+              onClick={onEconomy}
+              style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', background: 'none', border: 'none', padding: 0, cursor: 'pointer', width: '100%', textAlign: 'left', marginBottom: 8 }}
+            >
+              <OnchainDot done={onchain.wallet} label="wallet" />
+              <OnchainDot done={onchain.token} label="token" />
+              <OnchainDot done={onchain.identity} label="identity" />
+              <span style={{ marginLeft: 'auto', fontFamily: 'ui-monospace, Menlo, monospace', fontSize: 9, color: t.faint, letterSpacing: '0.02em' }}>
+                economy →
+              </span>
+            </button>
+            {(economyAware || visibleTools.length > 0) && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                {economyAware && (
+                  <span style={{ fontFamily: 'ui-monospace, Menlo, monospace', fontSize: 8, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: '#22c55e', background: '#22c55e1a', border: '1px solid #22c55e40', borderRadius: 3, padding: '2px 5px' }}>
+                    Economy aware
+                  </span>
+                )}
+                {visibleTools.map(tool => (
+                  <span key={tool} style={{ fontFamily: 'ui-monospace, Menlo, monospace', fontSize: 8, letterSpacing: '0.04em', color: t.faint, background: t.surface, border: `1px solid ${t.divider}`, borderRadius: 3, padding: '2px 5px' }}>
+                    {formatTool(tool)}
+                  </span>
+                ))}
+                {extraTools > 0 && (
+                  <span style={{ fontFamily: 'ui-monospace, Menlo, monospace', fontSize: 8, letterSpacing: '0.04em', color: t.faint }}>
+                    +{extraTools} more
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Phase progress bar — always at bottom of sub-row section */}
+        {awarenessLabel && (
+          <div style={{ height: 2, background: t.surface, overflow: 'hidden' }}>
+            <div style={{ height: '100%', width: `${phasePct}%`, background: aColor, transition: 'width 0.6s ease' }} />
+          </div>
+        )}
+      </div>
     </div>
   );
 }

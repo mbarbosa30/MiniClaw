@@ -369,30 +369,39 @@ function AgentRow({
       </div>
 
       {/* Row 3: monospace live stats + phase pill */}
-      {(statSegments.length > 0 || (awareness && pColor)) && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginTop: 5 }}>
-          {statSegments.map((seg) => (
-            <span key={seg} style={{ ...MONO, color: t.faint }}>
-              {seg}
-            </span>
-          ))}
-          {awareness && pColor && (
-            <span style={{
-              marginLeft: 'auto',
-              flexShrink: 0,
-              fontFamily: 'ui-monospace, Menlo, monospace',
-              fontSize: 8,
-              fontWeight: 600,
-              letterSpacing: '0.07em',
-              textTransform: 'uppercase',
-              color: pColor,
-              whiteSpace: 'nowrap',
-            }}>
-              {awareness.label || awareness.phase}
-            </span>
-          )}
-        </div>
-      )}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginTop: 5, minHeight: 14 }}>
+        {statSegments.map((seg) => (
+          <span key={seg} style={{ ...MONO, color: t.faint }}>
+            {seg}
+          </span>
+        ))}
+        {awareness && pColor ? (
+          <span style={{
+            marginLeft: 'auto',
+            flexShrink: 0,
+            fontFamily: 'ui-monospace, Menlo, monospace',
+            fontSize: 8,
+            fontWeight: 600,
+            letterSpacing: '0.07em',
+            textTransform: 'uppercase',
+            color: pColor,
+            whiteSpace: 'nowrap',
+          }}>
+            {awareness.label || awareness.phase || 'phase'}
+          </span>
+        ) : !awareness ? (
+          <span style={{
+            marginLeft: 'auto',
+            flexShrink: 0,
+            display: 'inline-block',
+            width: 60,
+            height: 8,
+            borderRadius: 2,
+            background: t.surface,
+            opacity: 0.5,
+          }} />
+        ) : null}
+      </div>
     </motion.div>
   );
 }
