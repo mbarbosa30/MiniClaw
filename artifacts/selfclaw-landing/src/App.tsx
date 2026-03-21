@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 
 const T = {
   bg: '#ffffff',
@@ -144,7 +144,7 @@ function Hero() {
           Join the waitlist →
         </button>
         <span style={{ ...MONO, fontSize: 10, color: T.faint, letterSpacing: '0.05em' }}>
-          Free during beta · Works in MiniPay on Celo
+          Free during beta · No setup · Works in MiniPay on Celo
         </span>
       </div>
     </section>
@@ -164,17 +164,17 @@ const FEATURES = [
       </svg>
     ),
     title: 'Your AI team',
-    body: 'Create multiple Claws, each with their own specialty, personality, and focus. They collaborate so you don\'t have to do everything alone.',
+    body: "Create multiple Claws, each with their own specialty, personality, and focus. They collaborate so you don't have to do everything alone.",
   },
   {
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z"/>
+        <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2z"/>
         <path d="M12 8v4l3 3"/>
       </svg>
     ),
     title: 'Memory that sticks',
-    body: 'Every conversation teaches your Claws something new. Semantic memory maintained automatically — they remember what matters.',
+    body: "Every conversation teaches your Claws something new. Semantic memory maintained automatically — they remember what matters.",
   },
   {
     icon: (
@@ -186,7 +186,7 @@ const FEATURES = [
       </svg>
     ),
     title: 'Humor & soul',
-    body: 'Choose from Dry-wit, Playful, Sarcastic, Absurdist, or Straight. Your agents have real personality — they\'re not boring.',
+    body: "Choose from Dry-wit, Playful, Sarcastic, Absurdist, or Straight. Your agents actually have personality. They're not boring.",
   },
   {
     icon: (
@@ -195,7 +195,7 @@ const FEATURES = [
       </svg>
     ),
     title: 'Proactive, not reactive',
-    body: 'Daily briefs, market monitoring, and skill runs — your Claws don\'t wait to be asked. They keep you in the loop.',
+    body: "Daily briefs, market monitoring, and skill runs — your Claws don't wait to be asked. They keep you in the loop.",
   },
   {
     icon: (
@@ -206,7 +206,7 @@ const FEATURES = [
       </svg>
     ),
     title: 'Onchain by default',
-    body: 'Send and receive cUSD, CELO, cEUR. Gifts, commerce, payments — all built into every agent from day one.',
+    body: 'Send and receive cUSD, CELO, cEUR. Gifts, commerce, payments — all built into every agent.',
   },
   {
     icon: (
@@ -280,89 +280,24 @@ function FeatureCards() {
   );
 }
 
-// ---- MiniPay Context Strip ----
-
-function ContextStrip() {
-  return (
-    <section style={{
-      maxWidth: MAX_W,
-      margin: '0 auto',
-      padding: '72px 24px',
-      display: 'grid',
-      gridTemplateColumns: '1fr 1fr',
-      gap: 48,
-      alignItems: 'center',
-    }}>
-      <div>
-        <p style={{
-          ...MONO,
-          fontSize: 10,
-          fontWeight: 600,
-          letterSpacing: '0.12em',
-          textTransform: 'uppercase',
-          color: T.faint,
-          marginBottom: 16,
-        }}>
-          What is MiniPay?
-        </p>
-        <h2 style={{
-          fontSize: 28,
-          fontWeight: 300,
-          letterSpacing: '-0.025em',
-          lineHeight: 1.25,
-          color: T.text,
-          marginBottom: 16,
-        }}>
-          A wallet for the<br />next billion users.
-        </h2>
-        <p style={{
-          fontSize: 14,
-          fontWeight: 300,
-          lineHeight: 1.7,
-          color: T.label,
-        }}>
-          MiniPay is a lightweight crypto wallet by Opera — the browser used by
-          hundreds of millions across Africa, Asia, and Latin America. MiniClaw
-          lives inside it: no separate app to install, no complicated setup.
-        </p>
-      </div>
-      <div style={{
-        background: T.surface,
-        borderRadius: 12,
-        border: `1px solid ${T.divider}`,
-        padding: '28px 24px',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 16,
-      }}>
-        {['Built on Celo', 'No crypto knowledge needed', 'Works on any Android phone', 'Lightweight — under 500 KB'].map((item) => (
-          <div key={item} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <span style={{
-              width: 6,
-              height: 6,
-              borderRadius: '50%',
-              background: '#22c55e',
-              flexShrink: 0,
-            }} />
-            <span style={{ fontSize: 13, fontWeight: 300, color: T.label }}>{item}</span>
-          </div>
-        ))}
-      </div>
-      <style>{`
-        @media (max-width: 640px) {
-          .context-grid { grid-template-columns: 1fr !important; }
-        }
-      `}</style>
-    </section>
-  );
-}
-
 // ---- How it works ----
 
 const STEPS = [
-  { n: '01', title: 'Open MiniPay', body: 'Find MiniPay in the Opera Mini browser or download it on Android. It\'s free and takes under a minute to set up.' },
-  { n: '02', title: 'Create your first Claw', body: 'Choose a persona, set your agent\'s personality and humor style. Your Claw is live in 60 seconds.' },
-  { n: '03', title: 'Let it work', body: 'Your Claw monitors, acts, and reports back while you get on with life. Check the daily brief each morning.' },
+  {
+    n: '01',
+    title: 'Open MiniPay',
+    body: "Find MiniClaw in the MiniApps section on Opera's wallet. No extra download, no complex setup.",
+  },
+  {
+    n: '02',
+    title: 'Create your first Claw',
+    body: "Choose a persona, set its personality and humor style. Your Claw is live in 60 seconds.",
+  },
+  {
+    n: '03',
+    title: 'Let it work',
+    body: "Your Claw monitors, acts, and reports back while you get on with life. Check the daily brief each morning.",
+  },
 ];
 
 function HowItWorks() {
@@ -440,13 +375,9 @@ const PERSONAS = [
   { emoji: '💻', name: 'Manila Dev' },
   { emoji: '🏪', name: 'Accra Merchant' },
   { emoji: '🎓', name: 'Cairo Student' },
-  { emoji: '📡', name: 'Dakar Creator' },
-  { emoji: '💊', name: 'Kampala Healer' },
 ];
 
 function PersonaStrip() {
-  const ref = useRef<HTMLDivElement>(null);
-
   return (
     <section style={{
       borderTop: `1px solid ${T.divider}`,
@@ -464,11 +395,10 @@ function PersonaStrip() {
           textTransform: 'uppercase',
           color: T.faint,
         }}>
-          17 locally-shaped personas
+          17 locally-shaped personas to start from
         </p>
       </div>
       <div
-        ref={ref}
         style={{
           display: 'flex',
           gap: 10,
@@ -509,7 +439,7 @@ function PersonaStrip() {
           alignItems: 'center',
           padding: '8px 14px',
         }}>
-          <span style={{ ...MONO, fontSize: 11, color: T.faint }}>+10 more</span>
+          <span style={{ ...MONO, fontSize: 11, color: T.faint }}>+12 more</span>
         </div>
       </div>
       <style>{`.persona-scroll::-webkit-scrollbar { display: none; }`}</style>
@@ -538,7 +468,7 @@ function WaitlistForm() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: email.trim() }),
       });
-      const data = await res.json();
+      const data = await res.json() as { ok?: boolean; error?: string };
       if (!res.ok || data.error) {
         throw new Error(data.error || 'Something went wrong');
       }
@@ -608,7 +538,7 @@ function WaitlistForm() {
             </svg>
           </span>
           <span style={{ fontSize: 14, fontWeight: 300, color: T.text }}>
-            You're on the list. We'll be in touch.
+            You're on the list. We'll be in touch. 👋
           </span>
         </div>
       ) : (
@@ -687,28 +617,10 @@ function Footer() {
       <div style={{
         maxWidth: MAX_W,
         margin: '0 auto',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        flexWrap: 'wrap',
-        gap: 12,
       }}>
         <span style={{ ...MONO, fontSize: 10, color: T.faint, letterSpacing: '0.06em' }}>
           MiniClaw · Built on Celo · Powered by SelfClaw AI
         </span>
-        <div style={{ display: 'flex', gap: 20 }}>
-          {['Privacy', 'Twitter / X'].map((link) => (
-            <a key={link} href="#" style={{
-              ...MONO,
-              fontSize: 10,
-              color: T.faint,
-              textDecoration: 'none',
-              letterSpacing: '0.04em',
-            }}>
-              {link}
-            </a>
-          ))}
-        </div>
       </div>
     </footer>
   );
@@ -722,7 +634,6 @@ export default function App() {
       <Nav />
       <Hero />
       <FeatureCards />
-      <ContextStrip />
       <HowItWorks />
       <PersonaStrip />
       <WaitlistForm />
