@@ -37,6 +37,20 @@ function setCachedAgents(agents: Agent[]) {
   }
 }
 
+// --- Daily Brief helpers ---
+
+function sanitizeSummary(summary: string | undefined, agentName: string): string {
+  if (!summary) return `${agentName} has an update for you`;
+  const s = summary.trim();
+  if (!/\s/.test(s) && s.includes('_')) {
+    return s
+      .replace(/^hosted_/, '')
+      .replace(/_/g, ' ')
+      .replace(/^\w/, (c) => c.toUpperCase());
+  }
+  return s;
+}
+
 // --- Daily Brief ---
 
 function DailyBriefCard({
@@ -89,9 +103,15 @@ function DailyBriefCard({
         </span>
       </div>
 
-      <p style={{ fontSize: 13, fontWeight: 300, lineHeight: 1.55, color: t.text, paddingRight: 20, marginBottom: 12 }}>
-        {item.highlight?.summary}
+      <p style={{ fontSize: 13, fontWeight: 300, lineHeight: 1.55, color: t.text, paddingRight: 20, marginBottom: (item.pendingTaskCount ?? 0) > 0 ? 8 : 12 }}>
+        {sanitizeSummary(item.highlight?.summary, item.agentName)}
       </p>
+
+      {(item.pendingTaskCount ?? 0) > 0 && (
+        <p style={{ ...MONO, color: t.faint, marginBottom: 12 }}>
+          {item.pendingTaskCount} task{item.pendingTaskCount === 1 ? '' : 's'} waiting for review
+        </p>
+      )}
 
       <button
         onClick={onTellMore}
