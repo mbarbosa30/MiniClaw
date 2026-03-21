@@ -690,7 +690,6 @@ function PersonalizeStep({
         fontFamily: FONT,
       }}
     >
-      {/* ── HEADER ── */}
       <div style={{ padding: '56px 32px 24px', flexShrink: 0, position: 'relative' }}>
         <button
           onClick={onBack}
@@ -734,7 +733,6 @@ function PersonalizeStep({
         </div>
       )}
 
-      {/* ── SCROLLABLE BODY ── */}
       <div className="no-scrollbar" style={{ flex: 1, overflowY: 'auto', padding: '24px 32px 8px' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
@@ -765,7 +763,6 @@ function PersonalizeStep({
               placeholder="e.g. Starting a TikTok shop, freelancing on Fiverr…" disabled={creating} style={inputStyle} />
           </div>
 
-          {/* ── VIBE ── */}
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
               <div style={{ flex: 1, height: 1, background: t.divider }} />
@@ -806,7 +803,6 @@ function PersonalizeStep({
             </p>
           </div>
 
-          {/* ── PROJECTS ── */}
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
               <div style={{ flex: 1, height: 1, background: t.divider }} />
@@ -966,7 +962,6 @@ function PersonalizeStep({
         </div>
       </div>
 
-      {/* ── BOTTOM CTA ── */}
       <div style={{ flexShrink: 0, padding: '16px 32px 32px', borderTop: `1px solid ${t.divider}` }}>
         <button
           onClick={onLaunch}
@@ -1135,7 +1130,7 @@ export function CreateAgentView() {
         const name = p.title ?? safeHostname(p.url);
         return p.description ? `- ${name} (${p.url}): ${p.description}` : `- ${name} (${p.url})`;
       });
-      soul += `\n\n## User's Projects\n${projectLines.join('\n')}\n\nReference the user's projects when relevant to give contextual, specific advice.`;
+      soul += `\n\n## Projects\n${projectLines.join('\n')}\n\nReference the user's projects when relevant to give contextual, specific advice.`;
     }
 
     return soul;
