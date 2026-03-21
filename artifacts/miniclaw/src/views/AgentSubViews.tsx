@@ -1330,6 +1330,7 @@ export function EconomyView() {
 
   const [commerceDesc, setCommerceDesc] = useState('');
   const [commerceAmount, setCommerceAmount] = useState('');
+  const [commerceCurrency, setCommerceCurrency] = useState('CELO');
   const [commerceError, setCommerceError] = useState<string | null>(null);
   const [commerceResult, setCommerceResult] = useState<{ id?: string; paymentLink?: string } | null>(null);
   const [showCommerceForm, setShowCommerceForm] = useState(false);
@@ -1425,7 +1426,7 @@ export function EconomyView() {
     setCommerceError(null);
     setCommerceResult(null);
     try {
-      const result = await commerceRequest.mutateAsync({ agentId, description: desc, amount: amt, currency: 'CELO' });
+      const result = await commerceRequest.mutateAsync({ agentId, description: desc, amount: amt, currency: commerceCurrency });
       setCommerceResult({ id: result.id, paymentLink: result.paymentLink });
       setCommerceDesc('');
       setCommerceAmount('');
@@ -1662,13 +1663,32 @@ export function EconomyView() {
                         onChange={e => setCommerceDesc(e.target.value)}
                         style={{ ...inputStyle }}
                       />
-                      <input
-                        placeholder="Amount in CELO"
-                        type="number"
-                        value={commerceAmount}
-                        onChange={e => setCommerceAmount(e.target.value)}
-                        style={{ ...inputStyle }}
-                      />
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <input
+                          placeholder="Amount"
+                          type="number"
+                          value={commerceAmount}
+                          onChange={e => setCommerceAmount(e.target.value)}
+                          style={{ ...inputStyle, flex: 1 }}
+                        />
+                        <select
+                          value={commerceCurrency}
+                          onChange={e => setCommerceCurrency(e.target.value)}
+                          style={{
+                            ...inputStyle,
+                            width: 90,
+                            flex: 'none',
+                            appearance: 'none',
+                            WebkitAppearance: 'none',
+                            paddingRight: 8,
+                          }}
+                        >
+                          <option value="CELO">CELO</option>
+                          <option value="cUSD">cUSD</option>
+                          <option value="cEUR">cEUR</option>
+                          <option value="cREAL">cREAL</option>
+                        </select>
+                      </div>
                       {commerceError && <p style={{ fontSize: 11, color: '#f87171', marginTop: 8 }}>{commerceError}</p>}
                       <EcoActionBtn
                         label={commerceRequest.isPending ? 'Creating…' : 'Create Request'}

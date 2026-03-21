@@ -517,45 +517,42 @@ export function AgentDetailView() {
         quota={quota}
       />
       <AwarenessSection agentId={id} onEconomy={() => push('economy', { id })} />
-      {/* Tab strip — Chat is the active tab; Economy navigates to its own screen */}
-      <div style={{
+      {/* Tab strip — Chat is active; all other tabs navigate to their view */}
+      <div className="no-scrollbar" style={{
         flexShrink: 0,
         display: 'flex',
+        overflowX: 'auto',
         borderBottom: `1px solid ${t.divider}`,
-        padding: '0 16px',
+        padding: '0 8px',
         gap: 0,
       }}>
-        <button style={{
-          padding: '10px 16px',
-          fontSize: 12,
-          fontWeight: 600,
-          color: t.text,
-          background: 'none',
-          border: 'none',
-          borderBottom: `2px solid ${t.text}`,
-          cursor: 'default',
-          letterSpacing: '-0.01em',
-          marginBottom: -1,
-        }}>
-          Chat
-        </button>
-        <button
-          onClick={() => push('economy', { id })}
-          style={{
-            padding: '10px 16px',
-            fontSize: 12,
-            fontWeight: 400,
-            color: t.faint,
-            background: 'none',
-            border: 'none',
-            borderBottom: '2px solid transparent',
-            cursor: 'pointer',
-            letterSpacing: '-0.01em',
-            marginBottom: -1,
-          }}
-        >
-          Economy
-        </button>
+        {([
+          { label: 'Chat',     active: true,  action: null },
+          { label: 'Economy',  active: false, action: () => push('economy', { id }) },
+          { label: 'Skills',   active: false, action: () => push('skills', { id }) },
+          { label: 'Settings', active: false, action: () => push('agent-settings', { id }) },
+          { label: 'Growth',   active: false, action: () => push('growth') },
+        ] as { label: string; active: boolean; action: (() => void) | null }[]).map(tab => (
+          <button
+            key={tab.label}
+            onClick={tab.action ?? undefined}
+            style={{
+              flexShrink: 0,
+              padding: '10px 14px',
+              fontSize: 12,
+              fontWeight: tab.active ? 600 : 400,
+              color: tab.active ? t.text : t.faint,
+              background: 'none',
+              border: 'none',
+              borderBottom: tab.active ? `2px solid ${t.text}` : '2px solid transparent',
+              cursor: tab.active ? 'default' : 'pointer',
+              letterSpacing: '-0.01em',
+              marginBottom: -1,
+            }}
+          >
+            {tab.label}
+          </button>
+        ))}
       </div>
       <div style={{ flex: 1, overflow: 'hidden' }}>
         <ChatTab
