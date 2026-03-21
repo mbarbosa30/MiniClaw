@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Home, Bot, Clapperboard, Zap, Briefcase } from 'lucide-react';
 
 /* ─── Theme ─── */
 
@@ -13,54 +14,14 @@ const MONO: React.CSSProperties = {
   letterSpacing: '0.04em',
 };
 
-/* ─── Persona data ─── */
+/* ─── Persona data (icons from ICON_MAP, matching CreateAgentView) ─── */
 
 interface Persona {
   id: string;
   name: string;
   tagline: string;
   color: string;
-  icon: React.ReactNode;
-}
-
-function HomeIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
-    </svg>
-  );
-}
-
-function BotIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <rect width="18" height="10" x="3" y="11" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/><line x1="8" x2="8" y1="16" y2="16"/><line x1="16" x2="16" y1="16" y2="16"/>
-    </svg>
-  );
-}
-
-function ClapperIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M4 11v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8H4Z"/><path d="m4 11-.88-2.87a2 2 0 0 1 1.33-2.5l11.48-3.5a2 2 0 0 1 2.5 1.32l.87 2.87L4 11.01Z"/><path d="m6.6 4.99 3.38 4.2"/><path d="m11.86 3.38 3.38 4.2"/>
-    </svg>
-  );
-}
-
-function ZapIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
-    </svg>
-  );
-}
-
-function BriefcaseIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <rect width="20" height="14" x="2" y="7" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
-    </svg>
-  );
+  Icon: React.ElementType;
 }
 
 const PERSONAS: Persona[] = [
@@ -69,35 +30,35 @@ const PERSONAS: Persona[] = [
     name: 'Family Treasurer',
     tagline: 'Budget, bills, remittances, savings',
     color: '#3b82f6',
-    icon: <HomeIcon />,
+    Icon: Home,
   },
   {
     id: 'ai-hustle-builder',
     name: 'AI Hustle Builder',
     tagline: 'Spot AI side hustles, find clients, track income',
     color: '#6366f1',
-    icon: <BotIcon />,
+    Icon: Bot,
   },
   {
     id: 'digital-creator-coach',
     name: 'Digital Creator Coach',
     tagline: 'Grow on TikTok, YouTube Shorts, turn followers into income',
     color: '#ef4444',
-    icon: <ClapperIcon />,
+    Icon: Clapperboard,
   },
   {
     id: 'vibecoder-apprentice',
     name: 'VibeCoder Apprentice',
     tagline: 'Build apps fast with no-code, ship MVPs in hours',
     color: '#8b5cf6',
-    icon: <ZapIcon />,
+    Icon: Zap,
   },
   {
     id: 'gig-economy-maximizer',
     name: 'Gig Economy Maximizer',
     tagline: 'Optimize Upwork/Fiverr, land high-paying AI gigs',
     color: '#f59e0b',
-    icon: <BriefcaseIcon />,
+    Icon: Briefcase,
   },
 ];
 
@@ -109,8 +70,8 @@ function Spinner({ color }: { color: string }) {
       animate={{ rotate: 360 }}
       transition={{ duration: 0.7, repeat: Infinity, ease: 'linear' }}
       style={{
-        width: 16,
-        height: 16,
+        width: 14,
+        height: 14,
         borderRadius: '50%',
         border: `2px solid ${color}30`,
         borderTopColor: color,
@@ -135,6 +96,8 @@ function PersonaCard({
   onSelect: () => void;
   index: number;
 }) {
+  const { Icon } = persona;
+
   return (
     <motion.button
       initial={{ opacity: 0, y: 10 }}
@@ -156,19 +119,18 @@ function PersonaCard({
         transition: 'background 0.2s ease',
       }}
     >
-      {/* Accent strip */}
+      {/* Accent strip — always visible in persona color, full opacity */}
       <div style={{
         position: 'absolute',
         left: 0,
         top: 0,
         bottom: 0,
         width: 2,
-        background: selected ? persona.color : 'transparent',
+        background: persona.color,
         borderRadius: '0 1px 1px 0',
-        transition: 'background 0.2s ease',
       }} />
 
-      {/* Icon container */}
+      {/* Icon */}
       <div style={{
         width: 36,
         height: 36,
@@ -181,7 +143,7 @@ function PersonaCard({
         color: selected ? persona.color : T.label,
         transition: 'background 0.2s ease, color 0.2s ease',
       }}>
-        {persona.icon}
+        <Icon size={16} strokeWidth={1.5} />
       </div>
 
       {/* Text */}
@@ -210,14 +172,14 @@ function PersonaCard({
         </p>
       </div>
 
-      {/* Launching state */}
+      {/* Launching overlay */}
       <AnimatePresence>
         {launching && selected && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}
+            style={{ display: 'flex', alignItems: 'center', gap: 7, flexShrink: 0 }}
           >
             <Spinner color={persona.color} />
             <span style={{
@@ -226,8 +188,9 @@ function PersonaCard({
               color: persona.color,
               letterSpacing: '0.06em',
               textTransform: 'uppercase',
+              whiteSpace: 'nowrap',
             }}>
-              launching…
+              Launching {persona.name}…
             </span>
           </motion.div>
         )}
@@ -266,7 +229,7 @@ export function OnboardingScreen() {
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
       `}</style>
 
-      {/* Header area */}
+      {/* Header */}
       <div style={{ padding: '52px 32px 32px', flexShrink: 0 }}>
         <motion.p
           initial={{ opacity: 0, y: 8 }}
@@ -287,18 +250,12 @@ export function OnboardingScreen() {
           initial={{ opacity: 0, y: 6 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.08 }}
-          style={{
-            fontSize: 12,
-            color: T.faint,
-            letterSpacing: '-0.01em',
-            lineHeight: 1.5,
-          }}
+          style={{ fontSize: 12, color: T.faint, letterSpacing: '-0.01em', lineHeight: 1.5 }}
         >
           Pick a persona. Start earning.
         </motion.p>
       </div>
 
-      {/* Divider */}
       <div style={{ height: 1, background: T.divider, flexShrink: 0 }} />
 
       {/* Persona list */}
@@ -314,7 +271,6 @@ export function OnboardingScreen() {
           />
         ))}
 
-        {/* Show more */}
         {!showMore && (
           <motion.button
             initial={{ opacity: 0 }}
@@ -326,13 +282,24 @@ export function OnboardingScreen() {
               background: 'none',
               border: 'none',
               borderBottom: `1px solid ${T.divider}`,
-              padding: '16px 32px',
+              padding: '16px 32px 16px 36px',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: 10,
+              gap: 16,
+              position: 'relative',
             }}
           >
+            {/* Gray accent strip placeholder */}
+            <div style={{
+              position: 'absolute',
+              left: 0,
+              top: 0,
+              bottom: 0,
+              width: 2,
+              background: T.divider,
+              borderRadius: '0 1px 1px 0',
+            }} />
             <div style={{
               width: 36,
               height: 36,
@@ -347,12 +314,7 @@ export function OnboardingScreen() {
                 <circle cx="12" cy="12" r="10"/><path d="M12 8v8"/><path d="M8 12h8"/>
               </svg>
             </div>
-            <span style={{
-              fontSize: 14,
-              fontWeight: 300,
-              color: T.faint,
-              letterSpacing: '-0.01em',
-            }}>
+            <span style={{ fontSize: 14, fontWeight: 300, color: T.faint, letterSpacing: '-0.01em' }}>
               Show more personas
             </span>
           </motion.button>
@@ -363,14 +325,7 @@ export function OnboardingScreen() {
 
       {/* Bottom hint */}
       <div style={{ flexShrink: 0, padding: '12px 32px 32px', borderTop: `1px solid ${T.divider}` }}>
-        <p style={{
-          ...MONO,
-          fontSize: 9,
-          color: T.faint,
-          textAlign: 'center',
-          textTransform: 'uppercase',
-          letterSpacing: '0.07em',
-        }}>
+        <p style={{ ...MONO, fontSize: 9, color: T.faint, textAlign: 'center', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
           You can switch or add agents anytime
         </p>
       </div>

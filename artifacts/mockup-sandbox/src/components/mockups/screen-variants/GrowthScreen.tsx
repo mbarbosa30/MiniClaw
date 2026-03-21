@@ -29,7 +29,6 @@ const CATEGORIES = [
   { label: 'Digests', count: 9 },
   { label: 'Wallet Actions', count: 5 },
 ];
-
 const MAX_CAT = 19;
 
 const TOKEN_CARDS = [
@@ -44,7 +43,6 @@ const CALL_TYPES = [
   { type: 'Memory', calls: 113, tokens: 22_100 },
   { type: 'Guard', calls: 12, tokens: 4_280 },
 ];
-
 const MAX_CALLS = 113;
 
 /* ─── Animated bar ─── */
@@ -65,15 +63,9 @@ function AnimBar({ pct, color, delay = 0 }: { pct: number; color: string; delay?
 /* ─── Growth tab ─── */
 
 function GrowthTab() {
-  const streakColor = '#22c55e';
-
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.25 }}
-    >
-      {/* Hero */}
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }}>
+      {/* Hero number */}
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
@@ -90,18 +82,11 @@ function GrowthTab() {
         }}>
           47
         </p>
-        <p style={{
-          ...MONO,
-          fontSize: 9,
-          color: T.faint,
-          letterSpacing: '0.08em',
-          textTransform: 'uppercase',
-          marginBottom: 8,
-        }}>
+        <p style={{ ...MONO, fontSize: 9, color: T.faint, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>
           Actions approved this month
         </p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 14 }}>
-          <p style={{ ...MONO, fontSize: 9, color: streakColor, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+          <p style={{ ...MONO, fontSize: 9, color: '#22c55e', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
             12-day streak
           </p>
           <p style={{ ...MONO, fontSize: 9, color: T.faint, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
@@ -113,7 +98,6 @@ function GrowthTab() {
         </p>
       </motion.div>
 
-      {/* Divider */}
       <div style={{ height: 1, background: T.divider, marginBottom: 24 }} />
 
       {/* Category bars */}
@@ -136,15 +120,11 @@ function GrowthTab() {
   );
 }
 
-/* ─── Usage tab ─── */
+/* ─── Analytics tab ─── */
 
-function UsageTab() {
+function AnalyticsTab() {
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.25 }}
-    >
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }}>
       {/* Token cards */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 20 }}>
         {TOKEN_CARDS.map(({ label, value }, i) => (
@@ -153,31 +133,12 @@ function UsageTab() {
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.07, duration: 0.3 }}
-            style={{
-              background: T.surface,
-              borderRadius: 8,
-              padding: '10px 12px',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 4,
-            }}
+            style={{ background: T.surface, borderRadius: 8, padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 4 }}
           >
-            <span style={{
-              fontSize: 18,
-              fontWeight: 200,
-              letterSpacing: '-0.03em',
-              lineHeight: 1,
-              color: T.text,
-            }}>
+            <span style={{ fontSize: 18, fontWeight: 200, letterSpacing: '-0.03em', lineHeight: 1, color: T.text }}>
               {fmtNum(value)}
             </span>
-            <span style={{
-              ...MONO,
-              fontSize: 8,
-              color: T.faint,
-              textTransform: 'uppercase',
-              letterSpacing: '0.07em',
-            }}>
+            <span style={{ ...MONO, fontSize: 8, color: T.faint, textTransform: 'uppercase', letterSpacing: '0.07em' }}>
               {label}
             </span>
           </motion.div>
@@ -187,24 +148,19 @@ function UsageTab() {
       {/* Stats row */}
       <div style={{ display: 'flex', gap: 24, marginBottom: 24 }}>
         <div>
-          <span style={{ fontSize: 14, fontWeight: 300, color: T.text }}>
-            {fmtNum(200)}
-          </span>
+          <span style={{ fontSize: 14, fontWeight: 300, color: T.text }}>200</span>
           <span style={{ ...MONO, fontSize: 9, color: T.faint, marginLeft: 6, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
             calls (30d)
           </span>
         </div>
         <div>
-          <span style={{ fontSize: 14, fontWeight: 300, color: T.text }}>
-            1.4s
-          </span>
+          <span style={{ fontSize: 14, fontWeight: 300, color: T.text }}>1.4s</span>
           <span style={{ ...MONO, fontSize: 9, color: T.faint, marginLeft: 6, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
             avg latency
           </span>
         </div>
       </div>
 
-      {/* Divider */}
       <div style={{ height: 1, background: T.divider, marginBottom: 20 }} />
 
       {/* Call-type breakdown */}
@@ -218,7 +174,7 @@ function UsageTab() {
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 5 }}>
               <span style={{ fontSize: 12, fontWeight: 300, color: T.text, letterSpacing: '-0.01em' }}>{type}</span>
-              <div style={{ display: 'flex', gap: 8, alignItems: 'baseline' }}>
+              <div style={{ display: 'flex', gap: 8 }}>
                 <span style={{ ...MONO, fontSize: 9, color: T.faint }}>{calls} calls</span>
                 <span style={{ ...MONO, fontSize: 9, color: T.faint }}>{fmtNum(tokens)} tok</span>
               </div>
@@ -233,7 +189,7 @@ function UsageTab() {
 
 /* ─── Root ─── */
 
-type Tab = 'growth' | 'usage';
+type Tab = 'growth' | 'analytics';
 
 export function GrowthScreen() {
   const [tab, setTab] = useState<Tab>('growth');
@@ -253,21 +209,15 @@ export function GrowthScreen() {
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
       `}</style>
 
-      {/* Header row */}
+      {/* Header */}
       <div style={{ padding: '28px 32px 0', flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-          <p style={{
-            fontSize: 22,
-            fontWeight: 200,
-            letterSpacing: '-0.03em',
-            color: T.text,
-            lineHeight: 1,
-          }}>
+          <p style={{ fontSize: 22, fontWeight: 200, letterSpacing: '-0.03em', color: T.text, lineHeight: 1 }}>
             Growth
           </p>
           {/* Tab switcher */}
           <div style={{ display: 'flex', gap: 16, paddingTop: 4 }}>
-            {(['growth', 'usage'] as Tab[]).map((t) => (
+            {(['growth', 'analytics'] as Tab[]).map((t) => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
@@ -290,14 +240,12 @@ export function GrowthScreen() {
             ))}
           </div>
         </div>
-
-        {/* Active tab underline */}
         <div style={{ height: 1, background: T.divider, marginTop: 20 }} />
       </div>
 
-      {/* Scrollable content */}
+      {/* Content */}
       <div className="no-scrollbar" style={{ flex: 1, overflowY: 'auto', padding: '24px 32px 40px' }}>
-        {tab === 'growth' ? <GrowthTab /> : <UsageTab />}
+        {tab === 'growth' ? <GrowthTab /> : <AnalyticsTab />}
       </div>
     </div>
   );

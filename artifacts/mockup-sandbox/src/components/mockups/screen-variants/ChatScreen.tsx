@@ -6,7 +6,7 @@ import { MoreHorizontal, Send } from 'lucide-react';
 
 const T = {
   bg: '#ffffff', text: '#0a0a0a', label: '#aaa', faint: '#bbb',
-  divider: '#f5f5f5', surface: '#f0f0f0', navBorder: '#f0f0f0',
+  divider: '#f5f5f5', surface: '#f0f0f0',
 };
 
 const MONO: React.CSSProperties = {
@@ -31,22 +31,22 @@ function ThinkingDots() {
   );
 }
 
-/* ─── Mock data ─── */
+/* ─── Mock data — 3 user + 3 agent (last agent is typing) ─── */
 
 const AGENT_NAME = 'Research Owl';
 const AGENT_LABEL = 'RESEARCH OWL';
 
 interface Msg {
-  role: 'user' | 'assistant' | 'system';
+  role: 'user' | 'assistant';
   content: string;
   ts: string;
   isTyping?: boolean;
 }
 
-const INITIAL_MSGS: Msg[] = [
+const MSGS: Msg[] = [
   {
     role: 'assistant',
-    content: `Hi! I'm Research Owl. I track Celo DeFi, compare rates, and surface insights for you. What would you like to explore?`,
+    content: `Hi! I'm Research Owl. I track Celo DeFi, compare rates, and surface insights. What would you like to explore?`,
     ts: '9:14 AM',
   },
   {
@@ -56,7 +56,7 @@ const INITIAL_MSGS: Msg[] = [
   },
   {
     role: 'assistant',
-    content: `Good question. Here's the current landscape:\n\n**Mento** — cUSD/USDC pools at ~4.2% APY\n**Ubeswap** — cUSD-USDT at ~6.8% APY with IL risk\n**Moola** — cUSD lending at ~3.1% APY, safer\n\nFor risk-adjusted yield, Moola is cleanest. Ubeswap is higher but impermanent loss can eat gains if cUSD de-pegs.`,
+    content: `Top options right now:\n\n• Mento — cUSD/USDC pools at ~4.2% APY\n• Ubeswap — cUSD-USDT at ~6.8% APY (IL risk)\n• Moola — cUSD lending at ~3.1% APY, safest\n\nFor risk-adjusted yield, Moola is cleanest.`,
     ts: '9:15 AM',
   },
   {
@@ -66,12 +66,12 @@ const INITIAL_MSGS: Msg[] = [
   },
   {
     role: 'assistant',
-    content: `Ubeswap LP risks to watch:\n\n1. **IL** — if cUSD/USDT ratio shifts beyond ±0.5%, your LP position loses value vs holding outright\n2. **Smart contract risk** — Ubeswap v2 is unaudited on the new pools\n3. **Liquidity depth** — thin pools amplify IL on rebalancing\n\nMy take: cap exposure to 20% of your stablecoin stack if you go in.`,
+    content: `Ubeswap LP risks:\n\n1. IL — if cUSD/USDT shifts ±0.5%, your position loses value vs holding outright\n2. Smart contract risk — v2 pools are unaudited\n3. Thin liquidity amplifies IL on rebalancing\n\nI'd cap exposure to 20% of your stablecoin stack.`,
     ts: '9:17 AM',
   },
   {
     role: 'user',
-    content: 'Can you keep watching this for me and alert me if yields change significantly?',
+    content: 'Can you keep watching this and alert me if yields change significantly?',
     ts: '9:19 AM',
   },
   {
@@ -82,7 +82,7 @@ const INITIAL_MSGS: Msg[] = [
   },
 ];
 
-const CHIPS = ['What about CELO staking?', 'Compare to Ethereum yields', 'Set a 1% yield alert'];
+const CHIPS = ['What about CELO staking?', 'Compare to ETH yields', 'Set 1% alert'];
 
 /* ─── Awareness strip ─── */
 
@@ -118,11 +118,7 @@ function AwarenessStrip() {
         />
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        {[
-          { done: true, label: 'wallet' },
-          { done: true, label: 'token' },
-          { done: false, label: 'identity' },
-        ].map(({ done, label }) => (
+        {[{ done: true, label: 'wallet' }, { done: true, label: 'token' }, { done: false, label: 'identity' }].map(({ done, label }) => (
           <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
             {done ? (
               <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
@@ -148,21 +144,16 @@ function AwarenessStrip() {
 /* ─── Quota bar ─── */
 
 function QuotaBar() {
-  const pct = 0.34;
   return (
     <div style={{ padding: '5px 20px 0' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 }}>
-        <span style={{ ...MONO, fontSize: 8, color: T.faint }}>
-          14,832 / 43,000 tokens
-        </span>
-        <span style={{ ...MONO, fontSize: 8, color: T.faint }}>
-          resets in 14h 22m
-        </span>
+        <span style={{ ...MONO, fontSize: 8, color: T.faint }}>14,832 / 43,000 tokens</span>
+        <span style={{ ...MONO, fontSize: 8, color: T.faint }}>resets in 14h 22m</span>
       </div>
       <div style={{ height: 2, background: T.surface, borderRadius: 1, overflow: 'hidden' }}>
         <motion.div
           initial={{ width: 0 }}
-          animate={{ width: `${pct * 100}%` }}
+          animate={{ width: '34%' }}
           transition={{ duration: 0.6, ease: 'easeOut' }}
           style={{ height: '100%', background: T.faint, borderRadius: 1 }}
         />
@@ -175,13 +166,7 @@ function QuotaBar() {
 
 function Header() {
   return (
-    <div style={{
-      flexShrink: 0,
-      borderBottom: `1px solid ${T.divider}`,
-      background: T.bg,
-      paddingLeft: 8,
-      paddingRight: 8,
-    }}>
+    <div style={{ flexShrink: 0, borderBottom: `1px solid ${T.divider}`, background: T.bg, paddingLeft: 8, paddingRight: 8 }}>
       <div style={{ height: 52, display: 'flex', alignItems: 'center' }}>
         <div style={{ width: 68, flexShrink: 0 }}>
           <button style={{ width: 44, height: 44, background: 'none', border: 'none', cursor: 'pointer', color: T.label, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -209,14 +194,27 @@ function Header() {
 /* ─── Message bubble ─── */
 
 function MessageItem({ msg, index }: { msg: Msg; index: number }) {
+  const isUser = msg.role === 'user';
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.04, duration: 0.3 }}
-      style={{ display: 'flex', flexDirection: 'column', gap: 5 }}
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: isUser ? 'flex-end' : 'flex-start',
+        gap: 4,
+      }}
     >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+      {/* Role + timestamp header */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'baseline',
+        gap: 8,
+        flexDirection: isUser ? 'row-reverse' : 'row',
+      }}>
         <span style={{
           ...MONO,
           fontSize: 9,
@@ -225,7 +223,7 @@ function MessageItem({ msg, index }: { msg: Msg; index: number }) {
           textTransform: 'uppercase',
           color: T.faint,
         }}>
-          {msg.role === 'user' ? 'YOU' : AGENT_LABEL}
+          {isUser ? 'YOU' : AGENT_LABEL}
         </span>
         {msg.ts && (
           <span style={{ ...MONO, fontSize: 9, color: T.faint, opacity: 0.6 }}>
@@ -233,14 +231,24 @@ function MessageItem({ msg, index }: { msg: Msg; index: number }) {
           </span>
         )}
       </div>
+
+      {/* Bubble */}
       <div style={{
-        fontSize: 14,
-        fontWeight: 300,
-        lineHeight: 1.6,
-        color: T.text,
-        whiteSpace: 'pre-wrap',
+        maxWidth: '80%',
+        background: isUser ? T.surface : 'transparent',
+        borderRadius: isUser ? '12px 12px 2px 12px' : '0 12px 12px 12px',
+        padding: isUser ? '9px 13px' : '0',
       }}>
-        {msg.isTyping ? <ThinkingDots /> : msg.content}
+        <p style={{
+          fontSize: 14,
+          fontWeight: 300,
+          lineHeight: 1.6,
+          color: T.text,
+          margin: 0,
+          whiteSpace: 'pre-wrap',
+        }}>
+          {msg.isTyping ? <ThinkingDots /> : msg.content}
+        </p>
       </div>
     </motion.div>
   );
@@ -277,48 +285,39 @@ export function ChatScreen() {
       {/* Messages */}
       <div
         className="no-scrollbar"
-        style={{ flex: 1, overflowY: 'auto', padding: '22px 32px 8px', display: 'flex', flexDirection: 'column', gap: 26 }}
+        style={{ flex: 1, overflowY: 'auto', padding: '22px 20px 8px', display: 'flex', flexDirection: 'column', gap: 22 }}
       >
-        {INITIAL_MSGS.map((msg, i) => (
+        {MSGS.map((msg, i) => (
           <MessageItem key={i} msg={msg} index={i} />
         ))}
         <div ref={endRef} />
       </div>
 
-      {/* Chips row */}
+      {/* Quick-reply chips */}
       <div
         className="no-scrollbar"
-        style={{
-          flexShrink: 0,
-          overflowX: 'auto',
-          display: 'flex',
-          gap: 8,
-          padding: '6px 32px 2px',
-        }}
+        style={{ flexShrink: 0, overflowX: 'auto', display: 'flex', gap: 8, padding: '6px 20px 2px' }}
       >
         {CHIPS.map((chip) => (
-          <button
-            key={chip}
-            style={{
-              flexShrink: 0,
-              fontSize: 11,
-              color: T.label,
-              background: 'none',
-              border: `1px solid ${T.divider}`,
-              borderRadius: 999,
-              padding: '5px 12px',
-              cursor: 'pointer',
-              whiteSpace: 'nowrap',
-              letterSpacing: '-0.01em',
-            }}
-          >
+          <button key={chip} style={{
+            flexShrink: 0,
+            fontSize: 11,
+            color: T.label,
+            background: 'none',
+            border: `1px solid ${T.divider}`,
+            borderRadius: 999,
+            padding: '5px 12px',
+            cursor: 'pointer',
+            whiteSpace: 'nowrap',
+            letterSpacing: '-0.01em',
+          }}>
             {chip}
           </button>
         ))}
       </div>
 
       {/* Compact history button */}
-      <div style={{ padding: '4px 32px 0', display: 'flex' }}>
+      <div style={{ padding: '4px 20px 0', display: 'flex' }}>
         <button style={{
           ...MONO,
           fontSize: 8,
@@ -336,35 +335,33 @@ export function ChatScreen() {
       </div>
 
       {/* Input bar */}
-      <div style={{ flexShrink: 0, borderTop: `1px solid ${T.divider}`, padding: '12px 32px 24px' }}>
-        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 16 }}>
-          <div style={{ flex: 1, position: 'relative' }}>
-            <input
-              value={inputVal}
-              onChange={e => setInputVal(e.target.value)}
-              placeholder={`Message ${AGENT_NAME}…`}
-              style={{
-                width: '100%',
-                background: 'transparent',
-                outline: 'none',
-                border: 'none',
-                padding: '6px 0',
-                fontSize: 14,
-                fontWeight: 300,
-                color: T.text,
-                letterSpacing: '-0.01em',
-                fontFamily: 'inherit',
-                boxSizing: 'border-box',
-              }}
-            />
-          </div>
-          <AnimatePresence>
-            {inputVal.length > 0 && (
+      <div style={{ flexShrink: 0, borderTop: `1px solid ${T.divider}`, padding: '12px 20px 24px' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 12 }}>
+          <input
+            value={inputVal}
+            onChange={e => setInputVal(e.target.value)}
+            placeholder={`Message ${AGENT_NAME}…`}
+            style={{
+              flex: 1,
+              background: 'transparent',
+              outline: 'none',
+              border: 'none',
+              padding: '6px 0',
+              fontSize: 14,
+              fontWeight: 300,
+              color: T.text,
+              letterSpacing: '-0.01em',
+              fontFamily: 'inherit',
+            }}
+          />
+          <AnimatePresence mode="wait">
+            {inputVal.length > 0 ? (
               <motion.button
-                initial={{ opacity: 0, scale: 0.8 }}
+                key="active"
+                initial={{ opacity: 0, scale: 0.85 }}
                 animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.8 }}
-                transition={{ duration: 0.15 }}
+                exit={{ opacity: 0, scale: 0.85 }}
+                transition={{ duration: 0.12 }}
                 style={{
                   flexShrink: 0,
                   width: 36,
@@ -376,31 +373,34 @@ export function ChatScreen() {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  marginBottom: 0,
                 }}
               >
                 <Send size={14} color={T.bg} strokeWidth={2} />
               </motion.button>
+            ) : (
+              <motion.button
+                key="idle"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.12 }}
+                style={{
+                  flexShrink: 0,
+                  width: 36,
+                  height: 36,
+                  borderRadius: '50%',
+                  background: T.surface,
+                  border: 'none',
+                  cursor: 'default',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Send size={14} color={T.faint} strokeWidth={2} />
+              </motion.button>
             )}
           </AnimatePresence>
-          {inputVal.length === 0 && (
-            <button
-              style={{
-                flexShrink: 0,
-                width: 36,
-                height: 36,
-                borderRadius: '50%',
-                background: T.surface,
-                border: 'none',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <Send size={14} color={T.faint} strokeWidth={2} />
-            </button>
-          )}
         </div>
       </div>
     </div>
