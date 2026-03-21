@@ -289,35 +289,35 @@ function AgentRow({
             {activity.replace('Still learning who I am', 'Learning who I am')}
           </span>
         )}
-        {awareness && pColor && (
-          <span style={{
-            marginLeft: 'auto',
-            flexShrink: 0,
-            fontFamily: 'ui-monospace, Menlo, monospace',
-            fontSize: 8,
-            fontWeight: 600,
-            letterSpacing: '0.07em',
-            textTransform: 'uppercase',
-            color: pColor,
-            background: `${pColor}1a`,
-            border: `1px solid ${pColor}40`,
-            borderRadius: 3,
-            padding: '2px 5px',
-            whiteSpace: 'nowrap',
-          }}>
-            {awareness.label || awareness.phase}
-          </span>
-        )}
       </div>
 
-      {/* Row 3: monospace live stats */}
-      {statSegments.length > 0 && (
-        <div style={{ display: 'flex', gap: 16, marginTop: 5 }}>
+      {/* Row 3: monospace live stats + phase pill */}
+      {(statSegments.length > 0 || (awareness && pColor)) && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginTop: 5 }}>
           {statSegments.map((seg) => (
             <span key={seg} style={{ ...MONO, color: t.faint }}>
               {seg}
             </span>
           ))}
+          {awareness && pColor && (
+            <span style={{
+              marginLeft: 'auto',
+              flexShrink: 0,
+              fontFamily: 'ui-monospace, Menlo, monospace',
+              fontSize: 8,
+              fontWeight: 600,
+              letterSpacing: '0.07em',
+              textTransform: 'uppercase',
+              color: pColor,
+              background: `${pColor}1a`,
+              border: `1px solid ${pColor}40`,
+              borderRadius: 3,
+              padding: '2px 5px',
+              whiteSpace: 'nowrap',
+            }}>
+              {awareness.label || awareness.phase}
+            </span>
+          )}
         </div>
       )}
     </motion.div>

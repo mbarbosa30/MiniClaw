@@ -413,8 +413,8 @@ export function GrowthView() {
                   ))}
                 </div>
 
-                {/* Total calls + avg latency */}
-                <div style={{ display: 'flex', gap: 24, marginBottom: 20 }}>
+                {/* Total calls + avg latency + memory */}
+                <div style={{ display: 'flex', gap: 24, marginBottom: 20, flexWrap: 'wrap' }}>
                   <div>
                     <span style={{ fontSize: 14, fontWeight: 300, color: t.text }}>
                       {fmtNum(usageData.totalCalls30d)}
@@ -431,6 +431,16 @@ export function GrowthView() {
                       avg latency
                     </span>
                   </div>
+                  {agents[0]?.memorySizeEstimate != null && agents[0].memorySizeEstimate > 0 && (
+                    <div>
+                      <span style={{ fontSize: 14, fontWeight: 300, color: t.text }}>
+                        {(agents[0].memorySizeEstimate / 1_048_576).toFixed(1)} MB
+                      </span>
+                      <span style={{ ...MONO_STYLE, fontSize: 9, color: t.faint, marginLeft: 6, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                        memory
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Call-type breakdown */}
