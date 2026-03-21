@@ -108,6 +108,8 @@ interface AppStore {
   toggleDarkMode: () => void;
   hasSeenOnboard: boolean;
   setHasSeenOnboard: (v: boolean) => void;
+  activityAlerts: boolean;
+  toggleActivityAlerts: () => void;
 }
 
 export const useAppStore = create<AppStore>((set) => ({
@@ -119,4 +121,10 @@ export const useAppStore = create<AppStore>((set) => ({
     writeLocalBool('miniclaw-seen-onboard', v);
     set({ hasSeenOnboard: v });
   },
+  activityAlerts: readLocalBool('miniclaw-activity-alerts'),
+  toggleActivityAlerts: () => set((s) => {
+    const next = !s.activityAlerts;
+    writeLocalBool('miniclaw-activity-alerts', next);
+    return { activityAlerts: next };
+  }),
 }));

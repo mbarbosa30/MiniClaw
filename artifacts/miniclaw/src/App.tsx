@@ -27,7 +27,7 @@ const queryClient = new QueryClient({
   },
 });
 
-const MAIN_VIEWS = new Set(['home', 'dashboard', 'settings']);
+const MAIN_VIEWS = new Set(['home', 'dashboard', 'settings', 'growth']);
 
 function MainLayout() {
   const view = useRouter((s) => s.currentView.name);
@@ -37,6 +37,7 @@ function MainLayout() {
         {view === 'home' && <HomeView />}
         {view === 'dashboard' && <DashboardView />}
         {view === 'settings' && <SettingsView />}
+        {view === 'growth' && <GrowthView />}
       </div>
       <AppNav />
     </div>
@@ -54,7 +55,6 @@ function ViewManager() {
 
   switch (view) {
     case 'create':       return <CreateAgentView />;
-    case 'growth':       return <GrowthView />;
     case 'agent-detail':   return <AgentDetailView />;
     case 'agent-options':  return <AgentOptionsView />;
     case 'agent-settings': return <AgentSettingsView />;

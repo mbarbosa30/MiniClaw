@@ -33,6 +33,13 @@ const ICON_MAP: Record<string, LucideIcon> = {
   lightbulb: Lightbulb,
 };
 
+export { ICON_MAP };
+
+export function resolveIcon(iconName?: string | null): LucideIcon | null {
+  if (!iconName) return null;
+  return ICON_MAP[iconName] ?? null;
+}
+
 interface AgentIconProps {
   iconName?: string | null;
   emoji?: string | null;
