@@ -27,11 +27,26 @@ export interface AgentListSummary {
 // Runtime status from the API — more granular than status (active/paused/error)
 export type AgentRuntimeStatus = 'thinking' | 'running' | 'waiting' | 'idle' | string;
 
+// Model info returned in agent detail, awareness, and settings GET responses
+export interface AvailableModel {
+  id: string;
+  label: string;
+  tier: 'free' | 'premium';
+}
+
+export interface ModelInfo {
+  modelName: string;
+  tier: 'free' | 'premium' | 'fallback';
+  provider: string;
+  availableModels: AvailableModel[];
+}
+
 export interface Agent {
   // API returns numeric IDs; typed as string | number for robustness
   id: string | number;
   name: string;
   emoji: string;
+  icon?: string;
   description: string;
   status: 'active' | 'paused' | 'error' | string;
   humorStyle?: HumorStyle;
@@ -55,6 +70,9 @@ export interface Agent {
   memorySizeEstimate?: number | null;
   memorySizeLimit?: number | null;
   enabledSkillNames?: string[] | null;
+
+  // Model info — returned on agent detail, awareness, and settings GET
+  modelInfo?: ModelInfo;
 
   // Detail-only fields — only populated on GET /v1/hosted-agents/:id
   tokenCostUsd?: number | null;
@@ -102,6 +120,7 @@ export interface SkillDef {
 export interface CreateAgentPayload {
   name: string;
   emoji?: string;
+  icon?: string;
   description?: string;
   interests?: string[];
   topicsToWatch?: string[];
@@ -123,6 +142,7 @@ export interface CreateAgentResponse {
 export interface UpdateAgentPayload {
   name?: string;
   emoji?: string;
+  icon?: string;
   description?: string;
   status?: 'active' | 'paused';
   interests?: string[];
@@ -137,6 +157,7 @@ export interface UpdateAgentPayload {
 export interface UpdateAgentSettingsPayload {
   name?: string;
   emoji?: string;
+  icon?: string;
   description?: string;
   interests?: string[];
   topicsToWatch?: string[];
@@ -151,6 +172,7 @@ export interface UpdateAgentSettingsPayload {
 export interface AgentSettings {
   name?: string;
   emoji?: string;
+  icon?: string;
   description?: string;
   interests?: string[];
   topicsToWatch?: string[];
@@ -162,6 +184,7 @@ export interface AgentSettings {
   telegramNotificationLevel?: TelegramNotificationLevel;
   humorStyle?: HumorStyle;
   premiumModel?: PremiumModel | null;
+  modelInfo?: ModelInfo;
 }
 
 // Knowledge entry — title is required per API docs
@@ -244,6 +267,7 @@ export interface DailyBriefItem {
   agentId: string | number;
   agentName: string;
   agentEmoji?: string;
+  agentIcon?: string;
   pendingTaskCount?: number;
   highlight?: DailyBriefHighlight;
 }
@@ -262,6 +286,25 @@ export interface QuotaInfo {
   percent: number;
 }
 
+// Economy capabilities returned by awareness endpoint
+export interface PhaseDetail {
+  name: string;
+  description: string;
+  behavior: string;
+  economyAwareness: boolean;
+}
+
+export interface EconomyCapabilities {
+  economyAwareness: boolean;
+  toolsAvailable: string[];
+  currentPhase: {
+    name: string;
+    description: string;
+    behavior: string;
+  };
+  phases?: Record<string, PhaseDetail>;
+}
+
 // GET /:id/awareness — self-awareness composite score + onchain status
 export interface AgentAwareness {
   messageCount: number;
@@ -276,6 +319,8 @@ export interface AgentAwareness {
     economyAwareness: boolean;
   };
   toolsAvailable?: string[];
+  economyCapabilities?: EconomyCapabilities;
+  modelInfo?: ModelInfo;
   onChain: {
     wallet: boolean;
     token: boolean;
@@ -302,4 +347,3 @@ export type TelegramNotificationLevel = 'all' | 'important' | 'none';
 export interface TelegramSettingsPayload {
   notificationLevel: TelegramNotificationLevel;
 }
-

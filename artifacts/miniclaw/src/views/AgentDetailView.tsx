@@ -5,6 +5,7 @@ import { useTheme } from '@/lib/theme';
 import { Button } from '@/components/ui';
 import { MoreHorizontal } from 'lucide-react';
 import { apiFetchStream, apiFetch, ApiError } from '@/lib/api-client';
+import { AgentIcon } from '@/lib/agent-icon';
 import type { Agent, ChatMessage } from '@/types';
 
 const DOT_COLOR: Record<string, string> = {
@@ -73,6 +74,17 @@ function AwarenessSection({ agentId }: { agentId: string }) {
 
   const onchain = data.onChain ?? { wallet: false, token: false, identity: false };
 
+  // Economy capabilities — prefer economyCapabilities, fall back to legacy phaseDetails
+  const ec = data.economyCapabilities;
+  const phaseBehavior = ec?.currentPhase?.behavior ?? data.phaseDetails?.behavior ?? null;
+  const economyAware = ec?.economyAwareness ?? data.phaseDetails?.economyAwareness ?? false;
+  const allTools = ec?.toolsAvailable ?? data.toolsAvailable ?? [];
+  const visibleTools = allTools.slice(0, 3);
+  const extraTools = allTools.length > 3 ? allTools.length - 3 : 0;
+
+  const formatTool = (name: string) =>
+    name.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+
   const OnchainDot = ({ done, label }: { done: boolean; label: string }) => (
     <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
       {done ? (
@@ -109,7 +121,7 @@ function AwarenessSection({ agentId }: { agentId: string }) {
       borderBottom: `1px solid ${t.divider}`,
     }}>
       {/* Phase pill + percentage */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: phaseBehavior ? 5 : 6 }}>
         <span style={{
           fontFamily: 'ui-monospace, Menlo, monospace',
           fontSize: 8,
@@ -133,6 +145,19 @@ function AwarenessSection({ agentId }: { agentId: string }) {
         </span>
       </div>
 
+      {/* Phase behavior text */}
+      {phaseBehavior && (
+        <p style={{
+          fontSize: 10,
+          color: t.label,
+          lineHeight: 1.5,
+          letterSpacing: '-0.005em',
+          marginBottom: 6,
+        }}>
+          {phaseBehavior}
+        </p>
+      )}
+
       {/* Progress bar */}
       <div style={{ height: 1.5, background: t.surface, borderRadius: 1, marginBottom: 8, overflow: 'hidden' }}>
         <div style={{
@@ -153,6 +178,55 @@ function AwarenessSection({ agentId }: { agentId: string }) {
           {data.memoriesLearned ?? 0}m · {data.conversationCount ?? 0}c · {data.messageCount ?? 0}msg
         </span>
       </div>
+
+      {/* Economy awareness badge + tools */}
+      {(economyAware || visibleTools.length > 0) && (
+        <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+          {economyAware && (
+            <span style={{
+              fontFamily: 'ui-monospace, Menlo, monospace',
+              fontSize: 8,
+              fontWeight: 600,
+              letterSpacing: '0.07em',
+              textTransform: 'uppercase',
+              color: '#22c55e',
+              background: '#22c55e1a',
+              border: '1px solid #22c55e40',
+              borderRadius: 3,
+              padding: '2px 5px',
+            }}>
+              Economy aware
+            </span>
+          )}
+          {visibleTools.map(tool => (
+            <span
+              key={tool}
+              style={{
+                fontFamily: 'ui-monospace, Menlo, monospace',
+                fontSize: 8,
+                letterSpacing: '0.04em',
+                color: t.faint,
+                background: t.surface,
+                border: `1px solid ${t.divider}`,
+                borderRadius: 3,
+                padding: '2px 5px',
+              }}
+            >
+              {formatTool(tool)}
+            </span>
+          ))}
+          {extraTools > 0 && (
+            <span style={{
+              fontFamily: 'ui-monospace, Menlo, monospace',
+              fontSize: 8,
+              letterSpacing: '0.04em',
+              color: t.faint,
+            }}>
+              +{extraTools} more
+            </span>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -256,20 +330,28 @@ function AgentHeader({
 
         {/* Center */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4, overflow: 'hidden' }}>
-          <span style={{
-            fontSize: 13,
-            fontWeight: 300,
-            letterSpacing: '-0.01em',
-            lineHeight: 1,
-            color: t.label,
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            maxWidth: '100%',
-            textAlign: 'center',
-          }}>
-            {agent.name || 'Agent'}
-          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, maxWidth: '100%', overflow: 'hidden' }}>
+            <AgentIcon
+              iconName={agent.icon}
+              emoji={agent.emoji}
+              size={11}
+              containerSize={20}
+              borderRadius={5}
+            />
+            <span style={{
+              fontSize: 13,
+              fontWeight: 300,
+              letterSpacing: '-0.01em',
+              lineHeight: 1,
+              color: t.label,
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              textAlign: 'center',
+            }}>
+              {agent.name || 'Agent'}
+            </span>
+          </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 5, maxWidth: '100%', overflow: 'hidden' }}>
             <span style={{ display: 'block', width: 5, height: 5, borderRadius: '50%', background: dotColor, flexShrink: 0 }} />
             <span style={{

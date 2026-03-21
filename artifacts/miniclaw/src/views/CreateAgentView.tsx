@@ -4,11 +4,13 @@ import { apiFetch } from '@/lib/api-client';
 import { useRouter, useAppStore } from '@/lib/store';
 import { useTheme } from '@/lib/theme';
 import { ScreenHeader } from '@/components/ui';
+import { AgentIcon } from '@/lib/agent-icon';
 import { motion } from 'framer-motion';
 
 interface PersonaConfig {
   id: string;
   emoji: string;
+  icon: string;
   name: string;
   tagline: string;
   color: string;
@@ -24,6 +26,7 @@ const PERSONAS: PersonaConfig[] = [
   {
     id: 'family-treasurer',
     emoji: '🏠',
+    icon: 'home',
     name: 'Family Treasurer',
     tagline: 'Budget, bills, remittances, savings',
     color: '#3b82f6',
@@ -59,6 +62,7 @@ Your motto: "Small, consistent steps build financial security for the whole fami
   {
     id: 'ai-hustle-builder',
     emoji: '🤖',
+    icon: 'bot',
     name: 'AI Hustle Builder',
     tagline: 'Spot AI side hustles, find clients, track income',
     color: '#6366f1',
@@ -94,6 +98,7 @@ Your motto: "Every AI tool is a potential income stream. Let's find yours."`,
   {
     id: 'digital-creator-coach',
     emoji: '🎬',
+    icon: 'video',
     name: 'Digital Creator Coach',
     tagline: 'Grow on TikTok, YouTube Shorts, turn followers into income',
     color: '#ef4444',
@@ -129,6 +134,7 @@ Your motto: "Consistency + hooks + monetization = your creator business."`,
   {
     id: 'online-biz-launcher',
     emoji: '🛍️',
+    icon: 'shopping-bag',
     name: 'Online Biz Launcher',
     tagline: 'Launch shops on TikTok, WhatsApp, Instagram, Gumroad',
     color: '#ec4899',
@@ -164,6 +170,7 @@ Your motto: "Your first sale changes everything. Let's get it."`,
   {
     id: 'vibecoder-apprentice',
     emoji: '⚡',
+    icon: 'zap',
     name: 'VibeCoder Apprentice',
     tagline: 'Build apps fast with no-code, ship MVPs in hours',
     color: '#8b5cf6',
@@ -199,6 +206,7 @@ Your motto: "An MVP shipped beats a perfect app planned."`,
   {
     id: 'gig-economy-maximizer',
     emoji: '💼',
+    icon: 'briefcase',
     name: 'Gig Economy Maximizer',
     tagline: 'Optimize Upwork/Fiverr, land high-paying AI gigs',
     color: '#f59e0b',
@@ -234,6 +242,7 @@ Your motto: "The right proposal, the right niche, the right rate — that's your
   {
     id: 'distribution-strategist',
     emoji: '📡',
+    icon: 'radio',
     name: 'Distribution Strategist',
     tagline: 'Get your product in front of thousands, track virality',
     color: '#10b981',
@@ -415,20 +424,14 @@ export function CreateAgentView() {
                     opacity: templatesLoading ? 0.6 : 1,
                   }}
                 >
-                  <div style={{
-                    width: 48,
-                    height: 48,
-                    borderRadius: 14,
-                    background: `${persona.color}18`,
-                    border: `1.5px solid ${persona.color}40`,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: 22,
-                    flexShrink: 0,
-                  }}>
-                    {persona.emoji}
-                  </div>
+                  <AgentIcon
+                    iconName={persona.icon}
+                    emoji={persona.emoji}
+                    size={22}
+                    color={persona.color}
+                    containerSize={48}
+                    borderRadius={14}
+                  />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <p style={{
                       fontSize: 14,

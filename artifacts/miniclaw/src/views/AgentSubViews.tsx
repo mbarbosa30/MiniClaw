@@ -17,7 +17,7 @@ import {
   Trash2, Link as LinkIcon, FileText, Check, X, Send,
   Zap, BookOpen, Brain, CircleCheck,
 } from 'lucide-react';
-import type { Agent, HumorStyle, PremiumModel, Memory, TelegramNotificationLevel } from '@/types';
+import type { Agent, HumorStyle, PremiumModel, Memory, TelegramNotificationLevel, AvailableModel } from '@/types';
 import { HUSTLE_MODE_SOUL_APPEND } from './CreateAgentView';
 
 function SubScreenLayout({ title, children }: { title: string; children: React.ReactNode }) {
@@ -640,10 +640,8 @@ export function AgentOptionsView() {
 }
 
 // --- AGENT SETTINGS VIEW (helpers) ---
-const MODEL_OPTIONS: { value: PremiumModel; label: string }[] = [
-  { value: 'none', label: 'standard' },
-  { value: 'grok-4.20', label: 'grok 4.20' },
-  { value: 'gpt-5.4', label: 'gpt-5.4' },
+const FALLBACK_MODELS: AvailableModel[] = [
+  { id: 'none', label: 'standard', tier: 'free' },
 ];
 
 function SLabel({ children }: { children: React.ReactNode }) {
@@ -822,6 +820,14 @@ function SettingsForm({ agent, onDeleted }: { agent: Agent; onDeleted: () => voi
   const [savingSoul, setSavingSoul] = useState(false);
   const [soulSaved, setSoulSaved] = useState(false);
 
+  // --- Model state ---
+  const availableModels = agent.modelInfo?.availableModels?.length
+    ? agent.modelInfo.availableModels
+    : FALLBACK_MODELS;
+  const [localModelId, setLocalModelId] = useState<string>(agent.premiumModel ?? 'none');
+  const [savingModel, setSavingModel] = useState(false);
+  const currentModelEntry = availableModels.find(m => m.id === localModelId) ?? availableModels[0];
+
   // --- Profile state ---
   const [mainSkill, setMainSkill] = useState('');
   const [platforms, setPlatforms] = useState('');
@@ -892,6 +898,24 @@ function SettingsForm({ agent, onDeleted }: { agent: Agent; onDeleted: () => voi
       // noop
     } finally {
       setSavingSoul(false);
+    }
+  };
+
+  // --- Model handler ---
+
+  const handleCycleModel = async () => {
+    if (availableModels.length <= 1) return;
+    const idx = availableModels.findIndex(m => m.id === localModelId);
+    const next = availableModels[(idx + 1) % availableModels.length];
+    const prevId = localModelId;
+    setLocalModelId(next.id);
+    setSavingModel(true);
+    try {
+      await update.mutateAsync({ id: agent.id, data: { premiumModel: next.id as PremiumModel } });
+    } catch {
+      setLocalModelId(prevId);
+    } finally {
+      setSavingModel(false);
     }
   };
 
@@ -1152,6 +1176,44 @@ function SettingsForm({ agent, onDeleted }: { agent: Agent; onDeleted: () => voi
           </div>
         )}
       </div>
+
+      {/* ── MODEL ── */}
+      <SLabel>Model</SLabel>
+      <SRow label="Active model">
+        <button
+          onClick={handleCycleModel}
+          disabled={savingModel || availableModels.length <= 1}
+          style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', padding: 0, cursor: availableModels.length <= 1 ? 'default' : 'pointer', opacity: savingModel ? 0.5 : 1 }}
+        >
+          <span style={{ fontFamily: 'ui-monospace, Menlo, monospace', fontSize: 10, color: t.text, letterSpacing: '0.02em' }}>
+            {savingModel ? '…' : (currentModelEntry?.label ?? 'standard')}
+          </span>
+          {currentModelEntry && (
+            <span style={{
+              fontFamily: 'ui-monospace, Menlo, monospace',
+              fontSize: 8,
+              fontWeight: 700,
+              letterSpacing: '0.08em',
+              textTransform: 'uppercase',
+              color: currentModelEntry.tier === 'premium' ? '#f59e0b' : t.faint,
+              background: currentModelEntry.tier === 'premium' ? '#f59e0b18' : t.surface,
+              border: `1px solid ${currentModelEntry.tier === 'premium' ? '#f59e0b40' : t.divider}`,
+              borderRadius: 3,
+              padding: '1px 4px',
+            }}>
+              {currentModelEntry.tier === 'premium' ? 'PRO' : 'FREE'}
+            </span>
+          )}
+          {availableModels.length > 1 && (
+            <span style={{ color: t.faint, fontSize: 8 }}>▼</span>
+          )}
+        </button>
+      </SRow>
+      {agent.modelInfo?.modelName && (
+        <p style={{ fontSize: 10, color: t.faint, fontFamily: 'ui-monospace, Menlo, monospace', letterSpacing: '0.02em', paddingTop: 6, paddingBottom: 2 }}>
+          {agent.modelInfo.provider ? `${agent.modelInfo.provider} · ` : ''}{agent.modelInfo.modelName}
+        </p>
+      )}
 
       {/* ── RESET ── */}
       <SLabel>Reset</SLabel>

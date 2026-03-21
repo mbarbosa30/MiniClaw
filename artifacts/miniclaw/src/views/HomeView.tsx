@@ -5,6 +5,7 @@ import { useTheme } from '@/lib/theme';
 import { useRouter, useAuthStore, useAppStore } from '@/lib/store';
 import { useAgents, useTasks, useActivity, useAwareness } from '@/hooks/use-agents';
 import { StateIndicator, agentVisualState, STATE_COLOR, STATE_LABEL } from '@/components/StateIndicator';
+import { AgentIcon } from '@/lib/agent-icon';
 import { formatAddress } from '@/lib/utils';
 import type { Agent, DailyBriefItem } from '@/types';
 
@@ -204,30 +205,39 @@ function AgentRow({
       transition={{ delay: index * 0.07, duration: 0.35 }}
       style={{ paddingTop: 20, paddingBottom: 20 }}
     >
-      {/* Row 1: name | [StateIndicator] [phase pill] [options] */}
+      {/* Row 1: [icon] name | [StateIndicator] [phase pill] [options] */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <button
-          className="text-left"
-          onClick={onPress}
-          style={{
-            flex: 1,
-            background: 'none',
-            border: 'none',
-            padding: 0,
-            cursor: 'pointer',
-            fontSize: 27,
-            fontWeight: 300,
-            letterSpacing: '-0.025em',
-            lineHeight: 1,
-            color: isIdle ? t.faint : t.text,
-            minWidth: 0,
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-          }}
-        >
-          {agent.name}
-        </button>
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
+          <AgentIcon
+            iconName={agent.icon}
+            emoji={agent.emoji}
+            size={13}
+            containerSize={28}
+            borderRadius={7}
+          />
+          <button
+            className="text-left"
+            onClick={onPress}
+            style={{
+              flex: 1,
+              background: 'none',
+              border: 'none',
+              padding: 0,
+              cursor: 'pointer',
+              fontSize: 27,
+              fontWeight: 300,
+              letterSpacing: '-0.025em',
+              lineHeight: 1,
+              color: isIdle ? t.faint : t.text,
+              minWidth: 0,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {agent.name}
+          </button>
+        </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0, marginLeft: 8, height: 12 }}>
           <StateIndicator state={state} />
           {awareness && pColor && (
