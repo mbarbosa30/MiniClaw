@@ -1,22 +1,15 @@
 import { Router } from 'express';
 import fs from 'fs';
-import path from 'path';
 
 const router = Router();
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-const WAITLIST_FILE = path.join(process.cwd(), 'data', 'waitlist.json');
-
-function ensureFile() {
-  const dir = path.dirname(WAITLIST_FILE);
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-  if (!fs.existsSync(WAITLIST_FILE)) fs.writeFileSync(WAITLIST_FILE, '[]', 'utf8');
-}
+const WAITLIST_FILE = '/tmp/waitlist.json';
 
 function readWaitlist(): string[] {
   try {
-    ensureFile();
+    if (!fs.existsSync(WAITLIST_FILE)) return [];
     return JSON.parse(fs.readFileSync(WAITLIST_FILE, 'utf8')) as string[];
   } catch {
     return [];
@@ -24,7 +17,6 @@ function readWaitlist(): string[] {
 }
 
 function appendEmail(email: string) {
-  ensureFile();
   const list = readWaitlist();
   if (!list.includes(email)) {
     list.push(email);
@@ -72,7 +64,6 @@ router.post('/waitlist', (req, res) => {
 
   try {
     appendEmail(trimmed);
-    console.log(`[waitlist] added: ${trimmed}`);
     res.json({ ok: true });
   } catch (err) {
     console.error('[waitlist] write error:', err);

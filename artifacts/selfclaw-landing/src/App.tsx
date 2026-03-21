@@ -280,6 +280,87 @@ function FeatureCards() {
   );
 }
 
+// ---- MiniPay Context Strip ----
+
+function ContextStrip() {
+  return (
+    <section style={{
+      borderBottom: `1px solid ${T.divider}`,
+      padding: '72px 24px',
+    }}>
+      <div style={{
+        maxWidth: MAX_W,
+        margin: '0 auto',
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+        gap: 48,
+        alignItems: 'center',
+      }}>
+        <div>
+          <p style={{
+            ...MONO,
+            fontSize: 10,
+            fontWeight: 600,
+            letterSpacing: '0.12em',
+            textTransform: 'uppercase',
+            color: T.faint,
+            marginBottom: 16,
+          }}>
+            What is MiniPay?
+          </p>
+          <h2 style={{
+            fontSize: 28,
+            fontWeight: 300,
+            letterSpacing: '-0.025em',
+            lineHeight: 1.25,
+            color: T.text,
+            marginBottom: 16,
+          }}>
+            A wallet for the<br />next billion users.
+          </h2>
+          <p style={{
+            fontSize: 14,
+            fontWeight: 300,
+            lineHeight: 1.7,
+            color: T.label,
+          }}>
+            MiniPay is a lightweight crypto wallet by Opera — the browser used by
+            hundreds of millions across Africa, Asia, and Latin America. MiniClaw
+            lives inside it as a MiniApp: no separate download, no complicated setup.
+          </p>
+        </div>
+        <div style={{
+          background: T.surface,
+          borderRadius: 12,
+          border: `1px solid ${T.divider}`,
+          padding: '28px 24px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 16,
+        }}>
+          {[
+            'Built on Celo',
+            'No crypto knowledge needed',
+            'Works on any Android phone',
+            'Lightweight — under 500 KB',
+          ].map((item) => (
+            <div key={item} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <span style={{
+                width: 6,
+                height: 6,
+                borderRadius: '50%',
+                background: '#22c55e',
+                flexShrink: 0,
+              }} />
+              <span style={{ fontSize: 13, fontWeight: 300, color: T.label }}>{item}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 // ---- How it works ----
 
 const STEPS = [
@@ -303,7 +384,7 @@ const STEPS = [
 function HowItWorks() {
   return (
     <section style={{
-      borderTop: `1px solid ${T.divider}`,
+      borderBottom: `1px solid ${T.divider}`,
       padding: '72px 24px',
     }}>
       <div style={{ maxWidth: MAX_W, margin: '0 auto' }}>
@@ -380,7 +461,6 @@ const PERSONAS = [
 function PersonaStrip() {
   return (
     <section style={{
-      borderTop: `1px solid ${T.divider}`,
       borderBottom: `1px solid ${T.divider}`,
       background: T.surface,
       padding: '48px 0',
@@ -407,6 +487,7 @@ function PersonaStrip() {
           paddingRight: 24,
           paddingBottom: 4,
           scrollbarWidth: 'none',
+          msOverflowStyle: 'none',
         }}
         className="persona-scroll"
       >
@@ -543,11 +624,7 @@ function WaitlistForm() {
         </div>
       ) : (
         <form onSubmit={handleSubmit} style={{ maxWidth: 440 }}>
-          <div style={{
-            display: 'flex',
-            gap: 8,
-            flexWrap: 'wrap',
-          }}>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             <input
               type="email"
               value={email}
@@ -617,10 +694,31 @@ function Footer() {
       <div style={{
         maxWidth: MAX_W,
         margin: '0 auto',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: 16,
       }}>
-        <span style={{ ...MONO, fontSize: 10, color: T.faint, letterSpacing: '0.06em' }}>
+        <span style={{ ...MONO, fontSize: 10, color: T.faint, letterSpacing: '0.05em' }}>
           MiniClaw · Built on Celo · Powered by SelfClaw AI
         </span>
+        <div style={{ display: 'flex', gap: 20 }}>
+          {[
+            { label: 'Privacy', href: '#' },
+            { label: 'Twitter / X', href: '#' },
+          ].map(({ label, href }) => (
+            <a key={label} href={href} style={{
+              ...MONO,
+              fontSize: 10,
+              color: T.faint,
+              textDecoration: 'none',
+              letterSpacing: '0.04em',
+            }}>
+              {label}
+            </a>
+          ))}
+        </div>
       </div>
     </footer>
   );
@@ -634,6 +732,7 @@ export default function App() {
       <Nav />
       <Hero />
       <FeatureCards />
+      <ContextStrip />
       <HowItWorks />
       <PersonaStrip />
       <WaitlistForm />
