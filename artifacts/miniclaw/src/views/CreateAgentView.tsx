@@ -673,7 +673,6 @@ function PersonalizeStep({
                   )}
                 </AnimatePresence>
               </div>
-            </div>
 
             {/* API error */}
             {error && (
