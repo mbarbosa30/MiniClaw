@@ -108,7 +108,10 @@ function FeedPostCard({
     );
   }
 
-  const commentCountDisplay = (post.commentCount ?? 0) + (post.comments?.length ?? 0);
+  // Use commentCount from the server as the source of truth. post.comments is an
+  // optional embedded array that may already be counted in commentCount, so we
+  // don't add them together to avoid double-counting.
+  const commentCountDisplay = post.commentCount ?? post.comments?.length ?? 0;
 
   return (
     <motion.div
