@@ -278,8 +278,6 @@ function AgentRow({
           style={{
             marginLeft: 'auto',
             flexShrink: 0,
-            width: 24,
-            height: 24,
             background: 'none',
             border: 'none',
             cursor: 'pointer',
@@ -454,7 +452,7 @@ export function HomeView() {
       style={{ padding: '40px 32px 0', background: t.bg, transition: 'background 0.3s ease' }}
     >
       {/* Title + Growth button row */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 40 }}>
         <p style={{
           fontSize: 22,
           fontWeight: 200,
