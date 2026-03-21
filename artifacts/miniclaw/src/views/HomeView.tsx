@@ -189,16 +189,17 @@ function AgentRow({
               color: isIdle ? t.faint : t.text,
               minWidth: 0,
               overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 4,
             }}
           >
-            {agent.name}
+            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{agent.name}</span>
+            {(() => {
+              const Icon = resolveIcon(agent.icon) ?? Bot;
+              return <Icon size={14} strokeWidth={1.5} color={t.faint} style={{ flexShrink: 0 }} />;
+            })()}
           </button>
-          {(() => {
-            const Icon = resolveIcon(agent.icon) ?? Bot;
-            return <Icon size={14} strokeWidth={1.5} color={t.faint} style={{ flexShrink: 0 }} />;
-          })()}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0, marginLeft: 8, height: 12 }}>
           <StateIndicator state={state} />
@@ -264,7 +265,7 @@ function AgentRow({
         )}
         {activity && (
           <span style={{ fontSize: 10, color: t.label, fontStyle: 'italic', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {activity}
+            {activity.replace('Still learning who I am', 'Learning who I am')}
           </span>
         )}
       </div>
