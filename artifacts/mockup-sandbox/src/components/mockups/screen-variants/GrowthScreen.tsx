@@ -189,7 +189,7 @@ function AnalyticsTab() {
 
 /* ─── Root ─── */
 
-type Tab = 'growth' | 'analytics';
+type Tab = 'growth' | 'usage';
 
 export function GrowthScreen() {
   const [tab, setTab] = useState<Tab>('growth');
@@ -217,7 +217,7 @@ export function GrowthScreen() {
           </p>
           {/* Tab switcher */}
           <div style={{ display: 'flex', gap: 16, paddingTop: 4 }}>
-            {(['growth', 'analytics'] as Tab[]).map((t) => (
+            {(['growth', 'usage'] as Tab[]).map((t) => (
               <button
                 key={t}
                 onClick={() => setTab(t)}

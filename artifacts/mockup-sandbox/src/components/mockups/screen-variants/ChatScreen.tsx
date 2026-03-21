@@ -31,7 +31,7 @@ function ThinkingDots() {
   );
 }
 
-/* ─── Mock data — 3 user + 3 agent (last agent is typing) ─── */
+/* ─── Mock data — exactly 3 user + 3 agent (last agent is typing) ─── */
 
 const AGENT_NAME = 'Research Owl';
 const AGENT_LABEL = 'RESEARCH OWL';
@@ -43,12 +43,8 @@ interface Msg {
   isTyping?: boolean;
 }
 
+// 3 user + 3 agent, alternating, starting with user. Last agent = typing.
 const MSGS: Msg[] = [
-  {
-    role: 'assistant',
-    content: `Hi! I'm Research Owl. I track Celo DeFi, compare rates, and surface insights. What would you like to explore?`,
-    ts: '9:14 AM',
-  },
   {
     role: 'user',
     content: 'What are the best stablecoin yields on Celo right now?',
@@ -56,7 +52,7 @@ const MSGS: Msg[] = [
   },
   {
     role: 'assistant',
-    content: `Top options right now:\n\n• Mento — cUSD/USDC pools at ~4.2% APY\n• Ubeswap — cUSD-USDT at ~6.8% APY (IL risk)\n• Moola — cUSD lending at ~3.1% APY, safest\n\nFor risk-adjusted yield, Moola is cleanest.`,
+    content: `Top options right now:\n\n• Mento — cUSD/USDC at ~4.2% APY\n• Ubeswap — cUSD-USDT at ~6.8% APY (IL risk)\n• Moola — cUSD lending at ~3.1% APY, safest\n\nFor risk-adjusted yield, Moola is cleanest.`,
     ts: '9:15 AM',
   },
   {
@@ -84,84 +80,6 @@ const MSGS: Msg[] = [
 
 const CHIPS = ['What about CELO staking?', 'Compare to ETH yields', 'Set 1% alert'];
 
-/* ─── Awareness strip ─── */
-
-function AwarenessStrip() {
-  return (
-    <div style={{
-      flexShrink: 0,
-      padding: '8px 20px 10px',
-      borderBottom: `1px solid ${T.divider}`,
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 }}>
-        <span style={{
-          ...MONO,
-          fontSize: 8,
-          color: '#22c55e',
-          letterSpacing: '0.07em',
-          textTransform: 'uppercase',
-          background: '#22c55e1a',
-          border: '1px solid #22c55e40',
-          borderRadius: 3,
-          padding: '2px 5px',
-        }}>
-          confident
-        </span>
-        <span style={{ ...MONO, fontSize: 9, color: T.faint }}>71%</span>
-      </div>
-      <div style={{ height: 1.5, background: T.surface, borderRadius: 1, marginBottom: 7, overflow: 'hidden' }}>
-        <motion.div
-          initial={{ width: 0 }}
-          animate={{ width: '71%' }}
-          transition={{ duration: 0.8, ease: [0.25, 0.46, 0.45, 0.94] }}
-          style={{ height: '100%', background: '#22c55e', borderRadius: 1 }}
-        />
-      </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        {[{ done: true, label: 'wallet' }, { done: true, label: 'token' }, { done: false, label: 'identity' }].map(({ done, label }) => (
-          <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-            {done ? (
-              <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
-                <circle cx="4" cy="4" r="3.5" fill="#22c55e" />
-                <path d="M2.2 4l1.2 1.2 2.4-2.4" stroke="#0f0f0f" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            ) : (
-              <div style={{ width: 6, height: 6, borderRadius: '50%', border: `1px solid ${T.faint}` }} />
-            )}
-            <span style={{ ...MONO, fontSize: 9, color: done ? T.label : T.faint, textTransform: 'uppercase' }}>
-              {label}
-            </span>
-          </div>
-        ))}
-        <span style={{ ...MONO, fontSize: 9, color: T.faint, marginLeft: 'auto' }}>
-          14.8k tok · 2.1 MB
-        </span>
-      </div>
-    </div>
-  );
-}
-
-/* ─── Quota bar ─── */
-
-function QuotaBar() {
-  return (
-    <div style={{ padding: '5px 20px 0' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 }}>
-        <span style={{ ...MONO, fontSize: 8, color: T.faint }}>14,832 / 43,000 tokens</span>
-        <span style={{ ...MONO, fontSize: 8, color: T.faint }}>resets in 14h 22m</span>
-      </div>
-      <div style={{ height: 2, background: T.surface, borderRadius: 1, overflow: 'hidden' }}>
-        <motion.div
-          initial={{ width: 0 }}
-          animate={{ width: '34%' }}
-          transition={{ duration: 0.6, ease: 'easeOut' }}
-          style={{ height: '100%', background: T.faint, borderRadius: 1 }}
-        />
-      </div>
-    </div>
-  );
-}
-
 /* ─── Header ─── */
 
 function Header() {
@@ -186,7 +104,78 @@ function Header() {
           </button>
         </div>
       </div>
-      <QuotaBar />
+    </div>
+  );
+}
+
+/* ─── Awareness strip (includes quota bar below it) ─── */
+
+function AwarenessAndQuotaStrip() {
+  return (
+    <div style={{ flexShrink: 0, borderBottom: `1px solid ${T.divider}` }}>
+      {/* Awareness content */}
+      <div style={{ padding: '8px 20px 8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 }}>
+          <span style={{
+            ...MONO,
+            fontSize: 8,
+            color: '#22c55e',
+            letterSpacing: '0.07em',
+            textTransform: 'uppercase',
+            background: '#22c55e1a',
+            border: '1px solid #22c55e40',
+            borderRadius: 3,
+            padding: '2px 5px',
+          }}>
+            confident
+          </span>
+          <span style={{ ...MONO, fontSize: 9, color: T.faint }}>71%</span>
+        </div>
+        <div style={{ height: 1.5, background: T.surface, borderRadius: 1, marginBottom: 7, overflow: 'hidden' }}>
+          <motion.div
+            initial={{ width: 0 }}
+            animate={{ width: '71%' }}
+            transition={{ duration: 0.8, ease: [0.25, 0.46, 0.45, 0.94] }}
+            style={{ height: '100%', background: '#22c55e', borderRadius: 1 }}
+          />
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          {[{ done: true, label: 'wallet' }, { done: true, label: 'token' }, { done: false, label: 'identity' }].map(({ done, label }) => (
+            <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+              {done ? (
+                <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+                  <circle cx="4" cy="4" r="3.5" fill="#22c55e" />
+                  <path d="M2.2 4l1.2 1.2 2.4-2.4" stroke="#0f0f0f" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              ) : (
+                <div style={{ width: 6, height: 6, borderRadius: '50%', border: `1px solid ${T.faint}` }} />
+              )}
+              <span style={{ ...MONO, fontSize: 9, color: done ? T.label : T.faint, textTransform: 'uppercase' }}>
+                {label}
+              </span>
+            </div>
+          ))}
+          <span style={{ ...MONO, fontSize: 9, color: T.faint, marginLeft: 'auto' }}>
+            14.8k tok · 2.1 MB
+          </span>
+        </div>
+      </div>
+
+      {/* Quota bar — below the awareness strip */}
+      <div style={{ padding: '4px 32px 8px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 }}>
+          <span style={{ ...MONO, fontSize: 8, color: T.faint }}>14,832 / 43,000 tokens</span>
+          <span style={{ ...MONO, fontSize: 8, color: T.faint }}>resets in 14h 22m</span>
+        </div>
+        <div style={{ height: 2, background: T.surface, borderRadius: 1, overflow: 'hidden' }}>
+          <motion.div
+            initial={{ width: 0 }}
+            animate={{ width: '34%' }}
+            transition={{ duration: 0.6, ease: 'easeOut' }}
+            style={{ height: '100%', background: T.faint, borderRadius: 1 }}
+          />
+        </div>
+      </div>
     </div>
   );
 }
@@ -208,21 +197,14 @@ function MessageItem({ msg, index }: { msg: Msg; index: number }) {
         gap: 4,
       }}
     >
-      {/* Role + timestamp header */}
+      {/* Role + timestamp */}
       <div style={{
         display: 'flex',
         alignItems: 'baseline',
         gap: 8,
         flexDirection: isUser ? 'row-reverse' : 'row',
       }}>
-        <span style={{
-          ...MONO,
-          fontSize: 9,
-          fontWeight: 600,
-          letterSpacing: '0.09em',
-          textTransform: 'uppercase',
-          color: T.faint,
-        }}>
+        <span style={{ ...MONO, fontSize: 9, fontWeight: 600, letterSpacing: '0.09em', textTransform: 'uppercase', color: T.faint }}>
           {isUser ? 'YOU' : AGENT_LABEL}
         </span>
         {msg.ts && (
@@ -232,12 +214,12 @@ function MessageItem({ msg, index }: { msg: Msg; index: number }) {
         )}
       </div>
 
-      {/* Bubble */}
+      {/* Bubble — user: surface bg pill; agent: transparent, full width text */}
       <div style={{
         maxWidth: '80%',
         background: isUser ? T.surface : 'transparent',
-        borderRadius: isUser ? '12px 12px 2px 12px' : '0 12px 12px 12px',
-        padding: isUser ? '9px 13px' : '0',
+        borderRadius: isUser ? '12px 12px 2px 12px' : 0,
+        padding: isUser ? '9px 13px' : 0,
       }}>
         <p style={{
           fontSize: 14,
@@ -280,12 +262,12 @@ export function ChatScreen() {
       `}</style>
 
       <Header />
-      <AwarenessStrip />
+      <AwarenessAndQuotaStrip />
 
-      {/* Messages */}
+      {/* Messages — 32px horizontal padding */}
       <div
         className="no-scrollbar"
-        style={{ flex: 1, overflowY: 'auto', padding: '22px 20px 8px', display: 'flex', flexDirection: 'column', gap: 22 }}
+        style={{ flex: 1, overflowY: 'auto', padding: '22px 32px 8px', display: 'flex', flexDirection: 'column', gap: 22 }}
       >
         {MSGS.map((msg, i) => (
           <MessageItem key={i} msg={msg} index={i} />
@@ -293,10 +275,10 @@ export function ChatScreen() {
         <div ref={endRef} />
       </div>
 
-      {/* Quick-reply chips */}
+      {/* Quick-reply chips — 32px horizontal padding */}
       <div
         className="no-scrollbar"
-        style={{ flexShrink: 0, overflowX: 'auto', display: 'flex', gap: 8, padding: '6px 20px 2px' }}
+        style={{ flexShrink: 0, overflowX: 'auto', display: 'flex', gap: 8, padding: '6px 32px 2px' }}
       >
         {CHIPS.map((chip) => (
           <button key={chip} style={{
@@ -316,8 +298,8 @@ export function ChatScreen() {
         ))}
       </div>
 
-      {/* Compact history button */}
-      <div style={{ padding: '4px 20px 0', display: 'flex' }}>
+      {/* Compact history button — 32px horizontal padding */}
+      <div style={{ padding: '4px 32px 0', display: 'flex' }}>
         <button style={{
           ...MONO,
           fontSize: 8,
@@ -334,8 +316,8 @@ export function ChatScreen() {
         </button>
       </div>
 
-      {/* Input bar */}
-      <div style={{ flexShrink: 0, borderTop: `1px solid ${T.divider}`, padding: '12px 20px 24px' }}>
+      {/* Input bar — 32px horizontal padding */}
+      <div style={{ flexShrink: 0, borderTop: `1px solid ${T.divider}`, padding: '12px 32px 24px' }}>
         <div style={{ display: 'flex', alignItems: 'flex-end', gap: 12 }}>
           <input
             value={inputVal}
@@ -364,8 +346,7 @@ export function ChatScreen() {
                 transition={{ duration: 0.12 }}
                 style={{
                   flexShrink: 0,
-                  width: 36,
-                  height: 36,
+                  width: 36, height: 36,
                   borderRadius: '50%',
                   background: T.text,
                   border: 'none',
@@ -386,8 +367,7 @@ export function ChatScreen() {
                 transition={{ duration: 0.12 }}
                 style={{
                   flexShrink: 0,
-                  width: 36,
-                  height: 36,
+                  width: 36, height: 36,
                   borderRadius: '50%',
                   background: T.surface,
                   border: 'none',
