@@ -27,7 +27,8 @@ function buildHeaders(extra?: HeadersInit, body?: BodyInit | null): Headers {
     headers.set('Content-Type', 'application/json');
   }
   if (PLATFORM_KEY) headers.set('Authorization', `Bearer ${PLATFORM_KEY}`);
-  if (_walletAddress) headers.set('X-Wallet-Address', _walletAddress);
+  // Normalize to lowercase, trimmed — API validates strict lowercase hex EVM address
+  if (_walletAddress) headers.set('X-Wallet-Address', _walletAddress.trim().toLowerCase());
   return headers;
 }
 
