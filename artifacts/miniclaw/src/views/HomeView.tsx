@@ -452,7 +452,9 @@ export function HomeView() {
       style={{ display: 'flex', flexDirection: 'column', background: t.bg, transition: 'background 0.3s ease', overflow: 'hidden' }}
     >
       {/* Pinned header — does not scroll */}
-      <div style={{ flexShrink: 0, padding: '40px 32px 0' }}>
+      <div
+        style={{ flexShrink: 0, padding: '40px 32px 0' }}
+        className="pb-[16px] pt-[40px] pl-[32px] pr-[32px]">
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
           <p style={{
             fontSize: 22,
@@ -483,7 +485,6 @@ export function HomeView() {
           </button>
         </div>
       </div>
-
       {/* Quota gradient separator — pinned, always visible, full-bleed */}
       <div style={{
         flexShrink: 0,
@@ -493,7 +494,6 @@ export function HomeView() {
           : `linear-gradient(to right, transparent, ${t.divider})`,
         opacity: quotaGradient ? quotaGradient.opacity : 0.6,
       }} />
-
       {/* Scrollable list */}
       <div
         className="overflow-y-auto no-scrollbar"
