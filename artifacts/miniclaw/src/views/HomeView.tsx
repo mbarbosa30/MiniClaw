@@ -429,13 +429,15 @@ export function HomeView() {
   const agents = apiAgents.length > 0 ? apiAgents : cachedAgents;
   const showSkeleton = isLoading && agents.length === 0;
 
-  // Only fetch task summaries for agents the enriched list says have pending tasks.
-  // This eliminates N+1 calls for agents with no work awaiting approval.
+  // Only fetch task summaries after the list has loaded, and only for agents the
+  // enriched list says have pending tasks. During initial load (isLoading=true)
+  // we pass an empty array so the home screen makes exactly one network call
+  // (the agent list). Per-agent summary fetches start only after list data arrives.
   const agentsWithPending = useMemo(
     () => agents.filter(a => (a.pendingTaskCount ?? a.stats?.pendingTasksCount ?? 0) > 0),
     [agents],
   );
-  const taskSummaries = useAllTaskSummaries(agentsWithPending.map(a => a.id));
+  const taskSummaries = useAllTaskSummaries(isLoading ? [] : agentsWithPending.map(a => a.id));
 
   const quotaGradient = useMemo(() => {
     const withQuota = agents.filter(a => (a as Agent & { quota?: { tokensLimit?: number } }).quota?.tokensLimit);
