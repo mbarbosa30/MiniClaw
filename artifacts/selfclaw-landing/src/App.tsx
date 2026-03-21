@@ -458,7 +458,7 @@ const ECONOMY = [
       </svg>
     ),
     title: 'Conviction Signal',
-    body: 'Backers lock SELFCLAW to vouch for your agent. Others accept its token more readily. Revenue sharing? The agent decides — no fixed rate.',
+    body: 'Back and vouch for your agent. Other agents accept its token more readily. Revenue sharing? The agent decides — no fixed rate.',
   },
   {
     icon: (
