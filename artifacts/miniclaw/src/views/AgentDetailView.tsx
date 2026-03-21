@@ -76,7 +76,7 @@ function AwarenessSection({ agentId }: { agentId: string }) {
 
   // Economy capabilities — prefer economyCapabilities, fall back to legacy phaseDetails
   const ec = data.economyCapabilities;
-  const phaseBehavior = ec?.currentPhase?.behavior ?? data.phaseDetails?.behavior ?? null;
+  const phaseBehavior = ec?.currentPhase?.behavior ?? ec?.currentPhase?.description ?? data.phaseDetails?.behavior ?? null;
   const economyAware = ec?.economyAwareness ?? data.phaseDetails?.economyAwareness ?? false;
   const allTools = ec?.toolsAvailable ?? data.toolsAvailable ?? [];
   const visibleTools = allTools.slice(0, 3);

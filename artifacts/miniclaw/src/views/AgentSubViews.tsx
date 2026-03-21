@@ -911,7 +911,7 @@ function SettingsForm({ agent, onDeleted }: { agent: Agent; onDeleted: () => voi
     setLocalModelId(next.id);
     setSavingModel(true);
     try {
-      await update.mutateAsync({ id: agent.id, data: { premiumModel: next.id as PremiumModel } });
+      await update.mutateAsync({ id: agent.id, data: { premiumModel: next.id } });
     } catch {
       setLocalModelId(prevId);
     } finally {

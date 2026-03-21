@@ -45,7 +45,7 @@ export interface Agent {
   // API returns numeric IDs; typed as string | number for robustness
   id: string | number;
   name: string;
-  emoji: string;
+  emoji?: string;
   icon?: string;
   description: string;
   status: 'active' | 'paused' | 'error' | string;
@@ -150,7 +150,7 @@ export interface UpdateAgentPayload {
   socialHandles?: SocialHandles;
   personalContext?: string;
   humorStyle?: HumorStyle;
-  premiumModel?: PremiumModel | null;
+  premiumModel?: string | null;
 }
 
 // PUT /:id/settings — settings-only update
@@ -165,7 +165,7 @@ export interface UpdateAgentSettingsPayload {
   enabledSkills?: string[];
   personalContext?: string;
   humorStyle?: HumorStyle;
-  premiumModel?: PremiumModel | null;
+  premiumModel?: string | null;
 }
 
 // GET /:id/settings response — full agent settings object
