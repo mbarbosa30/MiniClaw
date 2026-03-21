@@ -5,7 +5,7 @@ import { useTemplates, useCreateAgent, useSpawningStatus } from '@/hooks/use-age
 import { useRouter, useAppStore } from '@/lib/store';
 import { useTheme } from '@/lib/theme';
 import { resolveIcon } from '@/lib/agent-icon';
-import { PERSONAS, HUSTLE_MODE_SOUL_APPEND } from '@/lib/personas';
+import { PERSONAS } from '@/lib/personas';
 import type { PersonaConfig } from '@/lib/personas';
 import type { HumorStyle, SpawningProgressStep } from '@/types';
 
