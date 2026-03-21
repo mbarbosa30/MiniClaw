@@ -848,13 +848,21 @@ export function CreateAgentView() {
   };
 
   const buildBriefContext = (persona: PersonaConfig, info: UserInfo): string => {
-    const parts: string[] = [];
-    if (info.name.trim()) parts.push(`I'm ${info.name.trim()}`);
-    if (info.country.trim()) parts.push(`from ${info.country.trim()}`);
-    let greeting = parts.length > 0 ? `Hi! ${parts.join(', ')}. ` : 'Hi! ';
-    if (info.goal.trim()) greeting += `I'm currently working on: ${info.goal.trim()}. `;
-    greeting += `Let's get started!`;
-    return greeting;
+    const namePart = info.name.trim();
+    const countryPart = info.country.trim();
+    const goalPart = info.goal.trim();
+
+    let intro = 'Hi!';
+    if (namePart && countryPart) intro = `Hi! I'm ${namePart} from ${countryPart}.`;
+    else if (namePart) intro = `Hi! I'm ${namePart}.`;
+    else if (countryPart) intro = `Hi! I'm based in ${countryPart}.`;
+
+    let context = `${intro} `;
+    if (goalPart) context += `I'm working on: ${goalPart}. `;
+
+    context += `Please introduce yourself as my ${persona.name} — ${persona.tagline.endsWith('.') ? persona.tagline.slice(0, -1).toLowerCase() : persona.tagline.toLowerCase()} — and ask me one focused question to understand what I want to achieve with you.`;
+
+    return context;
   };
 
   const buildUserContextSoul = (persona: PersonaConfig, info: UserInfo): string => {
