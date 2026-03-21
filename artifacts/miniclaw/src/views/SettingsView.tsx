@@ -117,55 +117,66 @@ function ProfileSection() {
     setUserProfile({ ...userProfile, [field]: value });
   };
 
-  const inputStyle: React.CSSProperties = {
-    fontSize: 12,
+  const fieldStyle: React.CSSProperties = {
+    width: '100%',
+    background: t.surface,
+    border: `1px solid ${t.divider}`,
+    borderRadius: 10,
+    padding: '13px 16px',
+    fontSize: 15,
     color: t.text,
-    background: 'none',
-    border: 'none',
-    outline: 'none',
-    textAlign: 'right',
-    width: '55%',
-    letterSpacing: '-0.01em',
     fontFamily: 'inherit',
-    padding: 0,
+    letterSpacing: '-0.01em',
+    outline: 'none',
+    boxSizing: 'border-box',
   };
 
-  const placeholderMap = {
-    name: 'e.g. Amara',
-    country: 'e.g. Nigeria, Kenya',
-    goal: 'e.g. freelancing on Fiverr',
+  const fieldLabelStyle: React.CSSProperties = {
+    fontSize: 9,
+    fontFamily: 'ui-monospace, Menlo, monospace',
+    fontWeight: 600,
+    color: t.faint,
+    letterSpacing: '0.08em',
+    textTransform: 'uppercase',
+    display: 'block',
+    marginBottom: 8,
   };
 
   return (
     <>
       <SectionLabel>Profile</SectionLabel>
-      <Row label="Name">
-        <input
-          type="text"
-          value={userProfile.name}
-          placeholder={placeholderMap.name}
-          onChange={(e) => handleChange('name', e.target.value)}
-          style={inputStyle}
-        />
-      </Row>
-      <Row label="Location">
-        <input
-          type="text"
-          value={userProfile.country}
-          placeholder={placeholderMap.country}
-          onChange={(e) => handleChange('country', e.target.value)}
-          style={inputStyle}
-        />
-      </Row>
-      <Row label="Current focus">
-        <input
-          type="text"
-          value={userProfile.goal}
-          placeholder={placeholderMap.goal}
-          onChange={(e) => handleChange('goal', e.target.value)}
-          style={inputStyle}
-        />
-      </Row>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, paddingBottom: 4 }}>
+        <div>
+          <label style={fieldLabelStyle}>Name</label>
+          <input
+            type="text"
+            value={userProfile.name}
+            placeholder="e.g. Amara"
+            onChange={(e) => handleChange('name', e.target.value)}
+            style={fieldStyle}
+          />
+        </div>
+        <div>
+          <label style={fieldLabelStyle}>Location</label>
+          <input
+            type="text"
+            value={userProfile.country}
+            placeholder="e.g. Nigeria, Kenya"
+            onChange={(e) => handleChange('country', e.target.value)}
+            style={fieldStyle}
+          />
+        </div>
+        <div>
+          <label style={fieldLabelStyle}>Current focus</label>
+          <input
+            type="text"
+            value={userProfile.goal}
+            placeholder="e.g. freelancing on Fiverr"
+            onChange={(e) => handleChange('goal', e.target.value)}
+            style={fieldStyle}
+          />
+        </div>
+      </div>
       <p style={{
         fontSize: 10,
         color: t.faint,

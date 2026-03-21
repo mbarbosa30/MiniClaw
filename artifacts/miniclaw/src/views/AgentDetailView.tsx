@@ -626,6 +626,25 @@ function fmtTime(ts?: number, iso?: string): string {
   }
 }
 
+function fmtRelative(ts?: number, iso?: string): string {
+  try {
+    const d = iso ? new Date(iso) : ts ? new Date(ts) : null;
+    if (!d || isNaN(d.getTime())) return '';
+    const diffMs = Date.now() - d.getTime();
+    const diffSec = Math.floor(diffMs / 1000);
+    if (diffSec < 60) return 'just now';
+    const diffMin = Math.floor(diffSec / 60);
+    if (diffMin < 60) return `${diffMin}m ago`;
+    const diffHr = Math.floor(diffMin / 60);
+    if (diffHr < 24) return `${diffHr}h ago`;
+    const diffDay = Math.floor(diffHr / 24);
+    if (diffDay === 1) return 'yesterday';
+    return `${diffDay}d ago`;
+  } catch {
+    return '';
+  }
+}
+
 
 function ChatTab({
   agent,
@@ -1014,7 +1033,6 @@ function ChatTab({
         style={{ flex: 1, overflowY: 'auto', padding: '24px 32px 8px', display: 'flex', flexDirection: 'column', gap: 28 }}
       >
         {messages.map((m, i) => {
-          const timestamp = fmtTime(m._ts, m.createdAt);
           const isActiveStream = isStreaming && i === messages.length - 1 && m.role === 'assistant';
 
           if (m.role === 'system') {
@@ -1034,21 +1052,27 @@ function ChatTab({
           const isUser = m.role === 'user';
 
           if (isUser) {
+            const relTime = fmtRelative(m._ts, m.createdAt);
             return (
-              <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 3 }}>
-                <p style={{
-                  fontSize: 14,
-                  fontWeight: 400,
-                  lineHeight: 1.6,
-                  color: t.text,
-                  margin: 0,
-                  whiteSpace: 'pre-wrap',
-                  textAlign: 'right',
+              <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+                <div style={{
+                  background: t.surface,
+                  borderRadius: 14,
+                  padding: '10px 14px',
                   maxWidth: '80%',
                 }}>
-                  {m.content}
-                </p>
-                {timestamp && (
+                  <p style={{
+                    fontSize: 14,
+                    fontWeight: 400,
+                    lineHeight: 1.6,
+                    color: t.text,
+                    margin: 0,
+                    whiteSpace: 'pre-wrap',
+                  }}>
+                    {m.content}
+                  </p>
+                </div>
+                {relTime && (
                   <span style={{
                     fontSize: 9,
                     fontFamily: 'ui-monospace, Menlo, monospace',
@@ -1056,7 +1080,7 @@ function ChatTab({
                     color: t.faint,
                     opacity: 0.5,
                   }}>
-                    {timestamp}
+                    {relTime}
                   </span>
                 )}
               </div>
@@ -1065,29 +1089,16 @@ function ChatTab({
 
           return (
             <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                <span style={{
-                  fontSize: 9,
-                  fontFamily: 'ui-monospace, Menlo, monospace',
-                  fontWeight: 600,
-                  letterSpacing: '0.09em',
-                  textTransform: 'uppercase',
-                  color: t.faint,
-                }}>
-                  {agentLabel}
-                </span>
-                {timestamp && (
-                  <span style={{
-                    fontSize: 9,
-                    fontFamily: 'ui-monospace, Menlo, monospace',
-                    letterSpacing: '0.04em',
-                    color: t.faint,
-                    opacity: 0.6,
-                  }}>
-                    {timestamp}
-                  </span>
-                )}
-              </div>
+              <span style={{
+                fontSize: 9,
+                fontFamily: 'ui-monospace, Menlo, monospace',
+                fontWeight: 600,
+                letterSpacing: '0.09em',
+                textTransform: 'uppercase',
+                color: t.faint,
+              }}>
+                {agentLabel}
+              </span>
               {isActiveStream && !m.content ? (
                 <p style={{ fontSize: 14, fontWeight: 300, lineHeight: 1.6, color: t.text, margin: 0 }}>
                   <span className="typing-dots" style={{ display: 'inline-flex', gap: 4, alignItems: 'center' }}>
@@ -1099,22 +1110,27 @@ function ChatTab({
               ) : (
                 <MdContent content={m.content} t={t} />
               )}
-              {!isActiveStream && m.latencyMs !== undefined && (
-                <p style={{
-                  fontFamily: 'ui-monospace, Menlo, monospace',
-                  fontSize: 9,
-                  letterSpacing: '0.04em',
-                  color: t.faint,
-                  margin: 0,
-                  opacity: 0.7,
-                }}>
-                  {[
-                    m.model,
-                    `${(m.latencyMs / 1000).toFixed(1)}s`,
-                    m.tokensUsed != null && m.tokensUsed > 0 ? `${m.tokensUsed.toLocaleString()} tok` : undefined,
-                  ].filter(Boolean).join(' · ')}
-                </p>
-              )}
+              {!isActiveStream && (() => {
+                const relTime = fmtRelative(m._ts, m.createdAt);
+                const parts = [
+                  m.latencyMs !== undefined ? `${(m.latencyMs / 1000).toFixed(1)}s` : undefined,
+                  m.tokensUsed != null && m.tokensUsed > 0 ? `${m.tokensUsed.toLocaleString()} tok` : undefined,
+                  relTime || undefined,
+                ].filter(Boolean);
+                if (!parts.length) return null;
+                return (
+                  <p style={{
+                    fontFamily: 'ui-monospace, Menlo, monospace',
+                    fontSize: 9,
+                    letterSpacing: '0.04em',
+                    color: t.faint,
+                    margin: 0,
+                    opacity: 0.7,
+                  }}>
+                    {parts.join(' · ')}
+                  </p>
+                );
+              })()}
             </div>
           );
         })}
