@@ -517,6 +517,46 @@ export function AgentDetailView() {
         quota={quota}
       />
       <AwarenessSection agentId={id} onEconomy={() => push('economy', { id })} />
+      {/* Tab strip — Chat is the active tab; Economy navigates to its own screen */}
+      <div style={{
+        flexShrink: 0,
+        display: 'flex',
+        borderBottom: `1px solid ${t.divider}`,
+        padding: '0 16px',
+        gap: 0,
+      }}>
+        <button style={{
+          padding: '10px 16px',
+          fontSize: 12,
+          fontWeight: 600,
+          color: t.text,
+          background: 'none',
+          border: 'none',
+          borderBottom: `2px solid ${t.text}`,
+          cursor: 'default',
+          letterSpacing: '-0.01em',
+          marginBottom: -1,
+        }}>
+          Chat
+        </button>
+        <button
+          onClick={() => push('economy', { id })}
+          style={{
+            padding: '10px 16px',
+            fontSize: 12,
+            fontWeight: 400,
+            color: t.faint,
+            background: 'none',
+            border: 'none',
+            borderBottom: '2px solid transparent',
+            cursor: 'pointer',
+            letterSpacing: '-0.01em',
+            marginBottom: -1,
+          }}
+        >
+          Economy
+        </button>
+      </div>
       <div style={{ flex: 1, overflow: 'hidden' }}>
         <ChatTab
           agent={agent}

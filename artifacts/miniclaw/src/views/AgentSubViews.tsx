@@ -1331,7 +1331,8 @@ export function EconomyView() {
   const [commerceDesc, setCommerceDesc] = useState('');
   const [commerceAmount, setCommerceAmount] = useState('');
   const [commerceError, setCommerceError] = useState<string | null>(null);
-  const [commerceResult, setCommerceResult] = useState<string | null>(null);
+  const [commerceResult, setCommerceResult] = useState<{ id?: string; paymentLink?: string } | null>(null);
+  const [showCommerceForm, setShowCommerceForm] = useState(false);
 
   const [walletError, setWalletError] = useState<string | null>(null);
   const [walletCreated, setWalletCreated] = useState(false);
@@ -1342,6 +1343,7 @@ export function EconomyView() {
   const [giftMessage, setGiftMessage] = useState('');
   const [giftError, setGiftError] = useState<string | null>(null);
   const [giftSuccess, setGiftSuccess] = useState(false);
+  const [showGiftForm, setShowGiftForm] = useState(false);
 
   const clearAfter = (setter: (v: null) => void, ms = 4000) => {
     setTimeout(() => setter(null), ms);
@@ -1424,9 +1426,10 @@ export function EconomyView() {
     setCommerceResult(null);
     try {
       const result = await commerceRequest.mutateAsync({ agentId, description: desc, amount: amt, currency: 'CELO' });
-      setCommerceResult(result.paymentLink ?? result.id ?? 'Created');
+      setCommerceResult({ id: result.id, paymentLink: result.paymentLink });
       setCommerceDesc('');
       setCommerceAmount('');
+      setShowCommerceForm(false);
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Failed to create request';
       setCommerceError(msg);
@@ -1589,29 +1592,38 @@ export function EconomyView() {
               )}
 
               <div style={{ marginTop: 14, paddingTop: 14, borderTop: `1px solid ${t.divider}` }}>
-                <p style={{ fontSize: 10, fontWeight: 600, color: t.faint, letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: 'ui-monospace, Menlo, monospace', marginBottom: 8 }}>Send Gift to Owner</p>
-                <input
-                  placeholder="Amount in CELO"
-                  type="number"
-                  value={giftAmount}
-                  onChange={e => setGiftAmount(e.target.value)}
-                  disabled={!isPhase3}
-                  style={{ ...inputStyle, opacity: isPhase3 ? 1 : 0.4 }}
-                />
-                <input
-                  placeholder="Message (optional)"
-                  value={giftMessage}
-                  onChange={e => setGiftMessage(e.target.value)}
-                  disabled={!isPhase3}
-                  style={{ ...inputStyle, opacity: isPhase3 ? 1 : 0.4 }}
-                />
-                {giftError && <p style={{ fontSize: 11, color: '#f87171', marginTop: 6 }}>{giftError}</p>}
-                {giftSuccess && <p style={{ fontSize: 11, color: '#22c55e', marginTop: 6 }}>Gift sent successfully.</p>}
-                <EcoActionBtn
-                  label={giftOwner.isPending ? 'Sending…' : 'Send Gift'}
-                  onClick={handleGiftOwner}
-                  disabled={!isPhase3 || !giftAmount || giftOwner.isPending}
-                />
+                {giftSuccess ? (
+                  <p style={{ fontSize: 12, color: '#22c55e' }}>Gift sent successfully.</p>
+                ) : (
+                  <EcoActionBtn
+                    label="Send Gift to Owner"
+                    onClick={() => { if (isPhase3) setShowGiftForm(v => !v); }}
+                    disabled={!isPhase3}
+                  />
+                )}
+                {showGiftForm && !giftSuccess && (
+                  <div style={{ marginTop: 10 }}>
+                    <input
+                      placeholder="Amount in CELO"
+                      type="number"
+                      value={giftAmount}
+                      onChange={e => setGiftAmount(e.target.value)}
+                      style={{ ...inputStyle }}
+                    />
+                    <input
+                      placeholder="Message (optional)"
+                      value={giftMessage}
+                      onChange={e => setGiftMessage(e.target.value)}
+                      style={{ ...inputStyle }}
+                    />
+                    {giftError && <p style={{ fontSize: 11, color: '#f87171', marginTop: 6 }}>{giftError}</p>}
+                    <EcoActionBtn
+                      label={giftOwner.isPending ? 'Sending…' : 'Confirm Send'}
+                      onClick={handleGiftOwner}
+                      disabled={!giftAmount || giftOwner.isPending}
+                    />
+                  </div>
+                )}
               </div>
             </EcoCard>
 
@@ -1619,33 +1631,54 @@ export function EconomyView() {
               <p style={{ fontSize: 12, color: t.label, marginBottom: 10, lineHeight: 1.6 }}>
                 Create a payment request that your agent can share with users.
               </p>
-              <input
-                placeholder="Description (e.g. Consultation)"
-                value={commerceDesc}
-                onChange={e => setCommerceDesc(e.target.value)}
-                disabled={!isPhase3}
-                style={{ ...inputStyle, opacity: isPhase3 ? 1 : 0.4 }}
-              />
-              <input
-                placeholder="Amount in CELO"
-                type="number"
-                value={commerceAmount}
-                onChange={e => setCommerceAmount(e.target.value)}
-                disabled={!isPhase3}
-                style={{ ...inputStyle, opacity: isPhase3 ? 1 : 0.4 }}
-              />
-              {commerceError && <p style={{ fontSize: 11, color: '#f87171', marginTop: 8 }}>{commerceError}</p>}
-              {commerceResult && (
-                <div style={{ marginTop: 8, padding: '8px 10px', background: t.bg, border: `1px solid ${t.divider}`, borderRadius: 8 }}>
-                  <p style={{ fontSize: 10, color: t.faint, marginBottom: 4, fontFamily: 'ui-monospace, Menlo, monospace' }}>Payment link</p>
-                  <p style={{ fontSize: 11, color: t.text, wordBreak: 'break-all' }}>{commerceResult}</p>
+              {commerceResult ? (
+                <div style={{ marginTop: 4 }}>
+                  {commerceResult.id && (
+                    <div style={{ marginBottom: 8, padding: '8px 10px', background: t.surface, border: `1px solid ${t.divider}`, borderRadius: 8 }}>
+                      <p style={{ fontSize: 10, color: t.faint, marginBottom: 3, fontFamily: 'ui-monospace, Menlo, monospace', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Request ID</p>
+                      <p style={{ fontSize: 11, color: t.text, wordBreak: 'break-all', fontFamily: 'ui-monospace, Menlo, monospace' }}>{commerceResult.id}</p>
+                    </div>
+                  )}
+                  {commerceResult.paymentLink && (
+                    <div style={{ marginBottom: 8, padding: '8px 10px', background: t.surface, border: `1px solid ${t.divider}`, borderRadius: 8 }}>
+                      <p style={{ fontSize: 10, color: t.faint, marginBottom: 3, fontFamily: 'ui-monospace, Menlo, monospace', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Payment Link</p>
+                      <p style={{ fontSize: 11, color: t.text, wordBreak: 'break-all' }}>{commerceResult.paymentLink}</p>
+                    </div>
+                  )}
+                  <EcoActionBtn label="New Request" onClick={() => { setCommerceResult(null); setShowCommerceForm(true); }} disabled={false} />
                 </div>
+              ) : (
+                <>
+                  <EcoActionBtn
+                    label="New Payment Request"
+                    onClick={() => { if (isPhase3) setShowCommerceForm(v => !v); }}
+                    disabled={!isPhase3}
+                  />
+                  {showCommerceForm && (
+                    <div style={{ marginTop: 10 }}>
+                      <input
+                        placeholder="Description (e.g. Consultation)"
+                        value={commerceDesc}
+                        onChange={e => setCommerceDesc(e.target.value)}
+                        style={{ ...inputStyle }}
+                      />
+                      <input
+                        placeholder="Amount in CELO"
+                        type="number"
+                        value={commerceAmount}
+                        onChange={e => setCommerceAmount(e.target.value)}
+                        style={{ ...inputStyle }}
+                      />
+                      {commerceError && <p style={{ fontSize: 11, color: '#f87171', marginTop: 8 }}>{commerceError}</p>}
+                      <EcoActionBtn
+                        label={commerceRequest.isPending ? 'Creating…' : 'Create Request'}
+                        onClick={handleCommerceRequest}
+                        disabled={!commerceDesc.trim() || !commerceAmount || commerceRequest.isPending}
+                      />
+                    </div>
+                  )}
+                </>
               )}
-              <EcoActionBtn
-                label={commerceRequest.isPending ? 'Creating…' : 'Create Request'}
-                onClick={handleCommerceRequest}
-                disabled={!isPhase3 || !commerceDesc.trim() || !commerceAmount || commerceRequest.isPending}
-              />
             </EcoCard>
           </>
         )}
