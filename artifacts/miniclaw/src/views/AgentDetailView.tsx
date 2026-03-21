@@ -328,12 +328,12 @@ function MdContent({ content, t }: { content: string; t: ReturnType<typeof useTh
     pre: ({ children }: { children?: React.ReactNode }) => (
       <pre style={{ background: t.surface, borderRadius: 5, padding: '7px 10px', overflowX: 'auto', margin: '3px 0 6px 0', lineHeight: 1.5 }}>{children}</pre>
     ),
-    code: ({ children, className }: { children?: React.ReactNode; className?: string }) => {
-      const isBlock = !!className;
-      return isBlock ? (
-        <code style={{ fontFamily: 'ui-monospace, Menlo, monospace', fontSize: 12, color: t.text }}>{children}</code>
-      ) : (
+    code: ({ children, className, node }: { children?: React.ReactNode; className?: string; node?: { position?: { start: { line: number }; end: { line: number } } } }) => {
+      const isInline = !!(node?.position && node.position.start.line === node.position.end.line && !className);
+      return isInline ? (
         <code style={{ fontFamily: 'ui-monospace, Menlo, monospace', fontSize: 12, background: t.surface, padding: '1px 5px', borderRadius: 3, color: t.text }}>{children}</code>
+      ) : (
+        <code style={{ fontFamily: 'ui-monospace, Menlo, monospace', fontSize: 12, color: t.text }}>{children}</code>
       );
     },
     ul: ({ children }: { children?: React.ReactNode }) => (
