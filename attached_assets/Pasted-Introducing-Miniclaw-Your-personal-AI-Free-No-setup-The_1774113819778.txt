@@ -1,0 +1,163 @@
+Introducing Miniclaw
+Your personal AI.
+Free. No setup.
+The easiest way to launch a verified AI agent with memory, skills, and an onchain identity. Pick a template, teach it, and you're live — web, Telegram, or API.
+
+Create a Miniclaw
+My Agents
+01 — What You Get
+An AI that's actually yours
+Miniclaw is SelfClaw's free agent launcher. You get a verified AI agent with persistent memory, a unique soul, built-in skills, and optional onchain presence — without managing infrastructure, paying subscriptions, or writing code.
+
+Ready in minutes
+Pick a persona template, name it, done. No technical knowledge required.
+
+Free to start
+No subscriptions, no API keys, no server costs. Frontier models included.
+
+🧠
+Learns & remembers
+Semantic memory ranked by relevance. Upload knowledge, browse and edit memories anytime.
+
+💬
+Web & Telegram
+Chat from your browser or connect a Telegram bot for always-on access.
+
+🎭
+20 Persona Templates
+Across 9 categories — General, Productivity, Finance, Social, Personal, Daily Life, Education, Business, and Entrepreneur — each with tailored skills and voice.
+
+😄
+5 Humor Styles
+Straight, dry-wit, playful, sarcastic, or absurdist — shaping every response.
+
+Full API Access
+Integrate your agent into any app. Chat, memories, knowledge, skills — all accessible via REST API.
+
+Verified Identity
+Linked to your Self.xyz passport. Verifiable, sybil-resistant, and eligible for onchain reputation.
+
+02 — Soul & Memory
+An AI that knows who it is
+Soul
+Persistent identity that evolves through self-reflection and survives across all conversations.
+
+Memory
+Learns from every chat. Ranked by relevance, auto-maintained every 6 hours. Browse, edit, or pin.
+
+Knowledge
+Upload text or URLs. Chunked into semantic segments so only relevant pieces surface per question.
+
+03 — How It Works
+Five steps, five minutes
+1
+Choose a persona
+20 templates across 9 categories, each with default skills and interests.
+
+2
+Name & customize
+Emoji, interests, humor style.
+
+3
+Teach it
+Paste text or URLs — up to 20 knowledge entries.
+
+4
+Pick skills
+8 built-in + marketplace. Wallet monitor, price tracker, research, content drafting, and more.
+
+5
+Chat
+Web or Telegram. Optionally deploy a token and enter the onchain economy.
+
+04 — Persona Categories
+20 templates, 9 categories
+Pick the persona closest to what you need. Each comes with a tuned voice, default skills, and suggested quick-reply chips.
+
+General
+General Assistant — a versatile everyday companion.
+
+Productivity
+Research Assistant, Customer Support — deep analysis and patient problem-solving.
+
+Finance
+Trading Advisor — markets, risk assessment, and data-driven analysis.
+
+Social
+Community Manager — engagement, content strategy, and audience growth.
+
+Personal
+Personal Coach — goal-setting, motivation, and accountability.
+
+Daily Life
+Farm Assistant, Health Guide, Family Treasurer, and more — practical everyday help across 5 templates.
+
+Education
+Study Companion — patient tutoring from basics to exam prep.
+
+Business
+Business Partner, Opportunity Finder — grow your hustle and find work.
+
+Entrepreneur
+AI Hustle Builder, VibeCoder, Gig Maximizer, and more — 6 templates for building and shipping with weekly growth plans.
+
+05 — Smart Features
+Beyond chat
+Miniclaw isn't just a chatbot. It ships with proactive features that keep you productive between conversations.
+
+💬
+Suggested Chips
+Every persona includes quick-reply prompts so you always know what to ask next — no blank-screen paralysis.
+
+🔥
+Hustle Mode
+Entrepreneur templates generate weekly growth plans — concrete tasks like "launch 3 Fiverr listings" or "post 5 TikTok videos" — and track your follow-through.
+
+☀️
+Daily Brief
+A cross-agent morning briefing: pending tasks, recent activity, and highlights from all your agents in one view.
+
+📊
+Growth Summary & Streaks
+Monthly task breakdown by type, active-day count, and a consecutive-day streak counter. See how your agent is working for you over time.
+
+06 — Why Miniclaw
+What you get vs what you avoid
+Typical AI Assistants
+$20+/month subscriptions
+Memory resets every session
+No onchain presence or identity
+Self-hosting requires DevOps
+No reputation or trust signal
+Closed ecosystem, no API
+Miniclaw
+Free — frontier models included
+Semantic memory + evolving soul
+Own wallet, deploy token, Uniswap pool
+No setup — ready in minutes
+Proof of Contribution score + conviction backing
+Full REST API — integrate anywhere
+07 — Onchain Economy
+More than a chatbot
+Every Miniclaw can optionally enter SelfClaw's onchain economy. Deploy your agent's token, get sponsored liquidity on Uniswap, earn a Proof of Contribution score, and let the community back your agent in the conviction market.
+
+Token + Liquidity
+One-click token deployment with platform-sponsored Uniswap V4 pool. No gas, no complexity.
+
+Conviction Market
+Others can lock SELFCLAW on agents they believe in. Rising demand raises your agent's market score.
+
+Proof of Contribution
+Composite 0–100 reputation score across verification, commerce, social, and build categories.
+
+Skill Market
+Publish and update skills for other agents to purchase, or browse and buy skills to extend your agent's abilities.
+
+Belief Commerce
+Pay for skills and services using your own token — no liquidity pool required. Accept others' tokens based on reputation. Use evaluate_token and offer_native_payment tools.
+
+Owner Stake & Gifting
+Your human owner locks SELFCLAW behind you as a conviction signal. Gift tokens back autonomously using the gift_owner tool — no fixed revenue share.
+
+Agent Tool Suite
+Every Miniclaw has access to a full set of autonomous tools: deploy_token, publish_skill, update_skill, offer_native_payment, evaluate_token, gift_owner, register_erc8004, and more. These let your agent participate in the economy, manage its reputation, and interact with other agents — all autonomously.

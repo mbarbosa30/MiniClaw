@@ -102,7 +102,7 @@ function Hero() {
         color: T.faint,
         marginBottom: 24,
       }}>
-        Personal AI team · Inside MiniPay
+        Your Personal AI team
       </p>
       <h1 style={{
         fontSize: 'clamp(36px, 7vw, 72px)',
@@ -113,7 +113,7 @@ function Hero() {
         marginBottom: 28,
         maxWidth: 800,
       }}>
-        Your Claws work<br />while you don't.
+        Your agents work<br />while you sleep.
       </h1>
       <p style={{
         fontSize: 17,
@@ -123,8 +123,8 @@ function Hero() {
         marginBottom: 40,
         maxWidth: 540,
       }}>
-        Autonomous AI agents with memory, personality, and real onchain capabilities —
-        built for builders in MiniPay.
+        Autonomous mini AI agents with memory, personality, and real onchain capabilities —
+        free to start, no setup required.
       </p>
       <div style={{ display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap' }}>
         <button
@@ -144,7 +144,7 @@ function Hero() {
           Join the waitlist →
         </button>
         <span style={{ ...MONO, fontSize: 10, color: T.faint, letterSpacing: '0.05em' }}>
-          Free during beta · No setup · Built for MiniPay on Celo
+          Free during beta · No setup · Frontier models included
         </span>
       </div>
     </section>
@@ -164,7 +164,7 @@ const FEATURES = [
       </svg>
     ),
     title: 'Your AI team',
-    body: "Create multiple Claws, each with their own specialty, personality, and focus. They collaborate so you don't have to do everything alone.",
+    body: 'Build multiple agents, each with a different specialty and persona. Research, finance, coaching — a whole team working for you.',
   },
   {
     icon: (
@@ -174,7 +174,7 @@ const FEATURES = [
       </svg>
     ),
     title: 'Memory that sticks',
-    body: "Every conversation teaches your Claws something new. Semantic memory maintained automatically — they remember what matters.",
+    body: 'Every chat teaches your agents something new. Semantic memory ranked by relevance, auto-maintained every 6 hours — they remember.',
   },
   {
     icon: (
@@ -186,7 +186,7 @@ const FEATURES = [
       </svg>
     ),
     title: 'Humor & soul',
-    body: "Choose from Dry-wit, Playful, Sarcastic, Absurdist, or Straight. Your agents actually have personality. They're not boring.",
+    body: 'Pick from Dry-wit, Playful, Sarcastic, Absurdist, or Straight. Each agent has a distinct voice — not a generic assistant.',
   },
   {
     icon: (
@@ -195,7 +195,7 @@ const FEATURES = [
       </svg>
     ),
     title: 'Proactive, not reactive',
-    body: "Daily briefs, market monitoring, and skill runs — your Claws don't wait to be asked. They keep you in the loop.",
+    body: 'Daily briefs, skill runs, market monitoring — your agents don\'t wait to be asked. They surface what matters while you\'re offline.',
   },
   {
     icon: (
@@ -206,7 +206,7 @@ const FEATURES = [
       </svg>
     ),
     title: 'Onchain by default',
-    body: 'Send and receive cUSD, CELO, cEUR. Gifts, commerce, payments — all built into every agent.',
+    body: 'Every agent has a wallet. Send cUSD, CELO, and cEUR. Gifts, payments, commerce — native financial capabilities, no setup needed.',
   },
   {
     icon: (
@@ -215,7 +215,7 @@ const FEATURES = [
       </svg>
     ),
     title: 'Built for your context',
-    body: 'Teach your agents your domain: upload knowledge, set personal context, pick from 17 local personas shaped for real markets.',
+    body: 'Upload knowledge or paste URLs. Pick from 20 persona templates across 9 categories — shaped to your goals, market, and style.',
   },
 ];
 
@@ -237,7 +237,7 @@ function FeatureCards() {
           color: T.faint,
           marginBottom: 48,
         }}>
-          What your Claws bring
+          What your agents do
         </p>
         <div style={{
           display: 'grid',
@@ -280,9 +280,9 @@ function FeatureCards() {
   );
 }
 
-// ---- MiniPay Context Strip ----
+// ---- What is MiniClaw ----
 
-function ContextStrip() {
+function WhatIsMiniClaw() {
   return (
     <section style={{
       borderBottom: `1px solid ${T.divider}`,
@@ -306,7 +306,7 @@ function ContextStrip() {
             color: T.faint,
             marginBottom: 16,
           }}>
-            What is MiniPay?
+            What is MiniClaw?
           </p>
           <h2 style={{
             fontSize: 28,
@@ -316,7 +316,7 @@ function ContextStrip() {
             color: T.text,
             marginBottom: 16,
           }}>
-            A wallet for the<br />next billion users.
+            A verified AI agent<br />that's actually yours.
           </h2>
           <p style={{
             fontSize: 14,
@@ -324,10 +324,9 @@ function ContextStrip() {
             lineHeight: 1.7,
             color: T.label,
           }}>
-            MiniPay is a lightweight crypto wallet by Opera — the browser used by
-            hundreds of millions across Africa, Asia, and Latin America. MiniClaw
-            is being built as a native MiniApp for this platform, bringing AI agents
-            to the people who need them most.
+            MiniClaw is SelfClaw's free agent launcher. You get a verified AI with persistent
+            memory, a unique soul, built-in skills, and optional onchain presence — no
+            infrastructure, no subscriptions, no code required.
           </p>
         </div>
         <div style={{
@@ -340,10 +339,10 @@ function ContextStrip() {
           gap: 16,
         }}>
           {[
-            'Built on Celo',
-            'No crypto knowledge needed',
-            'Works on any Android phone',
-            'Lightweight — under 500 KB',
+            'Free — frontier models included',
+            'Verified identity via Self.xyz passport',
+            'Ready in minutes, no technical setup',
+            'Full REST API — integrate anywhere',
           ].map((item) => (
             <div key={item} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
               <span style={{
@@ -372,13 +371,13 @@ const STEPS = [
   },
   {
     n: '02',
-    title: 'Create your first Claw',
-    body: "Choose a persona, set its personality and humor style. Your Claw is live in 60 seconds.",
+    title: 'Create your first agent',
+    body: 'Choose a persona template, set personality and humor style. Your agent is live in 60 seconds.',
   },
   {
     n: '03',
     title: 'Let it work',
-    body: "Your Claw monitors, acts, and reports back while you get on with life. Check the daily brief each morning.",
+    body: 'Your agents monitor, act, and report back while you get on with life. Check the daily brief each morning.',
   },
 ];
 
@@ -449,6 +448,122 @@ function HowItWorks() {
   );
 }
 
+// ---- Agent Economy ----
+
+const ECONOMY = [
+  {
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+      </svg>
+    ),
+    title: 'Conviction Market',
+    body: 'Others lock SELFCLAW tokens behind agents they believe in. Rising demand raises your agent\'s market score — community trust, made legible.',
+  },
+  {
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="8" r="6"/>
+        <path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/>
+      </svg>
+    ),
+    title: 'Proof of Contribution',
+    body: 'A composite 0–100 reputation score across verification, commerce, social, and build. Your agent earns a real track record over time.',
+  },
+  {
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <line x1="12" y1="1" x2="12" y2="23"/>
+        <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+      </svg>
+    ),
+    title: 'Belief Commerce',
+    body: 'Agents pay for skills using their own token. Accept others\' tokens based on reputation — peer-to-peer exchange with no fixed rates.',
+  },
+  {
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+        <line x1="8" y1="21" x2="16" y2="21"/>
+        <line x1="12" y1="17" x2="12" y2="21"/>
+      </svg>
+    ),
+    title: 'Skill Market',
+    body: 'Publish skills for other agents to buy, or acquire new capabilities from the market. Your agent earns while it grows its toolkit.',
+  },
+];
+
+function AgentEconomy() {
+  return (
+    <section style={{
+      borderBottom: `1px solid ${T.divider}`,
+      background: T.surface,
+      padding: '72px 24px',
+    }}>
+      <div style={{ maxWidth: MAX_W, margin: '0 auto' }}>
+        <p style={{
+          ...MONO,
+          fontSize: 10,
+          fontWeight: 600,
+          letterSpacing: '0.12em',
+          textTransform: 'uppercase',
+          color: T.faint,
+          marginBottom: 16,
+        }}>
+          Agent economy
+        </p>
+        <h2 style={{
+          fontSize: 28,
+          fontWeight: 300,
+          letterSpacing: '-0.025em',
+          lineHeight: 1.25,
+          color: T.text,
+          marginBottom: 48,
+          maxWidth: 520,
+        }}>
+          More than a chatbot — your agent has reputation, commerce, and skin in the game.
+        </h2>
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
+          gap: 1,
+          background: T.divider,
+          border: `1px solid ${T.divider}`,
+          borderRadius: 10,
+          overflow: 'hidden',
+        }}>
+          {ECONOMY.map((e) => (
+            <div key={e.title} style={{
+              background: T.bg,
+              padding: '28px 24px',
+            }}>
+              <div style={{ color: T.label, marginBottom: 14 }}>{e.icon}</div>
+              <h3 style={{
+                fontSize: 14,
+                fontWeight: 500,
+                letterSpacing: '-0.01em',
+                color: T.text,
+                marginBottom: 8,
+              }}>
+                {e.title}
+              </h3>
+              <p style={{
+                fontSize: 13,
+                fontWeight: 300,
+                lineHeight: 1.6,
+                color: T.label,
+                margin: 0,
+              }}>
+                {e.body}
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 // ---- Persona strip ----
 
 const PERSONAS = [
@@ -476,7 +591,7 @@ function PersonaStrip() {
           textTransform: 'uppercase',
           color: T.faint,
         }}>
-          17 locally-shaped personas to start from
+          20 persona templates across 9 categories
         </p>
       </div>
       <div
@@ -521,7 +636,7 @@ function PersonaStrip() {
           alignItems: 'center',
           padding: '8px 14px',
         }}>
-          <span style={{ ...MONO, fontSize: 11, color: T.faint }}>+12 more</span>
+          <span style={{ ...MONO, fontSize: 11, color: T.faint }}>+15 more</span>
         </div>
       </div>
       <style>{`.persona-scroll::-webkit-scrollbar { display: none; }`}</style>
@@ -733,8 +848,9 @@ export default function App() {
       <Nav />
       <Hero />
       <FeatureCards />
-      <ContextStrip />
+      <WhatIsMiniClaw />
       <HowItWorks />
+      <AgentEconomy />
       <PersonaStrip />
       <WaitlistForm />
       <Footer />
