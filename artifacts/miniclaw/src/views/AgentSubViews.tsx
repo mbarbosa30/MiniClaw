@@ -969,40 +969,38 @@ function SettingsForm({ agent, onDeleted }: { agent: Agent; onDeleted: () => voi
     setSavingProfile(true);
     setProfileSaved(false);
     setProfileError(null);
-    try {
-      const tasks: Promise<unknown>[] = [];
 
-      if (agentName.trim() && agentName !== agent.name) {
-        tasks.push(update.mutateAsync({ id: agent.id, data: { name: agentName.trim() } }));
-      }
-      if (mainSkill.trim()) {
-        tasks.push(addKnowledge.mutateAsync({
-          agentId: agent.id,
-          data: { title: 'Main skill', content: mainSkill.trim() }
-        }));
-      }
-      if (platforms.trim()) {
-        tasks.push(addKnowledge.mutateAsync({
-          agentId: agent.id,
-          data: { title: 'Platforms I use', content: platforms.trim() }
-        }));
-      }
-      if (country.trim()) {
-        tasks.push(addKnowledge.mutateAsync({
-          agentId: agent.id,
-          data: { title: 'Country', content: country.trim() }
-        }));
-      }
+    const failedFields: string[] = [];
 
-      await Promise.all(tasks);
+    if (agentName.trim() && agentName !== agent.name) {
+      try {
+        await update.mutateAsync({ id: agent.id, data: { name: agentName.trim() } });
+      } catch {
+        failedFields.push('name');
+      }
+    }
+
+    const knowledgeEntries: Array<{ label: string; title: string; content: string; clear: () => void }> = [
+      { label: 'main skill', title: 'Main skill', content: mainSkill.trim(), clear: () => setMainSkill('') },
+      { label: 'platforms', title: 'Platforms I use', content: platforms.trim(), clear: () => setPlatforms('') },
+      { label: 'country', title: 'Country', content: country.trim(), clear: () => setCountry('') },
+    ].filter(e => e.content);
+
+    for (const entry of knowledgeEntries) {
+      try {
+        await addKnowledge.mutateAsync({ agentId: agent.id, data: { title: entry.title, content: entry.content } });
+        entry.clear();
+      } catch {
+        failedFields.push(entry.label);
+      }
+    }
+
+    setSavingProfile(false);
+
+    if (failedFields.length === 0) {
       setProfileSaved(true);
-      setMainSkill('');
-      setPlatforms('');
-      setCountry('');
-    } catch (err) {
-      setProfileError(err instanceof Error ? err.message : 'Save failed.');
-    } finally {
-      setSavingProfile(false);
+    } else {
+      setProfileError(`Couldn't save: ${failedFields.join(', ')}`);
     }
   };
 
