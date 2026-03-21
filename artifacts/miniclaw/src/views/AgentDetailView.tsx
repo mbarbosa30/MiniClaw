@@ -53,72 +53,6 @@ function fmtResetAt(resetAt?: string): string {
   }
 }
 
-function QuotaBar({ quota }: { quota: QuotaState | null }) {
-  const t = useTheme();
-  if (!quota || quota.limit <= 0) return null;
-
-  const pct = Math.min(quota.used / quota.limit, 1);
-  const isExhausted = pct >= 1;
-  const isWarning = !isExhausted && pct >= 0.8;
-  const barColor = isExhausted ? '#ef4444' : isWarning ? '#f59e0b' : t.faint;
-
-  const fmt = (n: number) => n.toLocaleString();
-  const resetIn = fmtResetAt(quota.resetAt);
-
-  return (
-    <div style={{ marginTop: 6, paddingBottom: 4 }}>
-      {/* Token label */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 3 }}>
-        <span style={{
-          fontFamily: 'ui-monospace, Menlo, monospace',
-          fontSize: 8,
-          color: isExhausted ? '#ef4444' : isWarning ? '#f59e0b' : t.faint,
-          letterSpacing: '0.04em',
-        }}>
-          {fmt(quota.used)} / {fmt(quota.limit)} tokens
-        </span>
-        {resetIn && (
-          <span style={{
-            fontFamily: 'ui-monospace, Menlo, monospace',
-            fontSize: 8,
-            color: t.faint,
-            letterSpacing: '0.04em',
-          }}>
-            resets in {resetIn}
-          </span>
-        )}
-      </div>
-      {/* Progress bar */}
-      <div style={{ height: 2, background: t.surface, borderRadius: 1, overflow: 'hidden' }}>
-        <div
-          style={{
-            height: '100%',
-            width: `${pct * 100}%`,
-            background: barColor,
-            borderRadius: 1,
-            transition: 'width 0.4s ease',
-          }}
-        />
-      </div>
-      {/* Warning / exhausted text */}
-      {(isWarning || isExhausted) && (
-        <p style={{
-          fontFamily: 'ui-monospace, Menlo, monospace',
-          fontSize: 8,
-          color: barColor,
-          letterSpacing: '0.04em',
-          marginTop: 3,
-          textAlign: 'center',
-        }}>
-          {isExhausted
-            ? `Daily limit reached${resetIn ? ` — resets in ${resetIn}` : ''}`
-            : 'Approaching daily limit'}
-        </p>
-      )}
-    </div>
-  );
-}
-
 // --- Markdown renderer for assistant messages ---
 
 function MdContent({ content, t }: { content: string; t: ReturnType<typeof useTheme> }) {
@@ -209,7 +143,7 @@ function AgentHeader({
 
   const awarenessLabel = awarenessData ? (awarenessData.label || awarenessData.phase) : null;
   const aColor = awarenessData ? phaseColor(awarenessData.phase) : t.faint;
-  const pct = Math.min(Math.max(awarenessData?.progress ?? 0, 0), 100);
+  const phasePct = Math.min(Math.max(awarenessData?.progress ?? 0, 0), 100);
   const onchain = awarenessData?.onChain ?? { wallet: false, token: false, identity: false };
   const ec = awarenessData?.economyCapabilities;
   const phaseBehavior = ec?.currentPhase?.behavior ?? ec?.currentPhase?.description ?? awarenessData?.phaseDetails?.behavior ?? null;
@@ -237,14 +171,23 @@ function AgentHeader({
     </div>
   );
 
+  // Quota derived values
+  const hasQuota = quota != null && quota.limit > 0;
+  const quotaPct = hasQuota ? Math.min(quota!.used / quota!.limit, 1) : 0;
+  const isExhausted = hasQuota && quotaPct >= 1;
+  const isWarning = hasQuota && !isExhausted && quotaPct >= 0.8;
+  const quotaBarColor = isExhausted ? '#ef4444' : isWarning ? '#f59e0b' : t.faint;
+  const fmt = (n: number) => n.toLocaleString();
+  const resetIn = hasQuota ? fmtResetAt(quota!.resetAt) : '';
+
   return (
     <div style={{
       flexShrink: 0,
-      borderBottom: `1px solid ${t.divider}`,
       background: t.bg,
       paddingLeft: 8,
       paddingRight: 8,
     }}>
+      {/* Title row */}
       <div style={{ height: 52, display: 'flex', alignItems: 'center' }}>
         {/* Left — back button */}
         <div style={{ width: SIDE_W, flexShrink: 0, display: 'flex', alignItems: 'center' }}>
@@ -295,57 +238,75 @@ function AgentHeader({
         </div>
       </div>
 
-      {/* Quota bar */}
-      <div style={{ paddingLeft: 8, paddingRight: 8 }}>
-        <QuotaBar quota={quota} />
-      </div>
+      {/* Quota info row — integrated inline below agent name */}
+      {hasQuota && (
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingLeft: 8, paddingRight: 8, paddingBottom: 6 }}>
+          <span style={{ fontFamily: 'ui-monospace, Menlo, monospace', fontSize: 8, color: isExhausted ? '#ef4444' : isWarning ? '#f59e0b' : t.faint, letterSpacing: '0.04em' }}>
+            {fmt(quota!.used)} / {fmt(quota!.limit)} tokens
+            {(isWarning || isExhausted) && (
+              <span style={{ marginLeft: 6 }}>
+                {isExhausted ? '· limit reached' : '· limit approaching'}
+              </span>
+            )}
+          </span>
+          {resetIn && (
+            <span style={{ fontFamily: 'ui-monospace, Menlo, monospace', fontSize: 8, color: t.faint, letterSpacing: '0.04em' }}>
+              resets {resetIn}
+            </span>
+          )}
+        </div>
+      )}
 
-      {/* Collapsible awareness — phase tag toggle row */}
+      {/* Collapsible awareness — phase tag + pct on same row, full-bleed phase bar at bottom */}
       {awarenessLabel && (
-        <div style={{ paddingLeft: 8, paddingRight: 8, paddingBottom: 8 }}>
-          <button
-            onClick={() => setShowAwareness(v => !v)}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
-          >
-            <span style={{
-              fontFamily: 'ui-monospace, Menlo, monospace',
-              fontSize: 8,
-              color: aColor,
-              letterSpacing: '0.07em',
-              textTransform: 'uppercase',
-              background: `${aColor}1a`,
-              border: `1px solid ${aColor}40`,
-              borderRadius: 3,
-              padding: '2px 5px',
-            }}>
-              {awarenessLabel}
+        <div style={{ marginLeft: -8, marginRight: -8 }}>
+          {/* Toggle row */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            paddingLeft: 16,
+            paddingRight: 16,
+            paddingBottom: 8,
+            paddingTop: hasQuota ? 0 : 4,
+          }}>
+            <button
+              onClick={() => setShowAwareness(v => !v)}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
+            >
+              <span style={{
+                fontFamily: 'ui-monospace, Menlo, monospace',
+                fontSize: 8,
+                color: aColor,
+                letterSpacing: '0.07em',
+                textTransform: 'uppercase',
+                background: `${aColor}1a`,
+                border: `1px solid ${aColor}40`,
+                borderRadius: 3,
+                padding: '2px 5px',
+              }}>
+                {awarenessLabel}
+              </span>
+              <span style={{ fontSize: 8, color: t.faint, lineHeight: 1 }}>
+                {showAwareness ? '▴' : '▾'}
+              </span>
+            </button>
+            <span style={{ fontFamily: 'ui-monospace, Menlo, monospace', fontSize: 9, color: t.faint, letterSpacing: '0.02em' }}>
+              {phasePct}%
             </span>
-            <span style={{ fontSize: 8, color: t.faint, lineHeight: 1 }}>
-              {showAwareness ? '▴' : '▾'}
-            </span>
-          </button>
+          </div>
 
+          {/* Expanded content */}
           {showAwareness && (
-            <div style={{ paddingTop: 8 }}>
-              {/* Phase behavior text */}
+            <div style={{ paddingLeft: 16, paddingRight: 16, paddingBottom: 8 }}>
               {phaseBehavior && (
-                <p style={{ fontSize: 10, color: t.label, lineHeight: 1.5, letterSpacing: '-0.005em', marginBottom: 6, marginTop: 0 }}>
+                <p style={{ fontSize: 10, color: t.label, lineHeight: 1.5, letterSpacing: '-0.005em', marginBottom: 8, marginTop: 0 }}>
                   {phaseBehavior}
                 </p>
               )}
-
-              {/* Progress bar */}
-              <div style={{ height: 1.5, background: t.surface, borderRadius: 1, marginBottom: 8, overflow: 'hidden' }}>
-                <div style={{ height: '100%', width: `${pct}%`, background: aColor, borderRadius: 1, transition: 'width 0.6s ease' }} />
-              </div>
-              <span style={{ fontFamily: 'ui-monospace, Menlo, monospace', fontSize: 9, color: t.faint, letterSpacing: '0.02em', display: 'block', marginBottom: 8 }}>
-                {pct}%
-              </span>
-
-              {/* Onchain dots + economy link */}
               <button
                 onClick={onEconomy}
-                style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', background: 'none', border: 'none', padding: 0, cursor: 'pointer', width: '100%', textAlign: 'left' }}
+                style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', background: 'none', border: 'none', padding: 0, cursor: 'pointer', width: '100%', textAlign: 'left', marginBottom: 8 }}
               >
                 <OnchainDot done={onchain.wallet} label="wallet" />
                 <OnchainDot done={onchain.token} label="token" />
@@ -354,10 +315,8 @@ function AgentHeader({
                   economy →
                 </span>
               </button>
-
-              {/* Economy awareness badge + tools */}
               {(economyAware || visibleTools.length > 0) && (
-                <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                   {economyAware && (
                     <span style={{ fontFamily: 'ui-monospace, Menlo, monospace', fontSize: 8, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: '#22c55e', background: '#22c55e1a', border: '1px solid #22c55e40', borderRadius: 3, padding: '2px 5px' }}>
                       Economy aware
@@ -377,8 +336,27 @@ function AgentHeader({
               )}
             </div>
           )}
+
+          {/* Phase progress bar as bottom border of awareness section */}
+          <div style={{ height: 2, background: t.surface, overflow: 'hidden' }}>
+            <div style={{ height: '100%', width: `${phasePct}%`, background: aColor, transition: 'width 0.6s ease' }} />
+          </div>
         </div>
       )}
+
+      {/* Bottom border: quota bar when no awareness, plain divider when no data at all */}
+      {!awarenessLabel && (
+        hasQuota ? (
+          <div style={{ height: 2, background: t.surface, overflow: 'hidden', marginLeft: -8, marginRight: -8 }}>
+            <div style={{ height: '100%', width: `${quotaPct * 100}%`, background: quotaBarColor, transition: 'width 0.4s ease' }} />
+          </div>
+        ) : (
+          <div style={{ height: 1, background: t.divider, marginLeft: -8, marginRight: -8 }} />
+        )
+      )}
+
+      {/* Invisible spacer so header doesn't end flush when no bottom bar rendered above */}
+      {awarenessLabel && !hasQuota && <div style={{ height: 0 }} />}
     </div>
   );
 }
@@ -1011,17 +989,29 @@ function ChatTab({
                   m.tokensUsed != null && m.tokensUsed > 0 ? `${m.tokensUsed.toLocaleString()} tok` : undefined,
                   relTime || undefined,
                 ].filter(Boolean);
+                const PER_MSG_MAX = 4000;
+                const effortW = m.tokensUsed != null && m.tokensUsed > 0
+                  ? `${Math.min(Math.max(m.tokensUsed / PER_MSG_MAX, 0.08), 1) * 100}%`
+                  : '8%';
                 return (
-                  <p style={{
-                    fontFamily: 'ui-monospace, Menlo, monospace',
-                    fontSize: 9,
-                    letterSpacing: '0.04em',
-                    color: t.faint,
-                    margin: 0,
-                    opacity: 0.7,
-                  }}>
-                    {parts.join(' · ')}
-                  </p>
+                  <>
+                    <p style={{
+                      fontFamily: 'ui-monospace, Menlo, monospace',
+                      fontSize: 9,
+                      letterSpacing: '0.04em',
+                      color: t.faint,
+                      margin: 0,
+                      opacity: 0.7,
+                    }}>
+                      {parts.join(' · ')}
+                    </p>
+                    <div style={{
+                      height: 1,
+                      width: effortW,
+                      background: `linear-gradient(to right, ${t.divider}, transparent)`,
+                      marginTop: 2,
+                    }} />
+                  </>
                 );
               })()}
             </div>
