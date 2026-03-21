@@ -1052,7 +1052,7 @@ function ChatTab({
           const isUser = m.role === 'user';
 
           if (isUser) {
-            const relTime = fmtRelative(m._ts, m.createdAt);
+            const timestamp = fmtTime(m._ts, m.createdAt);
             return (
               <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
                 <div style={{
@@ -1072,7 +1072,7 @@ function ChatTab({
                     {m.content}
                   </p>
                 </div>
-                {relTime && (
+                {timestamp && (
                   <span style={{
                     fontSize: 9,
                     fontFamily: 'ui-monospace, Menlo, monospace',
@@ -1080,7 +1080,7 @@ function ChatTab({
                     color: t.faint,
                     opacity: 0.5,
                   }}>
-                    {relTime}
+                    {timestamp}
                   </span>
                 )}
               </div>
@@ -1110,14 +1110,13 @@ function ChatTab({
               ) : (
                 <MdContent content={m.content} t={t} />
               )}
-              {!isActiveStream && (() => {
+              {!isActiveStream && m.latencyMs !== undefined && (() => {
                 const relTime = fmtRelative(m._ts, m.createdAt);
                 const parts = [
-                  m.latencyMs !== undefined ? `${(m.latencyMs / 1000).toFixed(1)}s` : undefined,
+                  `${(m.latencyMs / 1000).toFixed(1)}s`,
                   m.tokensUsed != null && m.tokensUsed > 0 ? `${m.tokensUsed.toLocaleString()} tok` : undefined,
                   relTime || undefined,
                 ].filter(Boolean);
-                if (!parts.length) return null;
                 return (
                   <p style={{
                     fontFamily: 'ui-monospace, Menlo, monospace',
