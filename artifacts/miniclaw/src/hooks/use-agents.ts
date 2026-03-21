@@ -99,8 +99,6 @@ export function useAgents() {
     },
     refetchInterval: 12_000,
     refetchIntervalInBackground: false,
-    retry: 3,
-    retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 30_000),
     staleTime: 30_000,
   });
 }
