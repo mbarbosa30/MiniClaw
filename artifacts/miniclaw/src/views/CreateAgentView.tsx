@@ -1,17 +1,17 @@
 import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronDown, Plus } from 'lucide-react';
+import { ChevronDown, ChevronLeft } from 'lucide-react';
 import { useTemplates, useCreateAgent, useSpawningStatus } from '@/hooks/use-agents';
 import { useRouter, useAppStore } from '@/lib/store';
 import { useTheme } from '@/lib/theme';
 import { resolveIcon } from '@/lib/agent-icon';
-import { ScreenHeader } from '@/components/ui';
 import { PERSONAS, HUSTLE_MODE_SOUL_APPEND } from '@/lib/personas';
 import type { PersonaConfig } from '@/lib/personas';
 import type { HumorStyle, SpawningProgressStep } from '@/types';
 
 interface UserInfo {
   name: string;
+  city: string;
   country: string;
   goal: string;
 }
@@ -163,7 +163,6 @@ const AUDIENCE_AWARE_PERSONAS = new Set([
   'distribution-strategist',
 ]);
 
-const LANGUAGE_CHIPS = ['English', 'French', 'Swahili', 'Hausa', 'Yoruba', 'Amharic', 'Portuguese', 'Arabic'];
 
 const EXP_LEVELS: { value: 'beginner' | 'intermediate' | 'expert'; label: string }[] = [
   { value: 'beginner', label: 'Beginner' },
@@ -175,23 +174,21 @@ function PersonalizeStep({
   persona,
   agentCustomName,
   userName,
+  userCity,
   userCountry,
   userXHandle,
   userGoal,
   userExperienceLevel,
-  userLanguages,
-  userChallenges,
   userTargetAudience,
   humorStyle,
   projects,
   onChangeAgentName,
   onChangeName,
+  onChangeCity,
   onChangeCountry,
   onChangeXHandle,
   onChangeGoal,
   onChangeExperienceLevel,
-  onChangeLanguages,
-  onChangeChallenges,
   onChangeTargetAudience,
   onChangeHumorStyle,
   onAddProject,
@@ -205,23 +202,21 @@ function PersonalizeStep({
   persona: PersonaConfig;
   agentCustomName: string;
   userName: string;
+  userCity: string;
   userCountry: string;
   userXHandle: string;
   userGoal: string;
   userExperienceLevel: '' | 'beginner' | 'intermediate' | 'expert';
-  userLanguages: string[];
-  userChallenges: string;
   userTargetAudience: string;
   humorStyle: HumorStyle;
   projects: ProjectEntry[];
   onChangeAgentName: (v: string) => void;
   onChangeName: (v: string) => void;
+  onChangeCity: (v: string) => void;
   onChangeCountry: (v: string) => void;
   onChangeXHandle: (v: string) => void;
   onChangeGoal: (v: string) => void;
   onChangeExperienceLevel: (v: '' | 'beginner' | 'intermediate' | 'expert') => void;
-  onChangeLanguages: (v: string[]) => void;
-  onChangeChallenges: (v: string) => void;
   onChangeTargetAudience: (v: string) => void;
   onChangeHumorStyle: (s: HumorStyle) => void;
   onAddProject: (url: string) => void;
@@ -235,29 +230,21 @@ function PersonalizeStep({
   const t = useTheme();
   const [urlInput, setUrlInput] = useState('');
   const [urlError, setUrlError] = useState<string | null>(null);
+  const [nameError, setNameError] = useState<string | null>(null);
 
-  const hasAdvancedData = !!userExperienceLevel || userLanguages.length > 0 || !!userChallenges || !!userTargetAudience;
+  const hasAdvancedData = !!userExperienceLevel || !!userTargetAudience;
   const [advancedOpen, setAdvancedOpen] = useState(() => hasAdvancedData);
 
   const showAudienceField = AUDIENCE_AWARE_PERSONAS.has(persona.id);
+  const showAdvancedToggle = showAudienceField || true;
 
-  const toggleLanguage = (lang: string) => {
-    if (userLanguages.includes(lang)) {
-      onChangeLanguages(userLanguages.filter(l => l !== lang));
-    } else {
-      onChangeLanguages([...userLanguages, lang]);
+  const handleLaunchClick = () => {
+    if (!agentCustomName.trim()) {
+      setNameError('Give your agent a name to continue.');
+      return;
     }
-  };
-
-  const [otherLangInput, setOtherLangInput] = useState('');
-
-  const commitOtherLang = () => {
-    const trimmed = otherLangInput.trim();
-    if (!trimmed) return;
-    if (!userLanguages.includes(trimmed)) {
-      onChangeLanguages([...userLanguages, trimmed]);
-    }
-    setOtherLangInput('');
+    setNameError(null);
+    onLaunch();
   };
 
   const handleAddUrl = () => {
@@ -280,7 +267,7 @@ function PersonalizeStep({
     background: t.surface,
     border: `1px solid ${t.divider}`,
     borderRadius: 10,
-    padding: '13px 16px',
+    padding: '9px 14px',
     fontSize: 15,
     color: t.text,
     fontFamily: FONT,
@@ -304,546 +291,452 @@ function PersonalizeStep({
         fontFamily: FONT,
       }}
     >
-      <ScreenHeader title={persona.name} onBack={onBack} />
+      <div className="no-scrollbar" style={{ flex: 1, overflowY: 'auto' }}>
+        {/* Inline back button */}
+        <button
+          onClick={onBack}
+          disabled={creating}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 4,
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            padding: '20px 28px 0',
+            color: t.label,
+            fontFamily: FONT,
+          }}
+        >
+          <ChevronLeft size={16} color={t.label} />
+          <span style={{ fontSize: 12, letterSpacing: '-0.01em' }}>Back</span>
+        </button>
 
-      <div style={{ padding: '24px 32px 20px', flexShrink: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-          <div style={{ width: 3, height: 24, background: persona.color, borderRadius: 2, flexShrink: 0 }} />
-          <p style={{ fontSize: 22, fontWeight: 200, letterSpacing: '-0.04em', color: t.text, lineHeight: 1.1 }}>
-            Tell us a bit about yourself.
-          </p>
+        {/* Hero */}
+        <div style={{ padding: '14px 32px 20px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+            <div style={{ width: 3, height: 20, background: persona.color, borderRadius: 2, flexShrink: 0 }} />
+            <p style={{ fontSize: 20, fontWeight: 200, letterSpacing: '-0.04em', color: t.text, lineHeight: 1.15 }}>
+              Introduce yourself to {agentCustomName.trim() || persona.name.split(' ')[0]}.
+            </p>
+          </div>
         </div>
-        <p style={{ fontSize: 12, color: t.label, letterSpacing: '-0.01em', lineHeight: 1.5 }}>
-          Helps your agent know you from the start. Everything is optional.
-        </p>
-      </div>
 
-      <div style={{ height: 1, background: t.divider, flexShrink: 0 }} />
+        <div style={{ height: 1, background: t.divider }} />
 
-      {error && (
-        <div style={{ padding: '10px 32px', background: 'rgba(248,113,113,0.08)', flexShrink: 0 }}>
-          <p style={{ fontSize: 11, color: '#f87171' }}>{error}</p>
-        </div>
-      )}
+        <div style={{ padding: '20px 32px 48px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
-      <div className="no-scrollbar" style={{ flex: 1, overflowY: 'auto', padding: '24px 32px 40px' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-
-          {/* Agent name */}
-          <div>
-            <p style={{ ...MONO, fontSize: 11, color: t.faint, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
-              Agent name <span style={{ textTransform: 'none', fontStyle: 'normal', letterSpacing: 0, opacity: 0.6 }}>(optional)</span>
-            </p>
-            <input type="text" value={agentCustomName} onChange={e => onChangeAgentName(e.target.value)}
-              placeholder={`e.g. Alex, Maya, ${persona.name.split(' ')[0]}`} disabled={creating} style={inputStyle} />
-            <p style={{ fontSize: 10, color: t.faint, marginTop: 6, letterSpacing: '-0.005em' }}>
-              If set, your agent will introduce itself by this name.
-            </p>
-          </div>
-
-          {/* First name */}
-          <div>
-            <p style={{ ...MONO, fontSize: 11, color: t.faint, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
-              Your first name
-            </p>
-            <input type="text" value={userName} onChange={e => onChangeName(e.target.value)}
-              placeholder="e.g. Amara" disabled={creating} style={inputStyle} />
-          </div>
-
-          {/* Country */}
-          <div>
-            <p style={{ ...MONO, fontSize: 11, color: t.faint, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
-              Country / Region
-            </p>
-            <input type="text" value={userCountry} onChange={e => onChangeCountry(e.target.value)}
-              placeholder="e.g. Nigeria, Kenya, Brazil" disabled={creating} style={inputStyle} />
-          </div>
-
-          {/* X / Twitter handle */}
-          <div>
-            <p style={{ ...MONO, fontSize: 11, color: t.faint, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
-              X / Twitter handle <span style={{ textTransform: 'none', fontStyle: 'normal', letterSpacing: 0, opacity: 0.6 }}>(optional)</span>
-            </p>
-            <div style={{ position: 'relative' }}>
-              <span style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', fontSize: 15, color: t.faint, pointerEvents: 'none', fontFamily: FONT }}>
-                @
-              </span>
+            {/* Agent name — required */}
+            <div>
+              <p style={{ ...MONO, fontSize: 11, color: t.faint, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
+                Agent name
+              </p>
               <input
                 type="text"
-                value={userXHandle}
-                onChange={e => onChangeXHandle(e.target.value.replace(/^@/, ''))}
-                placeholder="yourhandle"
+                value={agentCustomName}
+                onChange={e => { onChangeAgentName(e.target.value); if (nameError) setNameError(null); }}
+                placeholder={`e.g. Alex, Maya, ${persona.name.split(' ')[0]}`}
                 disabled={creating}
-                style={{ ...inputStyle, paddingLeft: 28 }}
+                style={{
+                  ...inputStyle,
+                  borderColor: nameError ? '#f87171' : undefined,
+                }}
               />
+              {nameError && (
+                <p style={{ fontSize: 11, color: '#f87171', marginTop: 5, letterSpacing: '-0.005em' }}>{nameError}</p>
+              )}
             </div>
-            <p style={{ fontSize: 10, color: t.faint, marginTop: 6, letterSpacing: '-0.005em' }}>
-              Helps your agent research your public profile and voice.
-            </p>
-          </div>
 
-          {/* Goal */}
-          <div>
-            <p style={{ ...MONO, fontSize: 11, color: t.faint, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
-              What are you working on?
-            </p>
-            <input type="text" value={userGoal} onChange={e => onChangeGoal(e.target.value)}
-              placeholder="e.g. Starting a TikTok shop, freelancing on Fiverr…" disabled={creating} style={inputStyle} />
-          </div>
-
-          <div>
-            <div style={{ height: 1, background: t.divider, marginBottom: 16 }} />
-            <p style={{ ...MONO, fontSize: 11, color: t.faint, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>
-              Vibe
-            </p>
-            <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
-              {HUMOR_STYLES.map(style => {
-                const active = humorStyle === style;
-                return (
-                  <button
-                    key={style}
-                    onClick={() => onChangeHumorStyle(style)}
-                    disabled={creating}
-                    style={{
-                      padding: '7px 14px',
-                      borderRadius: 100,
-                      border: `1.5px solid ${active ? persona.color : t.divider}`,
-                      background: active ? `${persona.color}18` : 'transparent',
-                      color: active ? persona.color : t.label,
-                      fontSize: 12,
-                      fontWeight: active ? 600 : 400,
-                      letterSpacing: '-0.01em',
-                      cursor: 'pointer',
-                      transition: 'all 0.15s',
-                      fontFamily: FONT,
-                    }}
-                  >
-                    {HUMOR_LABEL[style]}
-                  </button>
-                );
-              })}
+            {/* Your first name */}
+            <div>
+              <p style={{ ...MONO, fontSize: 11, color: t.faint, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
+                Your first name
+              </p>
+              <input type="text" value={userName} onChange={e => onChangeName(e.target.value)}
+                placeholder="e.g. Amara" disabled={creating} style={inputStyle} />
             </div>
-            <p style={{ fontSize: 10, color: t.faint, marginTop: 8, letterSpacing: '-0.005em' }}>
-              How your agent communicates — optional, change anytime.
-            </p>
-          </div>
 
-          <div>
-            <div style={{ height: 1, background: t.divider, marginBottom: 16 }} />
-            <p style={{ ...MONO, fontSize: 11, color: t.faint, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>
-              My projects
-            </p>
-
-            <p style={{ fontSize: 11, color: t.label, letterSpacing: '-0.005em', lineHeight: 1.5, marginBottom: 12 }}>
-              Share links to your work — your agent will read them so it knows your projects from the start.
-            </p>
-
-            {/* URL input row */}
-            {projects.length < MAX_PROJECTS && (
-              <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-                <input
-                  type="url"
-                  value={urlInput}
-                  onChange={e => setUrlInput(e.target.value)}
-                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddUrl(); } }}
-                  placeholder="e.g. tiktok.com/@yourhandle"
-                  disabled={creating}
-                  style={{
-                    flex: 1,
-                    background: t.surface,
-                    border: `1px solid ${t.divider}`,
-                    borderRadius: 10,
-                    padding: '11px 14px',
-                    fontSize: 13,
-                    color: t.text,
-                    fontFamily: FONT,
-                    letterSpacing: '-0.01em',
-                    outline: 'none',
-                    minWidth: 0,
-                  }}
-                />
-                <button
-                  onClick={handleAddUrl}
-                  disabled={creating || !urlInput.trim()}
-                  style={{
-                    flexShrink: 0,
-                    padding: '11px 16px',
-                    background: urlInput.trim() ? persona.color : t.surface,
-                    border: 'none',
-                    borderRadius: 10,
-                    color: urlInput.trim() ? '#fff' : t.faint,
-                    fontSize: 12,
-                    fontWeight: 500,
-                    cursor: urlInput.trim() ? 'pointer' : 'default',
-                    fontFamily: FONT,
-                    transition: 'all 0.15s',
-                    letterSpacing: '-0.01em',
-                  }}
-                >
-                  Add
-                </button>
+            {/* City + Country */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <div>
+                <p style={{ ...MONO, fontSize: 11, color: t.faint, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
+                  City
+                </p>
+                <input type="text" value={userCity} onChange={e => onChangeCity(e.target.value)}
+                  placeholder="Lagos, Nairobi…" disabled={creating} style={inputStyle} />
               </div>
-            )}
-            {urlError && (
-              <p style={{ ...MONO, fontSize: 10, color: '#f87171', marginBottom: 8, marginTop: -4 }}>
-                {urlError}
-              </p>
-            )}
+              <div>
+                <p style={{ ...MONO, fontSize: 11, color: t.faint, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
+                  Country
+                </p>
+                <input type="text" value={userCountry} onChange={e => onChangeCountry(e.target.value)}
+                  placeholder="Nigeria, Kenya…" disabled={creating} style={inputStyle} />
+              </div>
+            </div>
 
-            {projects.length >= MAX_PROJECTS && (
-              <p style={{ ...MONO, fontSize: 10, color: t.faint, marginBottom: 10 }}>
-                Max {MAX_PROJECTS} projects reached.
+            {/* X / Twitter handle */}
+            <div>
+              <p style={{ ...MONO, fontSize: 11, color: t.faint, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
+                X / Twitter <span style={{ textTransform: 'none', fontStyle: 'normal', letterSpacing: 0, opacity: 0.6 }}>(optional)</span>
               </p>
-            )}
+              <div style={{ position: 'relative' }}>
+                <span style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', fontSize: 15, color: t.faint, pointerEvents: 'none', fontFamily: FONT }}>
+                  @
+                </span>
+                <input
+                  type="text"
+                  value={userXHandle}
+                  onChange={e => onChangeXHandle(e.target.value.replace(/^@/, ''))}
+                  placeholder="yourhandle"
+                  disabled={creating}
+                  style={{ ...inputStyle, paddingLeft: 28 }}
+                />
+              </div>
+            </div>
 
-            {/* Project cards */}
-            {projects.length > 0 && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {projects.map((p) => (
-                  <motion.div
-                    key={p.id}
-                    initial={{ opacity: 0, y: 6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.2 }}
-                    style={{
-                      background: t.surface,
-                      border: `1px solid ${t.divider}`,
-                      borderRadius: 10,
-                      padding: '10px 14px',
-                      display: 'flex',
-                      alignItems: 'flex-start',
-                      gap: 10,
-                    }}
-                  >
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      {p.fetchStatus === 'loading' ? (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <OnboardingSpinner color={t.faint} />
-                          <span style={{ fontSize: 11, color: t.faint, letterSpacing: '-0.01em' }}>
-                            Fetching info…
-                          </span>
-                        </div>
-                      ) : (
-                        <>
-                          <p style={{
-                            fontSize: 12,
-                            fontWeight: 500,
-                            color: p.fetchStatus === 'error' ? t.faint : t.text,
-                            letterSpacing: '-0.01em',
-                            marginBottom: p.description ? 2 : 0,
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                          }}>
-                            {p.title ?? safeHostname(p.url)}
-                          </p>
-                          {p.description && (
-                            <p style={{
-                              fontSize: 10,
-                              color: t.faint,
-                              letterSpacing: '-0.005em',
-                              lineHeight: 1.4,
-                              display: '-webkit-box',
-                              WebkitLineClamp: 2,
-                              WebkitBoxOrient: 'vertical',
-                              overflow: 'hidden',
-                            }}>
-                              {p.description}
-                            </p>
-                          )}
-                          <p style={{ ...MONO, fontSize: 9, color: t.faint, marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {p.url}
-                          </p>
-                        </>
-                      )}
-                    </div>
+            {/* Goal */}
+            <div>
+              <p style={{ ...MONO, fontSize: 11, color: t.faint, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
+                What are you working on?
+              </p>
+              <input type="text" value={userGoal} onChange={e => onChangeGoal(e.target.value)}
+                placeholder="e.g. TikTok shop, freelancing on Fiverr…" disabled={creating} style={inputStyle} />
+            </div>
+
+            {/* Humor */}
+            <div>
+              <div style={{ height: 1, background: t.divider, marginBottom: 14 }} />
+              <p style={{ ...MONO, fontSize: 11, color: t.faint, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>
+                Humor
+              </p>
+              <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
+                {HUMOR_STYLES.map(style => {
+                  const active = humorStyle === style;
+                  return (
                     <button
-                      onClick={() => onRemoveProject(p.id)}
+                      key={style}
+                      onClick={() => onChangeHumorStyle(style)}
                       disabled={creating}
                       style={{
-                        flexShrink: 0,
-                        background: 'none',
-                        border: 'none',
+                        padding: '6px 13px',
+                        borderRadius: 100,
+                        border: `1.5px solid ${active ? persona.color : t.divider}`,
+                        background: active ? `${persona.color}18` : 'transparent',
+                        color: active ? persona.color : t.label,
+                        fontSize: 12,
+                        fontWeight: active ? 600 : 400,
+                        letterSpacing: '-0.01em',
                         cursor: 'pointer',
-                        color: t.label,
-                        fontSize: 16,
-                        lineHeight: 1,
-                        padding: '0 2px',
+                        transition: 'all 0.15s',
                         fontFamily: FONT,
                       }}
                     >
-                      ×
+                      {HUMOR_LABEL[style]}
                     </button>
-                  </motion.div>
-                ))}
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* My projects */}
+            <div>
+              <div style={{ height: 1, background: t.divider, marginBottom: 14 }} />
+              <p style={{ ...MONO, fontSize: 11, color: t.faint, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>
+                My projects
+              </p>
+              <p style={{ fontSize: 11, color: t.label, letterSpacing: '-0.005em', lineHeight: 1.5, marginBottom: 10 }}>
+                Share links — your agent will read them so it knows your work from day one.
+              </p>
+
+              {projects.length < MAX_PROJECTS && (
+                <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+                  <input
+                    type="url"
+                    value={urlInput}
+                    onChange={e => setUrlInput(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddUrl(); } }}
+                    placeholder="e.g. tiktok.com/@yourhandle"
+                    disabled={creating}
+                    style={{
+                      flex: 1,
+                      background: t.surface,
+                      border: `1px solid ${t.divider}`,
+                      borderRadius: 10,
+                      padding: '9px 12px',
+                      fontSize: 13,
+                      color: t.text,
+                      fontFamily: FONT,
+                      letterSpacing: '-0.01em',
+                      outline: 'none',
+                      minWidth: 0,
+                    }}
+                  />
+                  <button
+                    onClick={handleAddUrl}
+                    disabled={creating || !urlInput.trim()}
+                    style={{
+                      flexShrink: 0,
+                      padding: '9px 14px',
+                      background: urlInput.trim() ? t.text : t.surface,
+                      border: 'none',
+                      borderRadius: 10,
+                      color: urlInput.trim() ? '#fff' : t.faint,
+                      fontSize: 12,
+                      fontWeight: 500,
+                      cursor: urlInput.trim() ? 'pointer' : 'default',
+                      fontFamily: FONT,
+                      transition: 'all 0.15s',
+                      letterSpacing: '-0.01em',
+                    }}
+                  >
+                    Add
+                  </button>
+                </div>
+              )}
+              {urlError && (
+                <p style={{ ...MONO, fontSize: 10, color: '#f87171', marginBottom: 8, marginTop: -2 }}>
+                  {urlError}
+                </p>
+              )}
+              {projects.length >= MAX_PROJECTS && (
+                <p style={{ ...MONO, fontSize: 10, color: t.faint, marginBottom: 8 }}>
+                  Max {MAX_PROJECTS} projects reached.
+                </p>
+              )}
+              {projects.length > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {projects.map((p) => (
+                    <motion.div
+                      key={p.id}
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.2 }}
+                      style={{
+                        background: t.surface,
+                        border: `1px solid ${t.divider}`,
+                        borderRadius: 10,
+                        padding: '9px 12px',
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        gap: 10,
+                      }}
+                    >
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        {p.fetchStatus === 'loading' ? (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <OnboardingSpinner color={t.faint} />
+                            <span style={{ fontSize: 11, color: t.faint, letterSpacing: '-0.01em' }}>Fetching info…</span>
+                          </div>
+                        ) : (
+                          <>
+                            <p style={{
+                              fontSize: 12,
+                              fontWeight: 500,
+                              color: p.fetchStatus === 'error' ? t.faint : t.text,
+                              letterSpacing: '-0.01em',
+                              marginBottom: p.description ? 2 : 0,
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                            }}>
+                              {p.title ?? safeHostname(p.url)}
+                            </p>
+                            {p.description && (
+                              <p style={{
+                                fontSize: 10,
+                                color: t.faint,
+                                letterSpacing: '-0.005em',
+                                lineHeight: 1.4,
+                                display: '-webkit-box',
+                                WebkitLineClamp: 2,
+                                WebkitBoxOrient: 'vertical',
+                                overflow: 'hidden',
+                              }}>
+                                {p.description}
+                              </p>
+                            )}
+                            <p style={{ ...MONO, fontSize: 9, color: t.faint, marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {p.url}
+                            </p>
+                          </>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => onRemoveProject(p.id)}
+                        disabled={creating}
+                        style={{ flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer', color: t.label, fontSize: 16, lineHeight: 1, padding: '0 2px', fontFamily: FONT }}
+                      >×</button>
+                    </motion.div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Advanced section toggle */}
+            {showAdvancedToggle && (
+              <div>
+                <div style={{ height: 1, background: t.divider }} />
+                <button
+                  onClick={() => setAdvancedOpen(v => !v)}
+                  disabled={creating}
+                  style={{
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    background: 'none',
+                    border: 'none',
+                    padding: '14px 0 0',
+                    cursor: 'pointer',
+                    fontFamily: FONT,
+                  }}
+                >
+                  <span style={{ ...MONO, fontSize: 11, color: t.faint, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                    More detail = better research
+                  </span>
+                  <ChevronDown
+                    size={14}
+                    color={t.faint}
+                    style={{
+                      transform: advancedOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                      transition: 'transform 0.2s ease',
+                      flexShrink: 0,
+                    }}
+                  />
+                </button>
+
+                <AnimatePresence initial={false}>
+                  {advancedOpen && (
+                    <motion.div
+                      key="advanced"
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.22, ease: 'easeInOut' }}
+                      style={{ overflow: 'hidden' }}
+                    >
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 16, paddingTop: 18 }}>
+
+                        {/* Experience level */}
+                        <div>
+                          <p style={{ ...MONO, fontSize: 11, color: t.faint, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>
+                            Your experience level
+                          </p>
+                          <div style={{ display: 'flex', gap: 7 }}>
+                            {EXP_LEVELS.map(({ value, label }) => {
+                              const active = userExperienceLevel === value;
+                              return (
+                                <button
+                                  key={value}
+                                  onClick={() => onChangeExperienceLevel(active ? '' : value)}
+                                  disabled={creating}
+                                  style={{
+                                    flex: 1,
+                                    padding: '7px 0',
+                                    borderRadius: 100,
+                                    border: `1.5px solid ${active ? persona.color : t.divider}`,
+                                    background: active ? `${persona.color}18` : 'transparent',
+                                    color: active ? persona.color : t.label,
+                                    fontSize: 12,
+                                    fontWeight: active ? 600 : 400,
+                                    letterSpacing: '-0.01em',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.15s',
+                                    fontFamily: FONT,
+                                  }}
+                                >
+                                  {label}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        {/* Target audience — only for commerce/creator personas */}
+                        {showAudienceField && (
+                          <div>
+                            <p style={{ ...MONO, fontSize: 11, color: t.faint, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
+                              Who do you sell to / serve? <span style={{ textTransform: 'none', fontStyle: 'normal', letterSpacing: 0, opacity: 0.6 }}>(optional)</span>
+                            </p>
+                            <input
+                              type="text"
+                              value={userTargetAudience}
+                              onChange={e => onChangeTargetAudience(e.target.value)}
+                              placeholder="e.g. Small business owners in Lagos"
+                              disabled={creating}
+                              style={inputStyle}
+                            />
+                          </div>
+                        )}
+
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             )}
-          </div>
 
-          {/* Advanced section toggle */}
-          <div>
-            <div style={{ height: 1, background: t.divider }} />
-            <button
-              onClick={() => setAdvancedOpen(v => !v)}
-              disabled={creating}
-              style={{
-                width: '100%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                background: 'none',
-                border: 'none',
-                padding: '14px 0 0',
-                cursor: 'pointer',
-                fontFamily: FONT,
-              }}
-            >
-              <span style={{ ...MONO, fontSize: 11, color: t.faint, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                More detail = better research
-              </span>
-              <ChevronDown
-                size={14}
-                color={t.faint}
+            {/* API error */}
+            {error && (
+              <p style={{ fontSize: 11, color: '#f87171', letterSpacing: '-0.005em', marginTop: 4 }}>{error}</p>
+            )}
+
+            {/* Launch button */}
+            <div style={{ marginTop: 8 }}>
+              <button
+                onClick={handleLaunchClick}
+                disabled={creating}
                 style={{
-                  transform: advancedOpen ? 'rotate(180deg)' : 'rotate(0deg)',
-                  transition: 'transform 0.2s ease',
-                  flexShrink: 0,
+                  width: '100%',
+                  padding: '14px',
+                  background: creating ? `${t.text}80` : t.text,
+                  border: 'none',
+                  borderRadius: 8,
+                  cursor: creating ? 'wait' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                  fontFamily: FONT,
+                  marginBottom: 10,
+                  transition: 'opacity 0.2s ease',
                 }}
-              />
-            </button>
+              >
+                {creating ? (
+                  <>
+                    <OnboardingSpinner color="rgba(255,255,255,0.9)" />
+                    <span style={{ fontSize: 14, fontWeight: 500, color: 'rgba(255,255,255,0.9)', letterSpacing: '-0.01em' }}>
+                      Setting up your agent…
+                    </span>
+                  </>
+                ) : (
+                  <span style={{ fontSize: 14, fontWeight: 500, color: '#fff', letterSpacing: '-0.01em' }}>
+                    Launch {agentCustomName.trim() || persona.name}
+                  </span>
+                )}
+              </button>
 
-            <AnimatePresence initial={false}>
-              {advancedOpen && (
-                <motion.div
-                  key="advanced"
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  transition={{ duration: 0.22, ease: 'easeInOut' }}
-                  style={{ overflow: 'hidden' }}
-                >
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 20, paddingTop: 20 }}>
+              <button
+                onClick={onSkip}
+                disabled={creating}
+                style={{
+                  width: '100%',
+                  background: 'none',
+                  border: 'none',
+                  cursor: creating ? 'default' : 'pointer',
+                  padding: '8px',
+                  fontFamily: FONT,
+                }}
+              >
+                <span style={{ fontSize: 12, color: t.faint, letterSpacing: '-0.01em' }}>
+                  Skip — launch without personalizing
+                </span>
+              </button>
+            </div>
 
-                    {/* Experience level */}
-                    <div>
-                      <p style={{ ...MONO, fontSize: 11, color: t.faint, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>
-                        Your experience level
-                      </p>
-                      <div style={{ display: 'flex', gap: 7 }}>
-                        {EXP_LEVELS.map(({ value, label }) => {
-                          const active = userExperienceLevel === value;
-                          return (
-                            <button
-                              key={value}
-                              onClick={() => onChangeExperienceLevel(active ? '' : value)}
-                              disabled={creating}
-                              style={{
-                                flex: 1,
-                                padding: '8px 0',
-                                borderRadius: 100,
-                                border: `1.5px solid ${active ? persona.color : t.divider}`,
-                                background: active ? `${persona.color}18` : 'transparent',
-                                color: active ? persona.color : t.label,
-                                fontSize: 12,
-                                fontWeight: active ? 600 : 400,
-                                letterSpacing: '-0.01em',
-                                cursor: 'pointer',
-                                transition: 'all 0.15s',
-                                fontFamily: FONT,
-                              }}
-                            >
-                              {label}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    {/* Languages */}
-                    <div>
-                      <p style={{ ...MONO, fontSize: 11, color: t.faint, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>
-                        Languages you work in
-                      </p>
-                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                        {LANGUAGE_CHIPS.map(lang => {
-                          const active = userLanguages.includes(lang);
-                          return (
-                            <button
-                              key={lang}
-                              onClick={() => toggleLanguage(lang)}
-                              disabled={creating}
-                              style={{
-                                padding: '6px 12px',
-                                borderRadius: 100,
-                                border: `1.5px solid ${active ? persona.color : t.divider}`,
-                                background: active ? `${persona.color}18` : 'transparent',
-                                color: active ? persona.color : t.label,
-                                fontSize: 11,
-                                fontWeight: active ? 600 : 400,
-                                letterSpacing: '-0.01em',
-                                cursor: 'pointer',
-                                transition: 'all 0.15s',
-                                fontFamily: FONT,
-                              }}
-                            >
-                              {lang}
-                            </button>
-                          );
-                        })}
-                        {/* Custom (non-preset) selected languages */}
-                        {userLanguages
-                          .filter(l => !LANGUAGE_CHIPS.includes(l))
-                          .map(lang => (
-                            <button
-                              key={lang}
-                              onClick={() => toggleLanguage(lang)}
-                              disabled={creating}
-                              style={{
-                                padding: '6px 10px',
-                                borderRadius: 100,
-                                border: `1.5px solid ${persona.color}`,
-                                background: `${persona.color}18`,
-                                color: persona.color,
-                                fontSize: 11,
-                                fontWeight: 600,
-                                letterSpacing: '-0.01em',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 4,
-                                fontFamily: FONT,
-                              }}
-                            >
-                              {lang}
-                              <span style={{ opacity: 0.7, fontSize: 12, lineHeight: 1 }}>×</span>
-                            </button>
-                          ))}
-                      </div>
-                      {/* Other language free-text */}
-                      <div style={{ display: 'flex', gap: 6, marginTop: 8, alignItems: 'center' }}>
-                        <input
-                          type="text"
-                          value={otherLangInput}
-                          onChange={e => setOtherLangInput(e.target.value)}
-                          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); commitOtherLang(); } }}
-                          placeholder="Other language…"
-                          disabled={creating}
-                          style={{ ...inputStyle, flex: 1, marginBottom: 0 }}
-                        />
-                        <button
-                          type="button"
-                          onClick={commitOtherLang}
-                          disabled={creating || !otherLangInput.trim()}
-                          style={{
-                            width: 36,
-                            height: 44,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            background: otherLangInput.trim() ? t.text : t.surface,
-                            border: 'none',
-                            borderRadius: 10,
-                            cursor: otherLangInput.trim() ? 'pointer' : 'default',
-                            flexShrink: 0,
-                            transition: 'background 0.15s ease',
-                          }}
-                        >
-                          <Plus size={16} color={otherLangInput.trim() ? t.bg : t.faint} />
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Challenges */}
-                    <div>
-                      <p style={{ ...MONO, fontSize: 11, color: t.faint, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
-                        Biggest challenge <span style={{ textTransform: 'none', fontStyle: 'normal', letterSpacing: 0, opacity: 0.6 }}>(optional)</span>
-                      </p>
-                      <input
-                        type="text"
-                        value={userChallenges}
-                        onChange={e => onChangeChallenges(e.target.value)}
-                        placeholder="e.g. Getting my first paying client"
-                        disabled={creating}
-                        style={inputStyle}
-                      />
-                    </div>
-
-                    {/* Target audience — only for commerce/creator personas */}
-                    {showAudienceField && (
-                      <div>
-                        <p style={{ ...MONO, fontSize: 11, color: t.faint, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
-                          Who do you sell to / serve? <span style={{ textTransform: 'none', fontStyle: 'normal', letterSpacing: 0, opacity: 0.6 }}>(optional)</span>
-                        </p>
-                        <input
-                          type="text"
-                          value={userTargetAudience}
-                          onChange={e => onChangeTargetAudience(e.target.value)}
-                          placeholder="e.g. Small business owners in Lagos"
-                          disabled={creating}
-                          style={inputStyle}
-                        />
-                      </div>
-                    )}
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
           </div>
-
-          <div style={{ height: 4 }} />
         </div>
-      </div>
-
-      <div style={{ flexShrink: 0, padding: '16px 32px 32px', borderTop: `1px solid ${t.divider}` }}>
-        <button
-          onClick={onLaunch}
-          disabled={creating}
-          style={{
-            width: '100%',
-            padding: '16px',
-            background: creating ? `${persona.color}80` : persona.color,
-            border: 'none',
-            borderRadius: 14,
-            cursor: creating ? 'wait' : 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 8,
-            fontFamily: FONT,
-            marginBottom: 12,
-            transition: 'opacity 0.2s ease',
-          }}
-        >
-          {creating ? (
-            <>
-              <OnboardingSpinner color="rgba(255,255,255,0.9)" />
-              <span style={{ fontSize: 14, fontWeight: 500, color: 'rgba(255,255,255,0.9)', letterSpacing: '-0.01em' }}>
-                Setting up your agent…
-              </span>
-            </>
-          ) : (
-            <span style={{ fontSize: 14, fontWeight: 500, color: '#fff', letterSpacing: '-0.01em' }}>
-              Launch {agentCustomName.trim() || persona.name}
-            </span>
-          )}
-        </button>
-
-        <button
-          onClick={onSkip}
-          disabled={creating}
-          style={{
-            width: '100%',
-            background: 'none',
-            border: 'none',
-            cursor: creating ? 'default' : 'pointer',
-            padding: '8px',
-            fontFamily: FONT,
-          }}
-        >
-          <span style={{ fontSize: 12, color: t.faint, letterSpacing: '-0.01em' }}>
-            Skip — launch without personalizing
-          </span>
-        </button>
       </div>
     </motion.div>
   );
@@ -1010,12 +903,11 @@ export function CreateAgentView() {
 
   const [agentCustomName, setAgentCustomName] = useState('');
   const [userName, setUserName] = useState(() => userProfile.name);
+  const [userCity, setUserCity] = useState(() => userProfile.city);
   const [userCountry, setUserCountry] = useState(() => userProfile.country);
   const [userXHandle, setUserXHandle] = useState(() => userProfile.xHandle);
   const [userGoal, setUserGoal] = useState(() => userProfile.goal);
   const [userExperienceLevel, setUserExperienceLevel] = useState<'' | 'beginner' | 'intermediate' | 'expert'>(() => userProfile.experienceLevel);
-  const [userLanguages, setUserLanguages] = useState<string[]>(() => userProfile.languages);
-  const [userChallenges, setUserChallenges] = useState('');
   const [userTargetAudience, setUserTargetAudience] = useState('');
 
   const shuffledPersonas = useMemo(() => {
@@ -1035,7 +927,6 @@ export function CreateAgentView() {
   useEffect(() => {
     if (selectedPersona) {
       setAgentCustomName('');
-      setUserChallenges('');
       setUserTargetAudience('');
       setUserHumorStyle(selectedPersona.humorStyle ?? 'straight');
       setUserProjects([]);
@@ -1083,14 +974,16 @@ export function CreateAgentView() {
 
   const buildBriefContext = (persona: PersonaConfig, agentCustomName: string, info: UserInfo, projects: ProjectEntry[]): string => {
     const namePart = info.name.trim();
+    const cityPart = info.city.trim();
     const countryPart = info.country.trim();
+    const locationPart = [cityPart, countryPart].filter(Boolean).join(', ');
     const goalPart = info.goal.trim();
     const customName = agentCustomName.trim();
 
     let intro = 'Hi!';
-    if (namePart && countryPart) intro = `Hi! I'm ${namePart} from ${countryPart}.`;
+    if (namePart && locationPart) intro = `Hi! I'm ${namePart} from ${locationPart}.`;
     else if (namePart) intro = `Hi! I'm ${namePart}.`;
-    else if (countryPart) intro = `Hi! I'm based in ${countryPart}.`;
+    else if (locationPart) intro = `Hi! I'm based in ${locationPart}.`;
 
     let context = `${intro} `;
     if (goalPart) context += `I'm working on: ${goalPart}. `;
@@ -1117,8 +1010,6 @@ export function CreateAgentView() {
     humor: HumorStyle,
     projects: ProjectEntry[],
     experienceLevel: '' | 'beginner' | 'intermediate' | 'expert',
-    languages: string[],
-    challenges: string,
     targetAudience: string
   ) => {
     if (creating) return;
@@ -1128,6 +1019,8 @@ export function CreateAgentView() {
     try {
       const templateId = resolveTemplate(persona.personaTemplate);
       const urlList = projects.map(p => p.url);
+      const locationStr = [info.city.trim(), info.country.trim()].filter(Boolean).join(', ') || undefined;
+      const savedLanguages = userProfile.languages.length > 0 ? userProfile.languages : ['English'];
       const result = await create.mutateAsync({
         name: agentCustomName.trim() || persona.name,
         description: persona.tagline,
@@ -1140,13 +1033,12 @@ export function CreateAgentView() {
         enabledSkills: persona.enabledSkills,
         // Spawning pipeline fields
         ownerName: info.name.trim() || undefined,
-        location: info.country.trim() || undefined,
+        location: locationStr,
         xHandle: xHandle.trim() || undefined,
         urls: urlList.length > 0 ? urlList : undefined,
         domain: info.goal.trim() || undefined,
         experienceLevel: experienceLevel || undefined,
-        languages: languages.length > 0 ? languages : undefined,
-        challenges: challenges.trim() ? [challenges.trim()] : undefined,
+        languages: savedLanguages,
         targetAudience: targetAudience.trim() || undefined,
       });
 
@@ -1157,12 +1049,12 @@ export function CreateAgentView() {
       setHasSeenOnboard(true);
       setUserProfile({
         name: info.name.trim(),
-        city: userProfile.city,
+        city: info.city.trim(),
         country: info.country.trim(),
         goal: info.goal.trim(),
         xHandle: xHandle.trim(),
         experienceLevel: experienceLevel,
-        languages,
+        languages: userProfile.languages,
       });
 
       // Store fallback brief context in case spawning fails
@@ -1206,10 +1098,10 @@ export function CreateAgentView() {
         providedFields={{
           xHandle: userXHandle.trim() || undefined,
           urls: userProjects.map(p => p.url),
-          location: userCountry.trim() || undefined,
+          location: [userCity.trim(), userCountry.trim()].filter(Boolean).join(', ') || undefined,
           domain: userGoal.trim() || undefined,
           experienceLevel: userExperienceLevel || undefined,
-          languages: userLanguages.length > 0 ? userLanguages : undefined,
+          languages: userProfile.languages.length > 0 ? userProfile.languages : ['English'],
           targetAudience: userTargetAudience.trim() || undefined,
         }}
         onReady={() => {
@@ -1232,30 +1124,28 @@ export function CreateAgentView() {
           persona={selectedPersona}
           agentCustomName={agentCustomName}
           userName={userName}
+          userCity={userCity}
           userCountry={userCountry}
           userXHandle={userXHandle}
           userGoal={userGoal}
           userExperienceLevel={userExperienceLevel}
-          userLanguages={userLanguages}
-          userChallenges={userChallenges}
           userTargetAudience={userTargetAudience}
           humorStyle={userHumorStyle}
           projects={userProjects}
           onChangeAgentName={setAgentCustomName}
           onChangeName={setUserName}
+          onChangeCity={setUserCity}
           onChangeCountry={setUserCountry}
           onChangeXHandle={setUserXHandle}
           onChangeGoal={setUserGoal}
           onChangeExperienceLevel={setUserExperienceLevel}
-          onChangeLanguages={setUserLanguages}
-          onChangeChallenges={setUserChallenges}
           onChangeTargetAudience={setUserTargetAudience}
           onChangeHumorStyle={setUserHumorStyle}
           onAddProject={handleAddProject}
           onRemoveProject={handleRemoveProject}
           onBack={handleBack}
-          onSkip={() => handleLaunch(selectedPersona, '', { name: '', country: '', goal: '' }, '', selectedPersona.humorStyle, [], '', [], '', '')}
-          onLaunch={() => handleLaunch(selectedPersona, agentCustomName, { name: userName, country: userCountry, goal: userGoal }, userXHandle, userHumorStyle, userProjects, userExperienceLevel, userLanguages, userChallenges, userTargetAudience)}
+          onSkip={() => handleLaunch(selectedPersona, '', { name: '', city: '', country: '', goal: '' }, '', selectedPersona.humorStyle, [], '', '')}
+          onLaunch={() => handleLaunch(selectedPersona, agentCustomName, { name: userName, city: userCity, country: userCountry, goal: userGoal }, userXHandle, userHumorStyle, userProjects, userExperienceLevel, userTargetAudience)}
           creating={creating}
           error={error}
         />
