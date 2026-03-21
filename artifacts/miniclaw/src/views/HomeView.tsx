@@ -241,26 +241,10 @@ function AgentRow({
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0, marginLeft: 8, height: 12 }}>
           <StateIndicator state={state} />
-          <button
-            onClick={(e) => { e.stopPropagation(); onOptions(); }}
-            style={{
-              width: 28,
-              height: 28,
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              color: t.faint,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <MoreHorizontal size={14} strokeWidth={1.5} />
-          </button>
         </div>
       </div>
 
-      {/* Row 2: status label + pending badge + activity text | phase pill right */}
+      {/* Row 2: status label + pending badge + activity text + ⋯ right */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 6 }}>
         <span style={{
           fontSize: 9,
@@ -289,6 +273,25 @@ function AgentRow({
             {activity.replace('Still learning who I am', 'Learning who I am')}
           </span>
         )}
+        <button
+          onClick={(e) => { e.stopPropagation(); onOptions(); }}
+          style={{
+            marginLeft: 'auto',
+            flexShrink: 0,
+            width: 24,
+            height: 24,
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            color: t.faint,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 0,
+          }}
+        >
+          <MoreHorizontal size={13} strokeWidth={1.5} />
+        </button>
       </div>
 
       {/* Row 3: monospace live stats + phase pill */}
@@ -481,18 +484,17 @@ export function HomeView() {
         </button>
       </div>
 
-      {/* Quota gradient separator */}
-      {quotaGradient && (
-        <div style={{
-          height: 1,
-          background: `linear-gradient(to right, transparent, ${quotaGradient.color})`,
-          opacity: quotaGradient.opacity,
-          marginLeft: -32,
-          marginRight: -32,
-          marginBottom: 28,
-        }} />
-      )}
-      {!quotaGradient && <div style={{ marginBottom: 28 }} />}
+      {/* Quota gradient separator — always visible */}
+      <div style={{
+        height: 1,
+        background: quotaGradient
+          ? `linear-gradient(to right, transparent, ${quotaGradient.color})`
+          : `linear-gradient(to right, transparent, ${t.divider})`,
+        opacity: quotaGradient ? quotaGradient.opacity : 0.6,
+        marginLeft: -32,
+        marginRight: -32,
+        marginBottom: 28,
+      }} />
 
       {/* Daily Brief */}
       <AnimatePresence>
