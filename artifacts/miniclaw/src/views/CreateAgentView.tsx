@@ -283,7 +283,7 @@ export function CreateAgentView() {
   const pop = useRouter(s => s.pop);
   const push = useRouter(s => s.push);
   const fromOnboarding = useRouter(s => s.currentView.params?.fromOnboarding === 'true');
-  const { hasSeenOnboard, setHasSeenOnboard } = useAppStore();
+  const { setHasSeenOnboard } = useAppStore();
 
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
