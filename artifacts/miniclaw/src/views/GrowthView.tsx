@@ -43,6 +43,11 @@ function fmtLatency(ms: number): string {
   return `${Math.round(ms)}ms`;
 }
 
+function fmtCostUsd(n: number): string {
+  if (n < 0.01) return '<$0.01';
+  return `$${n.toFixed(2)}`;
+}
+
 const CALL_TYPE_LABELS: Record<string, string> = {
   chat: 'Chat',
   skill: 'Skills',
@@ -361,10 +366,10 @@ export function GrowthView() {
                 {/* Token grid: 24h / 7d / 30d */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 16 }}>
                   {([
-                    { label: '24h', value: usageData.tokens.last24h },
-                    { label: '7d', value: usageData.tokens.last7d },
-                    { label: '30d', value: usageData.tokens.last30d },
-                  ] as { label: string; value: number }[]).map(({ label, value }) => (
+                    { label: '24h', value: usageData.tokens.last24h, cost: usageData.cost?.last24h },
+                    { label: '7d', value: usageData.tokens.last7d, cost: usageData.cost?.last7d },
+                    { label: '30d', value: usageData.tokens.last30d, cost: usageData.cost?.last30d },
+                  ] as { label: string; value: number; cost?: number }[]).map(({ label, value, cost }) => (
                     <div
                       key={label}
                       style={{
@@ -394,6 +399,16 @@ export function GrowthView() {
                       }}>
                         {label}
                       </span>
+                      {cost != null && cost > 0 && (
+                        <span style={{
+                          ...MONO_STYLE,
+                          fontSize: 8,
+                          color: t.faint,
+                          letterSpacing: '0.04em',
+                        }}>
+                          {fmtCostUsd(cost)}
+                        </span>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -424,6 +439,7 @@ export function GrowthView() {
                     {usageData.callsByType.map((ct, idx) => {
                       const maxCalls = Math.max(...usageData.callsByType.map(c => c.calls), 1);
                       const pct = ct.calls / maxCalls;
+                      const costStr = ct.costUsd != null && ct.costUsd > 0 ? ` · ${fmtCostUsd(ct.costUsd)}` : '';
                       return (
                         <motion.div
                           key={ct.type}
@@ -436,7 +452,7 @@ export function GrowthView() {
                               {CALL_TYPE_LABELS[ct.type] ?? ct.type}
                             </span>
                             <span style={{ ...MONO_STYLE, fontSize: 9, color: t.faint }}>
-                              {ct.calls} · {fmtNum(ct.tokens)}
+                              {ct.calls} · {fmtNum(ct.tokens)}{costStr}
                             </span>
                           </div>
                           <div style={{ height: 1.5, background: t.surface, borderRadius: 1 }}>
@@ -451,6 +467,60 @@ export function GrowthView() {
                       );
                     })}
                   </div>
+                )}
+
+                {/* Per-model breakdown */}
+                {usageData.callsByModel && usageData.callsByModel.length > 0 && (
+                  <div style={{ marginTop: 20 }}>
+                    <p style={{ ...MONO_STYLE, fontSize: 8, color: t.faint, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12 }}>
+                      By model
+                    </p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                      {usageData.callsByModel.map((m, idx) => {
+                        const maxCalls = Math.max(...usageData.callsByModel!.map(x => x.calls), 1);
+                        const pct = m.calls / maxCalls;
+                        const costStr = m.costUsd > 0 ? ` · ${fmtCostUsd(m.costUsd)}` : '';
+                        return (
+                          <motion.div
+                            key={m.model}
+                            initial={{ opacity: 0, x: -6 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: idx * 0.05, duration: 0.25 }}
+                          >
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4 }}>
+                              <span style={{ fontSize: 11, fontWeight: 300, color: t.text, letterSpacing: '-0.01em' }}>
+                                {m.model}
+                              </span>
+                              <span style={{ ...MONO_STYLE, fontSize: 9, color: t.faint }}>
+                                {m.calls} · {fmtNum(m.tokens)}{costStr}
+                              </span>
+                            </div>
+                            <div style={{ height: 1.5, background: t.surface, borderRadius: 1 }}>
+                              <motion.div
+                                initial={{ width: 0 }}
+                                animate={{ width: `${pct * 100}%` }}
+                                transition={{ delay: idx * 0.05 + 0.1, duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
+                                style={{ height: '100%', background: t.label, borderRadius: 1 }}
+                              />
+                            </div>
+                          </motion.div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Burn-rate line */}
+                {usageData.cost?.last7d != null && usageData.cost.last7d > 0 && (
+                  <p style={{
+                    ...MONO_STYLE,
+                    fontSize: 9,
+                    color: t.faint,
+                    letterSpacing: '0.05em',
+                    marginTop: 20,
+                  }}>
+                    At this pace, ~{fmtCostUsd(usageData.cost.last7d * 4.3)} / mo
+                  </p>
                 )}
               </motion.div>
             )}

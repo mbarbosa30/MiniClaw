@@ -296,6 +296,14 @@ export interface UsageCallType {
   calls: number;
   tokens: number;
   avgLatencyMs: number;
+  costUsd?: number;
+}
+
+export interface UsageModelBreakdown {
+  model: string;
+  calls: number;
+  tokens: number;
+  costUsd: number;
 }
 
 export interface AgentUsageStats {
@@ -309,9 +317,15 @@ export interface AgentUsageStats {
     last7d: number;
     last30d: number;
   };
+  cost?: {
+    last24h: number;
+    last7d: number;
+    last30d: number;
+  };
   totalCalls30d: number;
   avgLatencyMs: number;
   callsByType: UsageCallType[];
+  callsByModel?: UsageModelBreakdown[];
 }
 
 export interface GrowthSummary {
