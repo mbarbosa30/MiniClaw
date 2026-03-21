@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, MoreHorizontal, X, TrendingUp } from 'lucide-react';
 import { useTheme } from '@/lib/theme';
-import { useRouter, useAuthStore } from '@/lib/store';
+import { useRouter, useAuthStore, useAppStore } from '@/lib/store';
 import { useAgents, useTasks, useActivity, useAwareness } from '@/hooks/use-agents';
 import { StateIndicator, agentVisualState, STATE_COLOR, STATE_LABEL } from '@/components/StateIndicator';
 import { formatAddress } from '@/lib/utils';
@@ -366,6 +366,7 @@ export function HomeView() {
   const t = useTheme();
   const push = useRouter((s) => s.push);
   const address = useAuthStore((s) => s.address);
+  const { hasSeenOnboard, setHasSeenOnboard } = useAppStore();
   const { data, isLoading, isError } = useAgents();
 
   const [cachedAgents, setCachedAgentsState] = useState<Agent[]>(() => getCachedAgents() ?? []);
@@ -405,13 +406,40 @@ export function HomeView() {
   const showBrief = briefItem && !briefDismissed && agents.length > 0;
 
   useEffect(() => {
-    if (!isLoading && !isError && agents.length === 0) {
-      push('create');
+    if (!isLoading && !isError && agents.length === 0 && !hasSeenOnboard) {
+      push('create', { fromOnboarding: 'true' });
     }
-  }, [isLoading, isError, agents.length, push]);
+  }, [isLoading, isError, agents.length, hasSeenOnboard, push]);
 
   if (!isLoading && !isError && agents.length === 0) {
-    return null;
+    if (!hasSeenOnboard) return null;
+    return (
+      <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, padding: '0 40px', background: t.bg }}>
+        <p style={{ fontSize: 22, fontWeight: 300, letterSpacing: '-0.025em', color: t.text, textAlign: 'center', lineHeight: 1.3 }}>
+          No agents yet
+        </p>
+        <p style={{ fontSize: 13, color: t.label, textAlign: 'center', lineHeight: 1.5 }}>
+          Pick a co-founder to get started.
+        </p>
+        <button
+          onClick={() => { setHasSeenOnboard(false); push('create', { fromOnboarding: 'true' }); }}
+          style={{
+            marginTop: 8,
+            padding: '12px 28px',
+            borderRadius: 14,
+            background: t.text,
+            color: t.bg,
+            fontSize: 13,
+            fontWeight: 600,
+            letterSpacing: '-0.015em',
+            border: 'none',
+            cursor: 'pointer',
+          }}
+        >
+          Create agent
+        </button>
+      </div>
+    );
   }
 
   return (

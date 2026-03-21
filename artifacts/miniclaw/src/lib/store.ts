@@ -94,14 +94,29 @@ export const useAuthStore = create<AuthStore>((set) => ({
 
 // --- APP PREFERENCES ---
 
+function readLocalBool(key: string): boolean {
+  try { return localStorage.getItem(key) === '1'; } catch { return false; }
+}
+
+function writeLocalBool(key: string, v: boolean): void {
+  try { localStorage.setItem(key, v ? '1' : '0'); } catch { /* noop */ }
+}
+
 interface AppStore {
   darkMode: boolean;
   setDarkMode: (v: boolean) => void;
   toggleDarkMode: () => void;
+  hasSeenOnboard: boolean;
+  setHasSeenOnboard: (v: boolean) => void;
 }
 
 export const useAppStore = create<AppStore>((set) => ({
   darkMode: false,
   setDarkMode: (v) => set({ darkMode: v }),
   toggleDarkMode: () => set((s) => ({ darkMode: !s.darkMode })),
+  hasSeenOnboard: readLocalBool('miniclaw-seen-onboard'),
+  setHasSeenOnboard: (v) => {
+    writeLocalBool('miniclaw-seen-onboard', v);
+    set({ hasSeenOnboard: v });
+  },
 }));

@@ -640,7 +640,6 @@ export function AgentOptionsView() {
 }
 
 // --- AGENT SETTINGS VIEW (helpers) ---
-const HUMOR_OPTIONS: HumorStyle[] = ['straight', 'dry-wit', 'playful', 'sarcastic', 'absurdist'];
 const MODEL_OPTIONS: { value: PremiumModel; label: string }[] = [
   { value: 'none', label: 'standard' },
   { value: 'grok-4.20', label: 'grok 4.20' },
@@ -700,6 +699,110 @@ function SPicker<T extends string>({ options, value, onChange, label }: { option
   );
 }
 
+const HUMOR_STYLES: HumorStyle[] = ['straight', 'dry-wit', 'playful', 'sarcastic', 'absurdist'];
+const HUMOR_LABEL: Record<HumorStyle, string> = {
+  straight: 'No fluff',
+  'dry-wit': 'Sharp',
+  playful: 'Fun',
+  sarcastic: 'Edgy',
+  absurdist: 'Weird',
+};
+
+function ChipCloud({
+  items,
+  onRemove,
+  onAdd,
+  placeholder,
+}: {
+  items: string[];
+  onRemove: (i: number) => void;
+  onAdd: (val: string) => void;
+  placeholder?: string;
+}) {
+  const t = useTheme();
+  const [adding, setAdding] = useState(false);
+  const [input, setInput] = useState('');
+
+  const commit = () => {
+    const v = input.trim();
+    if (v) onAdd(v);
+    setInput('');
+    setAdding(false);
+  };
+
+  return (
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, paddingTop: 12, paddingBottom: 14 }}>
+      {items.map((item, i) => (
+        <span
+          key={i}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 5,
+            padding: '5px 10px',
+            borderRadius: 100,
+            background: t.surface,
+            border: `1px solid ${t.divider}`,
+            fontSize: 12,
+            color: t.text,
+            letterSpacing: '-0.01em',
+          }}
+        >
+          {item}
+          <button
+            onClick={() => onRemove(i)}
+            style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: t.faint, fontSize: 11, lineHeight: 1, display: 'flex', alignItems: 'center' }}
+          >
+            ×
+          </button>
+        </span>
+      ))}
+      {adding ? (
+        <input
+          autoFocus
+          value={input}
+          onChange={e => setInput(e.target.value)}
+          onBlur={commit}
+          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); commit(); } if (e.key === 'Escape') { setAdding(false); setInput(''); } }}
+          placeholder={placeholder ?? 'Add…'}
+          style={{
+            padding: '5px 10px',
+            borderRadius: 100,
+            background: t.surface,
+            border: `1px solid ${t.text}`,
+            fontSize: 12,
+            color: t.text,
+            outline: 'none',
+            fontFamily: 'inherit',
+            letterSpacing: '-0.01em',
+            minWidth: 80,
+            maxWidth: 140,
+          }}
+        />
+      ) : (
+        <button
+          onClick={() => setAdding(true)}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 4,
+            padding: '5px 10px',
+            borderRadius: 100,
+            background: 'transparent',
+            border: `1px dashed ${t.divider}`,
+            fontSize: 12,
+            color: t.faint,
+            cursor: 'pointer',
+            letterSpacing: '-0.01em',
+          }}
+        >
+          + add
+        </button>
+      )}
+    </div>
+  );
+}
+
 function SettingsForm({ agent, onDeleted }: { agent: Agent; onDeleted: () => void }) {
   const t = useTheme();
   const update = useUpdateAgent();
@@ -708,6 +811,18 @@ function SettingsForm({ agent, onDeleted }: { agent: Agent; onDeleted: () => voi
   const updateSoul = useUpdateSoul();
   const addKnowledge = useAddKnowledge();
 
+  // --- Tune state ---
+  const [localDesc, setLocalDesc] = useState(agent.description ?? '');
+  const [descEditing, setDescEditing] = useState(false);
+  const [localHumor, setLocalHumor] = useState<HumorStyle>(agent.humorStyle ?? 'straight');
+  const [localInterests, setLocalInterests] = useState<string[]>(agent.interests ?? []);
+  const [localTopics, setLocalTopics] = useState<string[]>(agent.topicsToWatch ?? []);
+  const [soulExpanded, setSoulExpanded] = useState(false);
+  const [soulText, setSoulText] = useState('');
+  const [savingSoul, setSavingSoul] = useState(false);
+  const [soulSaved, setSoulSaved] = useState(false);
+
+  // --- Profile state ---
   const [mainSkill, setMainSkill] = useState('');
   const [platforms, setPlatforms] = useState('');
   const [country, setCountry] = useState('');
@@ -725,7 +840,62 @@ function SettingsForm({ agent, onDeleted }: { agent: Agent; onDeleted: () => voi
   useEffect(() => {
     if (!soul?.soul) return;
     setHustleMode(soul.soul.includes(HUSTLE_MODE_SOUL_APPEND.trim()));
-  }, [soul?.soul]);
+    if (!soulExpanded) setSoulText(soul.soul);
+  }, [soul?.soul, soulExpanded]);
+
+  // --- Tune handlers ---
+
+  const handleDescBlur = async () => {
+    setDescEditing(false);
+    if (localDesc.trim() === (agent.description ?? '')) return;
+    try {
+      await update.mutateAsync({ id: agent.id, data: { description: localDesc.trim() } });
+    } catch {
+      setLocalDesc(agent.description ?? '');
+    }
+  };
+
+  const handleHumorSelect = async (style: HumorStyle) => {
+    setLocalHumor(style);
+    try {
+      await update.mutateAsync({ id: agent.id, data: { humorStyle: style } });
+    } catch {
+      setLocalHumor(agent.humorStyle ?? 'straight');
+    }
+  };
+
+  const saveInterests = async (next: string[]) => {
+    setLocalInterests(next);
+    try {
+      await update.mutateAsync({ id: agent.id, data: { interests: next } });
+    } catch {
+      setLocalInterests(agent.interests ?? []);
+    }
+  };
+
+  const saveTopics = async (next: string[]) => {
+    setLocalTopics(next);
+    try {
+      await update.mutateAsync({ id: agent.id, data: { topicsToWatch: next } });
+    } catch {
+      setLocalTopics(agent.topicsToWatch ?? []);
+    }
+  };
+
+  const handleSaveSoul = async () => {
+    setSavingSoul(true);
+    setSoulSaved(false);
+    try {
+      await updateSoul.mutateAsync({ agentId: agent.id, soul: soulText });
+      setSoulSaved(true);
+    } catch {
+      // noop
+    } finally {
+      setSavingSoul(false);
+    }
+  };
+
+  // --- Hustle Mode handler ---
 
   const handleHustleToggle = async (enabled: boolean) => {
     setHustleMode(enabled);
@@ -751,16 +921,16 @@ function SettingsForm({ agent, onDeleted }: { agent: Agent; onDeleted: () => voi
         `/api/selfclaw/v1/hosted-agents/templates`
       ).catch(() => null);
 
-      let soulText = '';
+      let soulTextReset = '';
       if (defaultSoul && !Array.isArray(defaultSoul)) {
-        soulText = (defaultSoul as { soul?: string }).soul ?? '';
+        soulTextReset = (defaultSoul as { soul?: string }).soul ?? '';
       }
 
-      if (!soulText) {
-        soulText = baseSoul.replace(HUSTLE_MODE_SOUL_APPEND, '').trimEnd();
+      if (!soulTextReset) {
+        soulTextReset = baseSoul.replace(HUSTLE_MODE_SOUL_APPEND, '').trimEnd();
       }
 
-      await updateSoul.mutateAsync({ agentId: agent.id, soul: soulText });
+      await updateSoul.mutateAsync({ agentId: agent.id, soul: soulTextReset });
       setHustleMode(false);
       setResetDone(true);
     } catch (err) {
@@ -820,6 +990,88 @@ function SettingsForm({ agent, onDeleted }: { agent: Agent; onDeleted: () => voi
 
   return (
     <div className="no-scrollbar" style={{ height: '100%', overflowY: 'auto', padding: '0 32px 80px' }}>
+
+      {/* ── TUNE SECTION ── */}
+      <SLabel>Tune</SLabel>
+
+      {/* Description — tap to edit inline */}
+      <div
+        style={{ paddingTop: 13, paddingBottom: 13, borderBottom: `1px solid ${t.divider}` }}
+        onClick={() => { if (!descEditing) setDescEditing(true); }}
+      >
+        {descEditing ? (
+          <input
+            autoFocus
+            value={localDesc}
+            onChange={e => setLocalDesc(e.target.value)}
+            onBlur={handleDescBlur}
+            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleDescBlur(); } }}
+            style={{ width: '100%', background: 'transparent', border: 'none', outline: 'none', fontSize: 13, color: t.text, fontFamily: 'inherit', letterSpacing: '-0.01em', padding: 0 }}
+          />
+        ) : (
+          <p style={{ fontSize: 13, color: localDesc ? t.text : t.faint, letterSpacing: '-0.01em', lineHeight: 1.5, cursor: 'text' }}>
+            {localDesc || 'Tap to add a description…'}
+          </p>
+        )}
+      </div>
+
+      {/* Humor style — 5 tap-select pills */}
+      <div style={{ paddingTop: 14, paddingBottom: 2 }}>
+        <p style={{ fontSize: 9, color: t.faint, letterSpacing: '0.06em', textTransform: 'uppercase', fontFamily: 'ui-monospace, Menlo, monospace', marginBottom: 10 }}>Vibe</p>
+        <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
+          {HUMOR_STYLES.map(style => {
+            const active = localHumor === style;
+            return (
+              <button
+                key={style}
+                onClick={() => handleHumorSelect(style)}
+                style={{
+                  padding: '6px 14px',
+                  borderRadius: 100,
+                  border: `1.5px solid ${active ? t.text : t.divider}`,
+                  background: active ? t.text : 'transparent',
+                  color: active ? t.bg : t.label,
+                  fontSize: 12,
+                  fontWeight: active ? 600 : 400,
+                  letterSpacing: '-0.01em',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s',
+                  fontFamily: 'inherit',
+                }}
+              >
+                {HUMOR_LABEL[style]}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+      <div style={{ borderBottom: `1px solid ${t.divider}`, paddingBottom: 4 }} />
+
+      {/* Interests chip cloud */}
+      <div style={{ paddingTop: 4 }}>
+        <p style={{ fontSize: 9, color: t.faint, letterSpacing: '0.06em', textTransform: 'uppercase', fontFamily: 'ui-monospace, Menlo, monospace', paddingTop: 10, marginBottom: 0 }}>Interests</p>
+        <ChipCloud
+          items={localInterests}
+          onRemove={i => saveInterests(localInterests.filter((_, idx) => idx !== i))}
+          onAdd={v => saveInterests([...localInterests, v])}
+          placeholder="e.g. TikTok, savings"
+        />
+      </div>
+      <div style={{ borderBottom: `1px solid ${t.divider}` }} />
+
+      {/* Topics to watch chip cloud */}
+      <div style={{ paddingTop: 4 }}>
+        <p style={{ fontSize: 9, color: t.faint, letterSpacing: '0.06em', textTransform: 'uppercase', fontFamily: 'ui-monospace, Menlo, monospace', paddingTop: 10, marginBottom: 0 }}>Watching</p>
+        <ChipCloud
+          items={localTopics}
+          onRemove={i => saveTopics(localTopics.filter((_, idx) => idx !== i))}
+          onAdd={v => saveTopics([...localTopics, v])}
+          placeholder="e.g. exchange rates"
+        />
+      </div>
+      <div style={{ borderBottom: `1px solid ${t.divider}` }} />
+
+      {/* ── PROFILE SECTION ── */}
       <SLabel>Profile</SLabel>
       <STextRow
         label="Agent name"
@@ -859,6 +1111,7 @@ function SettingsForm({ agent, onDeleted }: { agent: Agent; onDeleted: () => voi
         </button>
       </div>
 
+      {/* ── HUSTLE MODE ── */}
       <SLabel>Hustle Mode</SLabel>
       <SRow label="Weekly growth plan">
         <Switch
@@ -870,6 +1123,37 @@ function SettingsForm({ agent, onDeleted }: { agent: Agent; onDeleted: () => voi
         When on, your agent proactively suggests income-generating actions every conversation.
       </p>
 
+      {/* Soul editor — collapsed by default */}
+      <div style={{ paddingTop: 10, paddingBottom: 10, borderBottom: `1px solid ${t.divider}` }}>
+        <button
+          onClick={() => { setSoulExpanded(v => !v); if (!soulExpanded) setSoulText(baseSoul); }}
+          style={{ fontSize: 12, color: t.faint, background: 'none', border: 'none', padding: 0, cursor: 'pointer', letterSpacing: '-0.01em' }}
+        >
+          {soulExpanded ? 'Hide personality ↑' : 'Edit personality →'}
+        </button>
+        {soulExpanded && (
+          <div style={{ marginTop: 12 }}>
+            <textarea
+              value={soulText}
+              onChange={e => setSoulText(e.target.value)}
+              rows={8}
+              style={{ width: '100%', background: t.surface, border: `1px solid ${t.divider}`, borderRadius: 8, outline: 'none', resize: 'none', fontSize: 12, color: t.text, fontFamily: 'inherit', letterSpacing: '-0.01em', lineHeight: 1.6, padding: '10px 12px', boxSizing: 'border-box' }}
+            />
+            {soulSaved && <p style={{ fontSize: 11, color: '#22c55e', fontFamily: 'ui-monospace, Menlo, monospace', marginTop: 6 }}>Saved.</p>}
+            <div style={{ marginTop: 10 }}>
+              <button
+                onClick={handleSaveSoul}
+                disabled={savingSoul || soulLoading}
+                style={{ fontSize: 12, color: t.label, textDecoration: 'underline', textUnderlineOffset: 3, background: 'none', border: 'none', padding: 0, cursor: 'pointer', letterSpacing: '-0.01em', opacity: savingSoul ? 0.5 : 1 }}
+              >
+                {savingSoul ? 'Saving…' : 'Save personality'}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ── RESET ── */}
       <SLabel>Reset</SLabel>
       {resetError && <p style={{ fontSize: 11, color: '#f87171', fontFamily: 'ui-monospace, Menlo, monospace', marginBottom: 8 }}>{resetError}</p>}
       {resetDone && <p style={{ fontSize: 11, color: '#22c55e', fontFamily: 'ui-monospace, Menlo, monospace', marginBottom: 8 }}>Reset to defaults.</p>}
@@ -883,6 +1167,7 @@ function SettingsForm({ agent, onDeleted }: { agent: Agent; onDeleted: () => voi
         </button>
       </div>
 
+      {/* ── DANGER ── */}
       <SLabel>Danger</SLabel>
       <div style={{ paddingTop: 13, paddingBottom: 13, borderBottom: `1px solid ${t.divider}` }}>
         <button onClick={handleDelete} disabled={remove.isPending}

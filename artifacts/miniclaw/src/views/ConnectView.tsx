@@ -55,6 +55,7 @@ export function ConnectView() {
   }, [authError]);
 
   const resolved = authError ? resolveAuthErrorMessage(authError) : null;
+  const isConnecting = !resolved && !timedOut;
 
   return (
     <div
@@ -108,6 +109,23 @@ export function ConnectView() {
           </span>
         )}
       </motion.div>
+
+      {/* Tagline — shown while connecting */}
+      {isConnecting && (
+        <motion.div
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5, duration: 0.5 }}
+          style={{ textAlign: 'center', marginBottom: 28, padding: '0 40px' }}
+        >
+          <p style={{ fontSize: 17, fontWeight: 300, letterSpacing: '-0.025em', color: t.text, lineHeight: 1.35, marginBottom: 6 }}>
+            Your AI team,<br />right here in MiniPay.
+          </p>
+          <p style={{ fontSize: 12, color: t.faint, letterSpacing: '-0.01em' }}>
+            Pick an agent. Start earning.
+          </p>
+        </motion.div>
+      )}
 
       <motion.div
         initial={{ opacity: 0 }}
