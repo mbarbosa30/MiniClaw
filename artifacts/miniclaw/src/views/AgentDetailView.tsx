@@ -700,6 +700,7 @@ function ChatTab({
     const userMsg = (override ?? input).trim();
     if (!userMsg || isStreaming) return;
     if (!override) setInput('');
+    setHistoryLoaded(true); // lock history gate so in-flight messages are never overwritten
     const now = Date.now();
     setMessages(prev => [
       ...prev,
@@ -750,11 +751,6 @@ function ChatTab({
           }
           if (chunk.done) break;
 
-          if (!firstDataReceived) {
-            firstDataReceived = true;
-            clearTimeout(sseTimeout);
-          }
-
           buf += decoder.decode(chunk.value, { stream: true });
           const lines = buf.split('\n');
           buf = lines.pop() ?? '';
@@ -765,6 +761,12 @@ function ChatTab({
             if (!jsonStr) continue;
             let evt: { content?: string; done?: boolean; conversationId?: number; suggestedChips?: string[]; error?: string };
             try { evt = JSON.parse(jsonStr); } catch { continue; }
+
+            // Only mark SSE as active when we receive a valid parsed event
+            if (!firstDataReceived) {
+              firstDataReceived = true;
+              clearTimeout(sseTimeout);
+            }
 
             if (evt.content !== undefined) {
               setMessages(prev => {
