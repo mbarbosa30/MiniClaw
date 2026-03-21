@@ -5,6 +5,7 @@ import { apiFetch } from '@/lib/api-client';
 import { useRouter, useAppStore } from '@/lib/store';
 import { useTheme } from '@/lib/theme';
 import { resolveIcon } from '@/lib/agent-icon';
+import { ScreenHeader } from '@/components/ui';
 import type { HumorStyle } from '@/types';
 
 interface PersonaConfig {
@@ -788,11 +789,13 @@ function OnboardingPersonaRow({
 
 function PersonalizeStep({
   persona,
+  agentCustomName,
   userName,
   userCountry,
   userGoal,
   humorStyle,
   projects,
+  onChangeAgentName,
   onChangeName,
   onChangeCountry,
   onChangeGoal,
@@ -806,11 +809,13 @@ function PersonalizeStep({
   error,
 }: {
   persona: PersonaConfig;
+  agentCustomName: string;
   userName: string;
   userCountry: string;
   userGoal: string;
   humorStyle: HumorStyle;
   projects: ProjectEntry[];
+  onChangeAgentName: (v: string) => void;
   onChangeName: (v: string) => void;
   onChangeCountry: (v: string) => void;
   onChangeGoal: (v: string) => void;
@@ -871,38 +876,17 @@ function PersonalizeStep({
         fontFamily: FONT,
       }}
     >
-      <div style={{ padding: '56px 32px 24px', flexShrink: 0, position: 'relative' }}>
-        <button
-          onClick={onBack}
-          style={{
-            position: 'absolute',
-            top: 20,
-            left: 24,
-            background: 'none',
-            border: 'none',
-            cursor: 'pointer',
-            padding: 4,
-            color: t.faint,
-            fontSize: 20,
-            lineHeight: 1,
-            fontFamily: FONT,
-          }}
-        >
-          ←
-        </button>
+      <ScreenHeader title={persona.name} onBack={onBack} />
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
-          <div style={{ width: 3, height: 28, background: persona.color, borderRadius: 2, flexShrink: 0 }} />
-          <p style={{ fontSize: 20, fontWeight: 300, letterSpacing: '-0.03em', color: t.text, lineHeight: 1.1 }}>
-            {persona.name}
+      <div style={{ padding: '24px 32px 20px', flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+          <div style={{ width: 3, height: 24, background: persona.color, borderRadius: 2, flexShrink: 0 }} />
+          <p style={{ fontSize: 22, fontWeight: 200, letterSpacing: '-0.04em', color: t.text, lineHeight: 1.1 }}>
+            Tell us a bit about yourself.
           </p>
         </div>
-
-        <p style={{ fontSize: 28, fontWeight: 200, letterSpacing: '-0.04em', color: t.text, lineHeight: 1.1, marginBottom: 8 }}>
-          Tell us a bit<br />about yourself.
-        </p>
         <p style={{ fontSize: 12, color: t.label, letterSpacing: '-0.01em', lineHeight: 1.5 }}>
-          Helps your agent know you from the start.
+          Helps your agent know you from the start. Everything is optional.
         </p>
       </div>
 
@@ -917,10 +901,22 @@ function PersonalizeStep({
       <div className="no-scrollbar" style={{ flex: 1, overflowY: 'auto', padding: '24px 32px 8px' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
+          {/* Agent name */}
+          <div>
+            <p style={{ ...MONO, fontSize: 9, color: t.faint, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
+              Agent name <span style={{ textTransform: 'none', fontStyle: 'normal', letterSpacing: 0, opacity: 0.6 }}>(optional)</span>
+            </p>
+            <input type="text" value={agentCustomName} onChange={e => onChangeAgentName(e.target.value)}
+              placeholder={`e.g. Alex, Maya, ${persona.name.split(' ')[0]}`} disabled={creating} style={inputStyle} />
+            <p style={{ fontSize: 10, color: t.faint, marginTop: 6, letterSpacing: '-0.005em' }}>
+              If set, your agent will introduce itself by this name.
+            </p>
+          </div>
+
           {/* First name */}
           <div>
             <p style={{ ...MONO, fontSize: 9, color: t.faint, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
-              First name
+              Your first name
             </p>
             <input type="text" value={userName} onChange={e => onChangeName(e.target.value)}
               placeholder="e.g. Amara" disabled={creating} style={inputStyle} />
@@ -1172,7 +1168,7 @@ function PersonalizeStep({
             </>
           ) : (
             <span style={{ fontSize: 14, fontWeight: 500, color: '#fff', letterSpacing: '-0.01em' }}>
-              Launch {persona.name}
+              Launch {agentCustomName.trim() || persona.name}
             </span>
           )}
         </button>
@@ -1213,6 +1209,7 @@ export function CreateAgentView() {
   const [step, setStep] = useState<Step>('persona');
   const [selectedPersona, setSelectedPersona] = useState<PersonaConfig | null>(null);
 
+  const [agentCustomName, setAgentCustomName] = useState('');
   const [userName, setUserName] = useState(() => userProfile.name);
   const [userCountry, setUserCountry] = useState(() => userProfile.country);
   const [userGoal, setUserGoal] = useState(() => userProfile.goal);
@@ -1233,6 +1230,7 @@ export function CreateAgentView() {
 
   useEffect(() => {
     if (selectedPersona) {
+      setAgentCustomName('');
       setUserHumorStyle(selectedPersona.humorStyle ?? 'straight');
       setUserProjects([]);
     }
@@ -1277,10 +1275,11 @@ export function CreateAgentView() {
     setUserProjects(prev => prev.filter(p => p.id !== id));
   };
 
-  const buildBriefContext = (persona: PersonaConfig, info: UserInfo, projects: ProjectEntry[]): string => {
+  const buildBriefContext = (persona: PersonaConfig, agentCustomName: string, info: UserInfo, projects: ProjectEntry[]): string => {
     const namePart = info.name.trim();
     const countryPart = info.country.trim();
     const goalPart = info.goal.trim();
+    const customName = agentCustomName.trim();
 
     let intro = 'Hi!';
     if (namePart && countryPart) intro = `Hi! I'm ${namePart} from ${countryPart}.`;
@@ -1296,7 +1295,10 @@ export function CreateAgentView() {
       context += `My projects: ${projectList}. `;
     }
 
-    context += `Please introduce yourself as my ${persona.name} — ${persona.tagline.endsWith('.') ? persona.tagline.slice(0, -1).toLowerCase() : persona.tagline.toLowerCase()} — and ask me one focused question to understand what I want to achieve with you.`;
+    const agentIntro = customName
+      ? `Please introduce yourself as ${customName}, my ${persona.name}`
+      : `Please introduce yourself as my ${persona.name}`;
+    context += `${agentIntro} — ${persona.tagline.endsWith('.') ? persona.tagline.slice(0, -1).toLowerCase() : persona.tagline.toLowerCase()} — and ask me one focused question to understand what I want to achieve with you.`;
 
     return context;
   };
@@ -1326,7 +1328,7 @@ export function CreateAgentView() {
     return soul;
   };
 
-  const handleLaunch = async (persona: PersonaConfig, info: UserInfo, humor: HumorStyle, projects: ProjectEntry[]) => {
+  const handleLaunch = async (persona: PersonaConfig, agentCustomName: string, info: UserInfo, humor: HumorStyle, projects: ProjectEntry[]) => {
     if (creating) return;
     setCreating(true);
     setError(null);
@@ -1334,7 +1336,7 @@ export function CreateAgentView() {
     try {
       const templateId = resolveTemplate(persona.personaTemplate);
       const result = await create.mutateAsync({
-        name: persona.name,
+        name: agentCustomName.trim() || persona.name,
         description: persona.tagline,
         humorStyle: humor,
         personaTemplate: templateId,
@@ -1390,7 +1392,7 @@ export function CreateAgentView() {
       setHasSeenOnboard(true);
       setUserProfile({ name: info.name.trim(), country: info.country.trim(), goal: info.goal.trim() });
 
-      const briefContext = buildBriefContext(persona, info, projects);
+      const briefContext = buildBriefContext(persona, agentCustomName, info, projects);
 
       pop();
       push('agent-detail', { id: String(newAgent.id), briefContext });
@@ -1425,11 +1427,13 @@ export function CreateAgentView() {
         <PersonalizeStep
           key="personalize"
           persona={selectedPersona}
+          agentCustomName={agentCustomName}
           userName={userName}
           userCountry={userCountry}
           userGoal={userGoal}
           humorStyle={userHumorStyle}
           projects={userProjects}
+          onChangeAgentName={setAgentCustomName}
           onChangeName={setUserName}
           onChangeCountry={setUserCountry}
           onChangeGoal={setUserGoal}
@@ -1437,8 +1441,8 @@ export function CreateAgentView() {
           onAddProject={handleAddProject}
           onRemoveProject={handleRemoveProject}
           onBack={handleBack}
-          onSkip={() => handleLaunch(selectedPersona, { name: '', country: '', goal: '' }, selectedPersona.humorStyle, [])}
-          onLaunch={() => handleLaunch(selectedPersona, { name: userName, country: userCountry, goal: userGoal }, userHumorStyle, userProjects)}
+          onSkip={() => handleLaunch(selectedPersona, '', { name: '', country: '', goal: '' }, selectedPersona.humorStyle, [])}
+          onLaunch={() => handleLaunch(selectedPersona, agentCustomName, { name: userName, country: userCountry, goal: userGoal }, userHumorStyle, userProjects)}
           creating={creating}
           error={error}
         />

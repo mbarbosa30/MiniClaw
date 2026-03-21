@@ -16,7 +16,7 @@ import { GrowthView } from "@/views/GrowthView";
 import { SettingsView } from "@/views/SettingsView";
 import { CreateAgentView } from "@/views/CreateAgentView";
 import { AgentDetailView } from "@/views/AgentDetailView";
-import { SkillsView, KnowledgeView, MemoriesView, TasksView, TelegramView, AgentOptionsView, AgentSettingsView, EconomyView } from "@/views/AgentSubViews";
+import { SkillsView, KnowledgeView, MemoriesView, SoulView, TasksView, TelegramView, AgentOptionsView, AgentSettingsView, EconomyView } from "@/views/AgentSubViews";
 import { AppNav } from "@/components/AppNav";
 
 const queryClient = new QueryClient({
@@ -81,7 +81,7 @@ function ViewManager() {
     case 'agent-settings': return <AgentSettingsView />;
     case 'skills':         return <SkillsView />;
     case 'knowledge':      return <KnowledgeView />;
-    case 'soul':           return <AgentSettingsView />;
+    case 'soul':           return <SoulView />;
     case 'memories':       return <MemoriesView />;
     case 'tasks':          return <TasksView />;
     case 'telegram':       return <TelegramView />;

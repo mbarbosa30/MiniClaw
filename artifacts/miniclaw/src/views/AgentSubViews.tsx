@@ -197,7 +197,93 @@ export function KnowledgeView() {
   );
 }
 
-// --- MEMORIES VIEW ---
+// --- SOUL VIEW ---
+export function SoulView() {
+  const t = useTheme();
+  const agentId: string = useRouter(s => s.currentView.params?.id ?? '');
+  const { data: soul, isLoading } = useSoul(agentId);
+  const updateSoul = useUpdateSoul();
+  const [editing, setEditing] = useState(false);
+  const [soulText, setSoulText] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    if (soul?.soul && !editing) setSoulText(soul.soul);
+  }, [soul?.soul, editing]);
+
+  const handleSave = async () => {
+    setSaving(true);
+    setSaved(false);
+    try {
+      await updateSoul.mutateAsync({ agentId, soul: soulText });
+      setSaved(true);
+      setEditing(false);
+    } catch {
+      // noop
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <SubScreenLayout title="Soul">
+      {isLoading ? <LoadingState /> : !soul?.soul ? (
+        <EmptyState
+          icon={<Brain size={22} />}
+          title="Not enough conversations yet"
+          description="Your agent's soul evolves as you chat. Come back after a few more exchanges."
+        />
+      ) : (
+        <div style={{ padding: '20px 20px 80px' }}>
+          {!editing ? (
+            <>
+              <div style={{ background: t.surface, borderRadius: 12, padding: '16px', marginBottom: 16, border: `1px solid ${t.divider}` }}>
+                <p style={{ fontSize: 12, lineHeight: 1.7, color: t.text, whiteSpace: 'pre-wrap', fontFamily: 'ui-monospace, Menlo, monospace', letterSpacing: '0.01em' }}>
+                  {soul.soul}
+                </p>
+              </div>
+              <button
+                onClick={() => { setEditing(true); setSoulText(soul.soul ?? ''); setSaved(false); }}
+                style={{ fontSize: 12, color: t.label, textDecoration: 'underline', textUnderlineOffset: 3, background: 'none', border: 'none', padding: 0, cursor: 'pointer', letterSpacing: '-0.01em' }}
+              >
+                Edit soul →
+              </button>
+            </>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <textarea
+                value={soulText}
+                onChange={e => setSoulText(e.target.value)}
+                rows={14}
+                style={{
+                  width: '100%',
+                  background: t.surface,
+                  border: `1px solid ${t.divider}`,
+                  borderRadius: 10,
+                  padding: '14px 14px',
+                  fontSize: 12,
+                  color: t.text,
+                  fontFamily: 'ui-monospace, Menlo, monospace',
+                  lineHeight: 1.7,
+                  outline: 'none',
+                  resize: 'vertical',
+                  boxSizing: 'border-box',
+                }}
+              />
+              {saved && <p style={{ fontSize: 11, color: '#22c55e', fontFamily: 'ui-monospace, Menlo, monospace' }}>Saved.</p>}
+              <div style={{ display: 'flex', gap: 8 }}>
+                <Button size="sm" style={{ flex: 1 }} onClick={handleSave} disabled={saving}>{saving ? 'Saving…' : 'Save'}</Button>
+                <Button size="sm" variant="ghost" onClick={() => setEditing(false)}>Cancel</Button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </SubScreenLayout>
+  );
+}
+
 export function MemoriesView() {
   const t = useTheme();
   const agentId: string = useRouter(s => s.currentView.params?.id ?? '');
@@ -307,7 +393,7 @@ function isLowRisk(task: import('@/types').AgentTask): boolean {
 export function TasksView() {
   const t = useTheme();
   const agentId: string = useRouter(s => s.currentView.params?.id ?? '');
-  const [tab, setTab] = useState<'pending' | 'all'>('pending');
+  const [tab, setTab] = useState<'pending' | 'all'>('all');
   const { data: rawTasks, isLoading } = useTasks(agentId, tab);
   const resolve = useResolveTask();
   const [autoApproved, setAutoApproved] = useState<Set<string>>(new Set());
@@ -381,7 +467,7 @@ export function TasksView() {
                 <div style={{ padding: '14px 20px' }}>
                   <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, marginBottom: 6 }}>
                     <p style={{ fontSize: 13, fontWeight: 600, flex: 1, lineHeight: 1.4, color: t.text }}>
-                      {task.title ?? task.description ?? task.action ?? 'Pending task'}
+                      {task.title ?? (task as any).payload?.title ?? task.description ?? (task as any).payload?.description ?? task.action ?? 'Pending task'}
                     </p>
                     <div style={{ display: 'flex', gap: 4, flexShrink: 0, alignItems: 'center' }}>
                       {task.taskType && (
@@ -396,9 +482,13 @@ export function TasksView() {
                       )}
                     </div>
                   </div>
-                  {task.description && task.title && (
-                    <p style={{ fontSize: 11, color: t.label, lineHeight: 1.5, marginBottom: 12 }}>{task.description}</p>
-                  )}
+                  {(() => {
+                    const titleVal = task.title ?? (task as any).payload?.title;
+                    const descVal = task.description ?? (task as any).payload?.description;
+                    return titleVal && descVal ? (
+                      <p style={{ fontSize: 11, color: t.label, lineHeight: 1.5, marginBottom: 12 }}>{descVal}</p>
+                    ) : null;
+                  })()}
                   {needsAction && !isLowRisk(task) && (
                     <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
                       <button
