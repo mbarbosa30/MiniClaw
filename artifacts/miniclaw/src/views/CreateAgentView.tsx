@@ -46,6 +46,10 @@ const HUMOR_LABEL: Record<HumorStyle, string> = {
 
 const MAX_PROJECTS = 5;
 
+function safeHostname(url: string): string {
+  try { return new URL(url).hostname; } catch { return url; }
+}
+
 const PERSONAS: PersonaConfig[] = [
   {
     id: 'ai-hustle-builder',
@@ -639,13 +643,21 @@ function PersonalizeStep({
 }) {
   const t = useTheme();
   const [urlInput, setUrlInput] = useState('');
+  const [urlError, setUrlError] = useState<string | null>(null);
 
   const handleAddUrl = () => {
     const raw = urlInput.trim();
     if (!raw) return;
-    const url = raw.startsWith('http://') || raw.startsWith('https://') ? raw : `https://${raw}`;
+    const candidate = raw.startsWith('http://') || raw.startsWith('https://') ? raw : `https://${raw}`;
+    try {
+      new URL(candidate);
+    } catch {
+      setUrlError('Enter a valid URL, e.g. tiktok.com/@yourhandle');
+      return;
+    }
+    setUrlError(null);
     setUrlInput('');
-    onAddProject(url);
+    onAddProject(candidate);
   };
 
   const inputStyle: React.CSSProperties = {
@@ -853,6 +865,11 @@ function PersonalizeStep({
                 </button>
               </div>
             )}
+            {urlError && (
+              <p style={{ ...MONO, fontSize: 10, color: '#f87171', marginBottom: 8, marginTop: -4 }}>
+                {urlError}
+              </p>
+            )}
 
             {projects.length >= MAX_PROJECTS && (
               <p style={{ ...MONO, fontSize: 10, color: t.faint, marginBottom: 10 }}>
@@ -899,7 +916,7 @@ function PersonalizeStep({
                             textOverflow: 'ellipsis',
                             whiteSpace: 'nowrap',
                           }}>
-                            {p.title ?? new URL(p.url).hostname}
+                            {p.title ?? safeHostname(p.url)}
                           </p>
                           {p.description && (
                             <p style={{
@@ -1044,19 +1061,14 @@ export function CreateAgentView() {
   };
 
   const fetchProjectMeta = async (url: string): Promise<{ title?: string; description?: string }> => {
-    try {
-      const res = await fetch(`https://api.microlink.io/?url=${encodeURIComponent(url)}`);
-      const data = await res.json();
-      if (data.status === 'success') {
-        return {
-          title: data.data?.title ?? undefined,
-          description: data.data?.description ?? undefined,
-        };
-      }
-    } catch {
-      // best-effort
-    }
-    return {};
+    const res = await fetch(`https://api.microlink.io/?url=${encodeURIComponent(url)}`);
+    if (!res.ok) throw new Error(`fetch failed: ${res.status}`);
+    const data = await res.json();
+    if (data.status !== 'success') throw new Error('microlink returned non-success');
+    return {
+      title: data.data?.title ?? undefined,
+      description: data.data?.description ?? undefined,
+    };
   };
 
   const handleAddProject = (url: string) => {
@@ -1098,7 +1110,7 @@ export function CreateAgentView() {
 
     const readyProjects = projects.filter(p => p.fetchStatus === 'ready' || p.fetchStatus === 'error');
     if (readyProjects.length > 0) {
-      const projectList = readyProjects.map(p => `${p.title ?? new URL(p.url).hostname} (${p.url})`).join(', ');
+      const projectList = readyProjects.map(p => `${p.title ?? safeHostname(p.url)} (${p.url})`).join(', ');
       context += `My projects: ${projectList}. `;
     }
 
@@ -1123,7 +1135,7 @@ export function CreateAgentView() {
 
     if (readyProjects.length > 0) {
       const projectLines = readyProjects.map(p => {
-        const name = p.title ?? new URL(p.url).hostname;
+        const name = p.title ?? safeHostname(p.url);
         return p.description ? `- ${name} (${p.url}): ${p.description}` : `- ${name} (${p.url})`;
       });
       soul += `\n\n## User's Projects\n${projectLines.join('\n')}\n\nReference the user's projects when relevant to give contextual, specific advice.`;
@@ -1160,10 +1172,8 @@ export function CreateAgentView() {
 
       const readyProjects = projects.filter(p => p.fetchStatus === 'ready' || p.fetchStatus === 'error');
       for (const p of readyProjects) {
-        let hostname = p.url;
-        try { hostname = new URL(p.url).hostname; } catch { /* noop */ }
         knowledgeTasks.push({
-          title: `Project: ${p.title ?? hostname}`,
+          title: `Project: ${p.title ?? safeHostname(p.url)}`,
           content: [p.url, p.description].filter(Boolean).join('\n'),
         });
       }
