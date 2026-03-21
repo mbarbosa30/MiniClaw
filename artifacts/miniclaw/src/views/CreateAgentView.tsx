@@ -1749,6 +1749,8 @@ export function CreateAgentView() {
       const result = await create.mutateAsync({
         name: agentCustomName.trim() || persona.name,
         description: persona.tagline,
+        icon: persona.icon,
+        emoji: persona.emoji,
         humorStyle: humor,
         personaTemplate: templateId,
         interests: persona.interests,

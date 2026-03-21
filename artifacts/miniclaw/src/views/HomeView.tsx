@@ -295,8 +295,10 @@ function AgentRow({
           >
             <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{agent.name}</span>
             {(() => {
-              const Icon = resolveIcon(agent.icon) ?? Bot;
-              return <Icon size={14} strokeWidth={1.5} color={t.faint} style={{ flexShrink: 0 }} />;
+              const Icon = resolveIcon(agent.icon);
+              if (Icon) return <Icon size={14} strokeWidth={1.5} color={t.faint} style={{ flexShrink: 0 }} />;
+              if (agent.emoji) return <span style={{ fontSize: 13, lineHeight: 1, flexShrink: 0 }}>{agent.emoji}</span>;
+              return <Bot size={14} strokeWidth={1.5} color={t.faint} style={{ flexShrink: 0 }} />;
             })()}
           </button>
         </div>
