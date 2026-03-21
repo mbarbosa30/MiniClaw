@@ -1559,7 +1559,7 @@ export function EconomyView() {
                 <EcoRow label="Supply" value={token.totalSupply.toLocaleString()} />
               )}
               {!token?.deployed && (
-                <p style={{ fontSize: 11, color: t.faint, marginTop: 10, lineHeight: 1.5 }}>Token deployment is managed by the agent autonomously as it grows.</p>
+                <p style={{ fontSize: 11, color: t.faint, marginTop: 10, lineHeight: 1.5 }}>No token yet. Token deployment is a Phase 3 advanced action managed autonomously by the agent.</p>
               )}
             </EcoCard>
 
