@@ -236,7 +236,6 @@ function PersonalizeStep({
   const [advancedOpen, setAdvancedOpen] = useState(() => hasAdvancedData);
 
   const showAudienceField = AUDIENCE_AWARE_PERSONAS.has(persona.id);
-  const showAdvancedToggle = showAudienceField || true;
 
   const handleLaunchClick = () => {
     if (!agentCustomName.trim()) {
@@ -574,8 +573,7 @@ function PersonalizeStep({
             </div>
 
             {/* Advanced section toggle */}
-            {showAdvancedToggle && (
-              <div>
+            <div>
                 <div style={{ height: 1, background: t.divider }} />
                 <button
                   onClick={() => setAdvancedOpen(v => !v)}
@@ -675,7 +673,7 @@ function PersonalizeStep({
                   )}
                 </AnimatePresence>
               </div>
-            )}
+            </div>
 
             {/* API error */}
             {error && (
