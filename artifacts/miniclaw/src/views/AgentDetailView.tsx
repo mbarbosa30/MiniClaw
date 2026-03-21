@@ -4,7 +4,7 @@ import { useRouter } from '@/lib/store';
 import { useTheme } from '@/lib/theme';
 import { Button } from '@/components/ui';
 import { MoreHorizontal } from 'lucide-react';
-import { apiFetch, apiFetchWithHeaders, ApiError } from '@/lib/api-client';
+import { apiFetch, apiFetchWithHeaders, apiFetchStream, ApiError } from '@/lib/api-client';
 import type { Agent, ChatMessage } from '@/types';
 
 const MONO = {
@@ -692,11 +692,146 @@ function ChatTab({
       { role: 'assistant' as const, content: '', _ts: undefined },
     ]);
     setIsStreaming(true);
+    setChips([]);
 
+    const body: { message: string; conversationId?: number } = { message: userMsg };
+    if (activeConversationId) body.conversationId = Number(activeConversationId);
+
+    // ─── Primary: SSE streaming ──────────────────────────────────────────
+    let sseSucceeded = false;
     try {
-      const body: { message: string; conversationId?: number } = { message: userMsg };
-      if (activeConversationId) body.conversationId = Number(activeConversationId);
+      const abortCtrl = new AbortController();
 
+      const sseRes = await apiFetchStream(
+        `/api/selfclaw/v1/hosted-agents/${agent.id}/chat`,
+        { method: 'POST', body: JSON.stringify(body), signal: abortCtrl.signal },
+      );
+
+      parseQuotaHeaders(sseRes.headers);
+
+      // 4s timeout — abort if no data arrives
+      let firstDataReceived = false;
+      const sseTimeout = setTimeout(() => {
+        if (!firstDataReceived) abortCtrl.abort();
+      }, 4000);
+
+      let sseDone = false;
+      let sseEventError = false;
+      const reader = sseRes.body!.getReader();
+      const decoder = new TextDecoder();
+      let buf = '';
+
+      try {
+        outer: while (true) {
+          let chunk: ReadableStreamReadResult<Uint8Array>;
+          try {
+            chunk = await reader.read();
+          } catch {
+            break; // network error or abort — fall through to poll
+          }
+          if (chunk.done) break;
+
+          if (!firstDataReceived) {
+            firstDataReceived = true;
+            clearTimeout(sseTimeout);
+          }
+
+          buf += decoder.decode(chunk.value, { stream: true });
+          const lines = buf.split('\n');
+          buf = lines.pop() ?? '';
+
+          for (const line of lines) {
+            if (!line.startsWith('data: ')) continue;
+            const jsonStr = line.slice(6).trim();
+            if (!jsonStr) continue;
+            let evt: { content?: string; done?: boolean; conversationId?: number; suggestedChips?: string[]; error?: string };
+            try { evt = JSON.parse(jsonStr); } catch { continue; }
+
+            if (evt.content !== undefined) {
+              setMessages(prev => {
+                const msgs = [...prev];
+                const last = msgs[msgs.length - 1];
+                if (last?.role === 'assistant') {
+                  msgs[msgs.length - 1] = { ...last, content: last.content + evt.content };
+                }
+                return msgs;
+              });
+            }
+
+            if (evt.done) {
+              sseDone = true;
+              if (evt.conversationId != null && !activeConversationId) {
+                setActiveConversationId(String(evt.conversationId));
+                refetchConversations();
+              }
+              setChips(evt.suggestedChips ?? []);
+              setMessages(prev => {
+                const msgs = [...prev];
+                const last = msgs[msgs.length - 1];
+                if (last?.role === 'assistant') {
+                  msgs[msgs.length - 1] = { ...last, _ts: Date.now() };
+                }
+                setCachedMessages(agent.id, msgs);
+                return msgs;
+              });
+            }
+
+            if (evt.error) {
+              sseEventError = true;
+              setMessages(prev => [
+                ...prev.slice(0, -1),
+                { role: 'system' as const, content: evt.error!, _ts: Date.now() },
+              ]);
+            }
+
+            if (sseDone || sseEventError) break outer;
+          }
+        }
+      } finally {
+        clearTimeout(sseTimeout);
+        reader.releaseLock();
+      }
+
+      if (sseDone || sseEventError) {
+        sseSucceeded = true;
+      } else if (firstDataReceived) {
+        // Stream ended without a done event but had partial content — seal it
+        setMessages(prev => {
+          const msgs = [...prev];
+          const last = msgs[msgs.length - 1];
+          if (last?.role === 'assistant' && last.content) {
+            msgs[msgs.length - 1] = { ...last, _ts: Date.now() };
+            setCachedMessages(agent.id, msgs);
+          }
+          return msgs;
+        });
+        sseSucceeded = true;
+      }
+      // else: timeout aborted, no data received — fall through to poll
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 429) {
+        const resetIn = fmtResetAt(quota?.resetAt);
+        setMessages(prev => [
+          ...prev.slice(0, -1),
+          {
+            role: 'system' as const,
+            content: `Daily token limit reached.${resetIn ? ` Resets in ${resetIn}.` : ''} Try compacting the conversation to free up tokens.`,
+            _ts: Date.now(),
+          },
+        ]);
+        setIsStreaming(false);
+        return;
+      }
+      // Other errors: fall through to poll
+    }
+
+    if (sseSucceeded) {
+      setIsStreaming(false);
+      return;
+    }
+
+    // ─── Fallback: POST → poll ───────────────────────────────────────────
+    try {
       const postRes = await apiFetchWithHeaders<{
         messageId: string;
         conversationId: number;
@@ -720,7 +855,7 @@ function ChatTab({
       setMessages(prev => [
         ...prev.slice(0, -1),
         {
-          role: 'system',
+          role: 'system' as const,
           content: is429
             ? `Daily token limit reached.${resetIn ? ` Resets in ${resetIn}.` : ''} Try compacting the conversation to free up tokens.`
             : 'Something went wrong. Please try again.',

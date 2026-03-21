@@ -95,3 +95,27 @@ export async function apiFetchWithHeaders<T>(path: string, options?: RequestInit
   const data = await response.json();
   return { data, headers: response.headers, status: response.status };
 }
+
+export async function apiFetchStream(path: string, options?: RequestInit): Promise<Response> {
+  const headers = buildHeaders(options?.headers, options?.body);
+  headers.set('Accept', 'text/event-stream');
+  const response = await fetch(`${BASE_URL}${path}`, { ...options, headers });
+
+  if (response.status === 401) {
+    await dispatchUnauthorized(response);
+    throw new Error('Unauthorized');
+  }
+
+  if (!response.ok) {
+    let errorMessage = 'An error occurred';
+    try {
+      const data = await response.json();
+      errorMessage = data.message || data.error || response.statusText;
+    } catch {
+      errorMessage = response.statusText;
+    }
+    throw new ApiError(errorMessage, response.status);
+  }
+
+  return response;
+}
