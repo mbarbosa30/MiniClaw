@@ -51,26 +51,41 @@ export interface AgentListResult {
   summary?: AgentListSummary;
 }
 
-type RawAgent = Agent & { currentActivity?: string | null };
+type RawAgent = Agent & {
+  currentActivity?: string | null;
+  pendingTaskCount?: number | null;
+  recentActivity?: string | null;
+  phase?: string | null;
+  phaseProgress?: number | null;
+};
 
 function normalizeListAgent(agent: RawAgent): Agent {
-  // currentActivity may arrive as a top-level field on list responses;
-  // the detail endpoint nests it inside stats. Merge into stats so
-  // HomeView's agent.stats?.currentActivity reference works either way.
-  const topLevel = agent.currentActivity ?? null;
-  if (topLevel != null) {
+  // Determine the best activity string — prefer currentActivity, fall back to recentActivity
+  const activityFromTop = agent.currentActivity ?? agent.recentActivity ?? null;
+
+  // Merge activity into stats so HomeView's agent.stats?.currentActivity reference works either way.
+  if (activityFromTop != null) {
     if (agent.stats) {
-      // Prefer the nested value; fill from top-level only when absent.
       if (!agent.stats.currentActivity) {
-        agent.stats = { ...agent.stats, currentActivity: topLevel };
+        agent.stats = { ...agent.stats, currentActivity: activityFromTop };
       }
     } else {
-      // No stats object from the list endpoint — create a stub.
-      // Counters are 0 as placeholders; real values come from useTasks
-      // (pendingCount) and the detail endpoint fetch (totalActionsCount etc).
-      agent.stats = { totalActionsCount: 0, pendingTasksCount: 0, memoriesCount: 0, currentActivity: topLevel };
+      agent.stats = { totalActionsCount: 0, pendingTasksCount: 0, memoriesCount: 0, currentActivity: activityFromTop };
     }
   }
+
+  // Merge inline pendingTaskCount → stats.pendingTasksCount so AgentRow can read it from stats
+  const inlinePending = agent.pendingTaskCount ?? null;
+  if (inlinePending != null) {
+    if (agent.stats) {
+      if (!agent.stats.pendingTasksCount) {
+        agent.stats = { ...agent.stats, pendingTasksCount: inlinePending };
+      }
+    } else {
+      agent.stats = { totalActionsCount: 0, pendingTasksCount: inlinePending, memoriesCount: 0, currentActivity: null };
+    }
+  }
+
   return agent as Agent;
 }
 

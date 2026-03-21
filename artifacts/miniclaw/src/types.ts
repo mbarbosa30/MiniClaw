@@ -94,6 +94,12 @@ export interface Agent {
   // Spawning pipeline state
   spawningStatus?: 'researching' | 'training' | 'ready' | 'failed' | null;
   spawningProgress?: SpawningProgressStep[];
+
+  // Enriched list fields — returned inline by GET /v1/hosted-agents gateway endpoint
+  phase?: string | null;
+  phaseProgress?: number | null;
+  pendingTaskCount?: number | null;
+  recentActivity?: string | null;
 }
 
 // GET /:id/spawning-status — live research pipeline progress

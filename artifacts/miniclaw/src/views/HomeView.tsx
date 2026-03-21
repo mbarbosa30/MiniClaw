@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { Plus, MoreHorizontal, TrendingUp, Check, X, Bot } from 'lucide-react';
 import { useTheme } from '@/lib/theme';
 import { useRouter, useAppStore } from '@/lib/store';
-import { useAgents, useAwareness, useTasks, useAllTaskSummaries, useResolveTask } from '@/hooks/use-agents';
+import { useAgents, useAllTaskSummaries, useResolveTask } from '@/hooks/use-agents';
 import { StateIndicator, agentVisualState, STATE_COLOR, STATE_LABEL } from '@/components/StateIndicator';
 import { resolveIcon } from '@/lib/agent-icon';
 import { PERSONAS } from '@/lib/personas';
@@ -245,12 +245,10 @@ function AgentRow({
   const color = STATE_COLOR[state];
   const isIdle = state === 'idle';
 
-  const { data: awareness } = useAwareness(agent.id);
   const isSpawning = agent.spawningStatus === 'researching' || agent.spawningStatus === 'training';
-  const { data: pendingTasks } = useTasks(agent.id, 'pending');
-  const pendingCount = pendingTasks?.length ?? 0;
+  const pendingCount = agent.stats?.pendingTasksCount ?? agent.pendingTaskCount ?? 0;
 
-  const liveActivity = agent.stats?.currentActivity?.trim() || null;
+  const liveActivity = agent.stats?.currentActivity?.trim() || agent.recentActivity?.trim() || null;
   const activity =
     liveActivity ??
     (agent.description ? agent.description.slice(0, 52) + (agent.description.length > 52 ? '…' : '') : null);
@@ -263,7 +261,7 @@ function AgentRow({
   if (agent.pocScore != null && agent.pocScore.totalScore > 0) statSegments.push(`PoC ${agent.pocScore.totalScore}`);
   if (agent.celoBalance != null && agent.celoBalance > 0) statSegments.push(`${agent.celoBalance} CELO`);
 
-  const pColor = awareness ? phaseColor(awareness.phase) : null;
+  const pColor = agent.phase ? phaseColor(agent.phase) : null;
 
   return (
     <motion.div
@@ -375,7 +373,7 @@ function AgentRow({
             {seg}
           </span>
         ))}
-        {awareness && pColor ? (
+        {agent.phase && pColor ? (
           <span style={{
             marginLeft: 'auto',
             flexShrink: 0,
@@ -387,19 +385,8 @@ function AgentRow({
             color: pColor,
             whiteSpace: 'nowrap',
           }}>
-            {awareness.label || awareness.phase || 'phase'}
+            {agent.phase}
           </span>
-        ) : !awareness ? (
-          <span style={{
-            marginLeft: 'auto',
-            flexShrink: 0,
-            display: 'inline-block',
-            width: 60,
-            height: 8,
-            borderRadius: 2,
-            background: t.surface,
-            opacity: 0.5,
-          }} />
         ) : null}
       </div>
     </motion.div>
