@@ -79,11 +79,21 @@ export function useAgents() {
       // The live API returns { agents: [], summary: {} } or a plain Agent[].
       // Tolerate both shapes; extract summary when present.
       const raw = await apiFetch<{ agents: RawAgent[]; summary?: AgentListSummary } | RawAgent[]>('/api/selfclaw/v1/hosted-agents');
+      const computeFallbackSummary = (agents: Agent[]): AgentListSummary => ({
+        activeCount: agents.filter(a => a.status === 'active').length,
+        totalCount: agents.length,
+        totalTokens: agents.reduce((sum, a) => sum + (a.llmTokensUsedToday ?? 0), 0),
+        totalCostUsd: agents.reduce((sum, a) => sum + (a.tokenCostUsd ?? 0), 0),
+      });
+
       if (Array.isArray(raw)) {
-        return { agents: raw.map(normalizeListAgent) };
+        const agents = raw.map(normalizeListAgent);
+        return { agents, summary: computeFallbackSummary(agents) };
       }
       const envelope = raw as { agents: RawAgent[]; summary?: AgentListSummary };
-      return { agents: (envelope.agents ?? []).map(normalizeListAgent), summary: envelope.summary };
+      const agents = (envelope.agents ?? []).map(normalizeListAgent);
+      const summary = envelope.summary ?? computeFallbackSummary(agents);
+      return { agents, summary };
     },
     refetchInterval: 12_000,
     refetchIntervalInBackground: false,
