@@ -23,6 +23,7 @@ import type {
   GrowthSummary,
   TelegramStatus,
   TelegramSettingsPayload,
+  CompactConversationResponse,
 } from '@/types';
 
 export type { Agent, AgentListSummary, PersonaTemplate, SkillDef };
@@ -452,5 +453,32 @@ export function useAwareness(agentId: string | number | undefined) {
       ),
     enabled: agentId != null && agentId !== '',
     staleTime: 60_000,
+  });
+}
+
+// --- COMPACT CONVERSATION ---
+
+// POST /:id/conversations/compact
+export function useCompactConversation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      agentId,
+      conversationId,
+    }: {
+      agentId: string | number;
+      conversationId: string | number;
+    }) =>
+      apiFetch<CompactConversationResponse>(
+        `/api/selfclaw/v1/hosted-agents/${sid(agentId)}/conversations/compact`,
+        {
+          method: 'POST',
+          body: JSON.stringify({ conversationId: Number(conversationId) }),
+        }
+      ),
+    onSuccess: (_, variables) => {
+      qc.invalidateQueries({ queryKey: ['messages', qid(variables.agentId)] });
+      qc.invalidateQueries({ queryKey: ['conversations', qid(variables.agentId)] });
+    },
   });
 }

@@ -341,6 +341,16 @@ export interface AgentAwareness {
   };
 }
 
+// POST /:id/conversations/compact
+export interface CompactConversationResponse {
+  success: boolean;
+  conversationId: number;
+  messagesCompacted: number;
+  totalMessages: number;
+  estimatedTokensSaved: number;
+  summariesTotal: number;
+}
+
 export interface TelegramStatus {
   connected: boolean;
   botUsername?: string;

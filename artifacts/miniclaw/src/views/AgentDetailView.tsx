@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { useAgent, useConversations, useMessages, useAwareness } from '@/hooks/use-agents';
+import { useAgent, useConversations, useMessages, useAwareness, useCompactConversation } from '@/hooks/use-agents';
 import { useRouter } from '@/lib/store';
 import { useTheme } from '@/lib/theme';
 import { Button } from '@/components/ui';
@@ -221,6 +221,24 @@ function AwarenessSection({ agentId }: { agentId: string }) {
 interface QuotaState {
   used: number;
   limit: number;
+  resetAt?: string;
+}
+
+function fmtResetAt(resetAt?: string): string {
+  if (!resetAt) return '';
+  try {
+    const d = new Date(resetAt);
+    if (isNaN(d.getTime())) return '';
+    const now = new Date();
+    const diffMs = d.getTime() - now.getTime();
+    if (diffMs <= 0) return 'soon';
+    const hrs = Math.floor(diffMs / 3_600_000);
+    const mins = Math.floor((diffMs % 3_600_000) / 60_000);
+    if (hrs > 0) return `${hrs}h ${mins}m`;
+    return `${mins}m`;
+  } catch {
+    return '';
+  }
 }
 
 function QuotaBar({ quota }: { quota: QuotaState | null }) {
@@ -228,31 +246,61 @@ function QuotaBar({ quota }: { quota: QuotaState | null }) {
   if (!quota || quota.limit <= 0) return null;
 
   const pct = Math.min(quota.used / quota.limit, 1);
-  const isWarning = pct >= 0.8;
+  const isExhausted = pct >= 1;
+  const isWarning = !isExhausted && pct >= 0.8;
+  const barColor = isExhausted ? '#ef4444' : isWarning ? '#f59e0b' : t.faint;
+
+  const fmt = (n: number) => n.toLocaleString();
+  const resetIn = fmtResetAt(quota.resetAt);
 
   return (
-    <div style={{ marginTop: 6, paddingBottom: 6 }}>
+    <div style={{ marginTop: 6, paddingBottom: 4 }}>
+      {/* Token label */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 3 }}>
+        <span style={{
+          fontFamily: 'ui-monospace, Menlo, monospace',
+          fontSize: 8,
+          color: isExhausted ? '#ef4444' : isWarning ? '#f59e0b' : t.faint,
+          letterSpacing: '0.04em',
+        }}>
+          {fmt(quota.used)} / {fmt(quota.limit)} tokens
+        </span>
+        {resetIn && (
+          <span style={{
+            fontFamily: 'ui-monospace, Menlo, monospace',
+            fontSize: 8,
+            color: t.faint,
+            letterSpacing: '0.04em',
+          }}>
+            resets in {resetIn}
+          </span>
+        )}
+      </div>
+      {/* Progress bar */}
       <div style={{ height: 2, background: t.surface, borderRadius: 1, overflow: 'hidden' }}>
         <div
           style={{
             height: '100%',
             width: `${pct * 100}%`,
-            background: isWarning ? '#f59e0b' : t.faint,
+            background: barColor,
             borderRadius: 1,
             transition: 'width 0.4s ease',
           }}
         />
       </div>
-      {isWarning && (
+      {/* Warning / exhausted text */}
+      {(isWarning || isExhausted) && (
         <p style={{
           fontFamily: 'ui-monospace, Menlo, monospace',
           fontSize: 8,
-          color: '#f59e0b',
-          letterSpacing: '0.05em',
+          color: barColor,
+          letterSpacing: '0.04em',
           marginTop: 3,
           textAlign: 'center',
         }}>
-          Almost at limit — upgrade for more
+          {isExhausted
+            ? `Daily limit reached${resetIn ? ` — resets in ${resetIn}` : ''}`
+            : 'Approaching daily limit'}
         </p>
       )}
     </div>
@@ -392,12 +440,20 @@ export function AgentDetailView() {
   const newChatAt: string | undefined = currentView.params?.newChatAt;
   const briefContext: string | undefined = currentView.params?.briefContext;
   const { data: agent, isLoading, isError, error, refetch } = useAgent(id);
+  const { data: awareness } = useAwareness(id);
   const [newChatTrigger, setNewChatTrigger] = useState(0);
   const [quota, setQuota] = useState<QuotaState | null>(null);
 
   useEffect(() => {
     if (newChatAt) setNewChatTrigger(n => n + 1);
   }, [newChatAt]);
+
+  useEffect(() => {
+    if (awareness?.quota && quota == null) {
+      const q = awareness.quota;
+      setQuota({ used: q.tokensUsed, limit: q.tokensLimit, resetAt: q.resetAt });
+    }
+  }, [awareness]);
 
   if (isLoading) {
     return (
@@ -456,6 +512,7 @@ export function AgentDetailView() {
           agentName={agentName}
           newChatTrigger={newChatTrigger}
           briefContext={briefContext}
+          quota={quota}
           onQuotaUpdate={setQuota}
         />
       </div>
@@ -482,12 +539,14 @@ function ChatTab({
   agentName,
   newChatTrigger,
   briefContext,
+  quota,
   onQuotaUpdate,
 }: {
   agent: Agent;
   agentName: string;
   newChatTrigger: number;
   briefContext?: string;
+  quota: QuotaState | null;
   onQuotaUpdate: (q: QuotaState | null) => void;
 }) {
   const t = useTheme();
@@ -507,7 +566,9 @@ function ChatTab({
   const [input, setInput] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
   const [chips, setChips] = useState<string[]>(agent.suggestedChips ?? []);
+  const [compactBanner, setCompactBanner] = useState<{ tokensSaved: number } | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
+  const compact = useCompactConversation();
 
   useEffect(() => {
     if (conversations && conversations.length > 0 && !activeConversationId) {
@@ -548,9 +609,22 @@ function ChatTab({
     const used = parseInt(headers.get('X-Quota-Used') ?? '', 10);
     const limit = parseInt(headers.get('X-Quota-Limit') ?? '', 10);
     if (!isNaN(used) && !isNaN(limit) && limit > 0) {
-      onQuotaUpdate({ used, limit });
+      const resetAt = headers.get('X-Quota-Reset-At') ?? quota?.resetAt;
+      onQuotaUpdate({ used, limit, resetAt });
     }
   };
+
+  const handleCompact = useCallback(async () => {
+    if (!activeConversationId || compact.isPending) return;
+    try {
+      const res = await compact.mutateAsync({ agentId: agent.id, conversationId: activeConversationId });
+      setCompactBanner({ tokensSaved: res.estimatedTokensSaved });
+      setTimeout(() => setCompactBanner(null), 5000);
+      setHistoryLoaded(false);
+    } catch {
+      // silent — compact is a best-effort feature
+    }
+  }, [activeConversationId, agent.id, compact]);
 
   const pollForResult = async (messageId: string) => {
     const maxAttempts = 15;
@@ -601,7 +675,22 @@ function ChatTab({
         body: JSON.stringify(body),
       });
 
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      if (!res.ok) {
+        if (res.status === 429) {
+          const resetIn = fmtResetAt(quota?.resetAt);
+          setMessages(prev => [
+            ...prev.slice(0, -1),
+            {
+              role: 'system',
+              content: `Daily token limit reached.${resetIn ? ` Resets in ${resetIn}.` : ''} Try compacting the conversation to free up tokens.`,
+              _ts: Date.now(),
+            },
+          ]);
+          setIsStreaming(false);
+          return;
+        }
+        throw new Error(`HTTP ${res.status}`);
+      }
       parseQuotaHeaders(res.headers);
 
       const reader = res.body?.getReader();
@@ -729,16 +818,23 @@ function ChatTab({
           setActiveConversationId(String(res2.conversationId));
           refetchConversations();
         }
-      } catch {
+      } catch (err) {
+        const is429 = err instanceof ApiError && err.status === 429;
+        const resetIn = fmtResetAt(quota?.resetAt);
         setMessages(prev => [
           ...prev.slice(0, -1),
-          { role: 'system', content: 'Something went wrong. Please try again.' }
+          {
+            role: 'system',
+            content: is429
+              ? `Daily token limit reached.${resetIn ? ` Resets in ${resetIn}.` : ''} Try compacting the conversation to free up tokens.`
+              : 'Something went wrong. Please try again.',
+          },
         ]);
       }
     } finally {
       setIsStreaming(false);
     }
-  }, [input, isStreaming, activeConversationId, agent.id]);
+  }, [input, isStreaming, activeConversationId, agent.id, quota]);
 
   const agentLabel = agentName.toUpperCase();
 
@@ -851,6 +947,30 @@ function ChatTab({
         </div>
       )}
 
+      {/* Compact success banner */}
+      {compactBanner && (
+        <div style={{
+          flexShrink: 0,
+          margin: '0 32px 4px',
+          padding: '6px 12px',
+          background: t.surface,
+          borderRadius: 6,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+        }}>
+          <span style={{ fontFamily: 'ui-monospace, Menlo, monospace', fontSize: 9, color: '#22c55e', letterSpacing: '0.04em' }}>
+            Saved ~{compactBanner.tokensSaved.toLocaleString()} tokens
+          </span>
+          <button
+            onClick={() => setCompactBanner(null)}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: t.faint, fontSize: 12, padding: 0, lineHeight: 1 }}
+          >
+            ×
+          </button>
+        </div>
+      )}
+
       {/* Input */}
       <div style={{ flexShrink: 0, borderTop: `1px solid ${t.divider}`, padding: '12px 32px 20px' }}>
         <div style={{ display: 'flex', alignItems: 'flex-end', gap: 16 }}>
@@ -877,6 +997,30 @@ function ChatTab({
             }}
             rows={1}
           />
+          {/* Compact button — visible when conversation is long enough */}
+          {activeConversationId && messages.length >= 10 && !isStreaming && (
+            <button
+              onClick={handleCompact}
+              disabled={compact.isPending}
+              title="Compact conversation to save tokens"
+              style={{
+                fontFamily: 'ui-monospace, Menlo, monospace',
+                fontSize: 8,
+                letterSpacing: '0.06em',
+                textTransform: 'uppercase',
+                color: compact.isPending ? t.faint : t.label,
+                background: 'none',
+                border: `1px solid ${t.divider}`,
+                borderRadius: 4,
+                padding: '3px 6px',
+                cursor: compact.isPending ? 'default' : 'pointer',
+                flexShrink: 0,
+                transition: 'color 0.15s, border-color 0.15s',
+              }}
+            >
+              {compact.isPending ? '…' : 'compact'}
+            </button>
+          )}
           <button
             onClick={() => handleSend()}
             disabled={!input.trim() || isStreaming}
