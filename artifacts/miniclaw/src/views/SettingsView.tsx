@@ -1,5 +1,6 @@
 import { useTheme } from '@/lib/theme';
 import { useAuthStore, useAppStore, useRouter } from '@/lib/store';
+import type { UserProfile } from '@/lib/store';
 import { useLogout } from '@/hooks/use-auth';
 import { useAgents, useTelegramStatus, useUpdateTelegramSettings } from '@/hooks/use-agents';
 import { formatAddress } from '@/lib/utils';
@@ -104,6 +105,78 @@ function ActionRow({ label, color, onClick }: { label: string; color?: string; o
         {label}
       </button>
     </div>
+  );
+}
+
+function ProfileSection() {
+  const t = useTheme();
+  const userProfile = useAppStore((s) => s.userProfile);
+  const setUserProfile = useAppStore((s) => s.setUserProfile);
+
+  const handleChange = (field: keyof UserProfile, value: string) => {
+    setUserProfile({ ...userProfile, [field]: value });
+  };
+
+  const inputStyle: React.CSSProperties = {
+    fontSize: 12,
+    color: t.text,
+    background: 'none',
+    border: 'none',
+    outline: 'none',
+    textAlign: 'right',
+    width: '55%',
+    letterSpacing: '-0.01em',
+    fontFamily: 'inherit',
+    padding: 0,
+  };
+
+  const placeholderMap = {
+    name: 'e.g. Amara',
+    country: 'e.g. Nigeria, Kenya',
+    goal: 'e.g. freelancing on Fiverr',
+  };
+
+  return (
+    <>
+      <SectionLabel>Profile</SectionLabel>
+      <Row label="Name">
+        <input
+          type="text"
+          value={userProfile.name}
+          placeholder={placeholderMap.name}
+          onChange={(e) => handleChange('name', e.target.value)}
+          style={inputStyle}
+        />
+      </Row>
+      <Row label="Location">
+        <input
+          type="text"
+          value={userProfile.country}
+          placeholder={placeholderMap.country}
+          onChange={(e) => handleChange('country', e.target.value)}
+          style={inputStyle}
+        />
+      </Row>
+      <Row label="Current focus">
+        <input
+          type="text"
+          value={userProfile.goal}
+          placeholder={placeholderMap.goal}
+          onChange={(e) => handleChange('goal', e.target.value)}
+          style={inputStyle}
+        />
+      </Row>
+      <p style={{
+        fontSize: 10,
+        color: t.faint,
+        lineHeight: 1.5,
+        letterSpacing: '-0.005em',
+        paddingTop: 6,
+        paddingBottom: 4,
+      }}>
+        Pre-fills when you create a new agent
+      </p>
+    </>
   );
 }
 
@@ -240,6 +313,9 @@ export function SettingsView() {
       }}>
         Settings
       </p>
+
+      {/* ── PROFILE ── */}
+      <ProfileSection />
 
       {/* ── APPEARANCE ── */}
       <SectionLabel>Appearance</SectionLabel>

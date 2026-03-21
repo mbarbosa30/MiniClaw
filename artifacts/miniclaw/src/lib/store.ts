@@ -103,6 +103,37 @@ function writeLocalBool(key: string, v: boolean): void {
   try { localStorage.setItem(key, v ? '1' : '0'); } catch { /* noop */ }
 }
 
+// --- USER PROFILE ---
+
+export interface UserProfile {
+  name: string;
+  country: string;
+  goal: string;
+}
+
+const PROFILE_KEY = 'miniclaw-user-profile';
+
+function readProfile(): UserProfile {
+  try {
+    const raw = localStorage.getItem(PROFILE_KEY);
+    if (!raw) return { name: '', country: '', goal: '' };
+    const parsed = JSON.parse(raw);
+    return {
+      name: parsed.name ?? '',
+      country: parsed.country ?? '',
+      goal: parsed.goal ?? '',
+    };
+  } catch {
+    return { name: '', country: '', goal: '' };
+  }
+}
+
+function writeProfile(profile: UserProfile): void {
+  try { localStorage.setItem(PROFILE_KEY, JSON.stringify(profile)); } catch { /* noop */ }
+}
+
+// --- APP STORE ---
+
 interface AppStore {
   darkMode: boolean;
   setDarkMode: (v: boolean) => void;
@@ -111,6 +142,8 @@ interface AppStore {
   setHasSeenOnboard: (v: boolean) => void;
   activityAlerts: boolean;
   toggleActivityAlerts: () => void;
+  userProfile: UserProfile;
+  setUserProfile: (profile: UserProfile) => void;
 }
 
 export const useAppStore = create<AppStore>((set) => ({
@@ -128,4 +161,9 @@ export const useAppStore = create<AppStore>((set) => ({
     writeLocalBool('miniclaw-activity-alerts', next);
     return { activityAlerts: next };
   }),
+  userProfile: readProfile(),
+  setUserProfile: (profile) => {
+    writeProfile(profile);
+    set({ userProfile: profile });
+  },
 }));

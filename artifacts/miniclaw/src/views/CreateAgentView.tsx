@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTemplates, useCreateAgent, useUpdateSoul, useAddKnowledge } from '@/hooks/use-agents';
 import { apiFetch } from '@/lib/api-client';
@@ -1207,15 +1207,24 @@ export function CreateAgentView() {
   const pop = useRouter(s => s.pop);
   const push = useRouter(s => s.push);
   const fromOnboarding = useRouter(s => s.currentView.params?.fromOnboarding === 'true');
-  const { setHasSeenOnboard } = useAppStore();
+  const { setHasSeenOnboard, userProfile, setUserProfile } = useAppStore();
 
   type Step = 'persona' | 'personalize';
   const [step, setStep] = useState<Step>('persona');
   const [selectedPersona, setSelectedPersona] = useState<PersonaConfig | null>(null);
 
-  const [userName, setUserName] = useState('');
-  const [userCountry, setUserCountry] = useState('');
-  const [userGoal, setUserGoal] = useState('');
+  const [userName, setUserName] = useState(() => userProfile.name);
+  const [userCountry, setUserCountry] = useState(() => userProfile.country);
+  const [userGoal, setUserGoal] = useState(() => userProfile.goal);
+
+  const shuffledPersonas = useMemo(() => {
+    const arr = [...PERSONAS];
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }, []);
   const [userHumorStyle, setUserHumorStyle] = useState<HumorStyle>('straight');
   const [userProjects, setUserProjects] = useState<ProjectEntry[]>([]);
 
@@ -1379,6 +1388,9 @@ export function CreateAgentView() {
       }
 
       setHasSeenOnboard(true);
+      if (info.name.trim() || info.country.trim() || info.goal.trim()) {
+        setUserProfile({ name: info.name.trim(), country: info.country.trim(), goal: info.goal.trim() });
+      }
 
       const briefContext = buildBriefContext(persona, info, projects);
 
@@ -1502,7 +1514,7 @@ export function CreateAgentView() {
         <div style={{ height: 1, background: t.divider, flexShrink: 0 }} />
 
         <div className="no-scrollbar" style={{ flex: 1, overflowY: 'auto' }}>
-          {PERSONAS.map((persona, i) => (
+          {shuffledPersonas.map((persona, i) => (
             <OnboardingPersonaRow
               key={persona.id}
               persona={persona}
