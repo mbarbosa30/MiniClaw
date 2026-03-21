@@ -1,0 +1,20 @@
+What & Why
+The external miniapp at miniclawapp.replit.app consumes the GET /v1/hosted-agents list endpoint, but several fields it needs are missing from the response. The highest-value gap is runtimeStatus — without it, all agents always appear "active" and the animated thinking/running indicators never fire. Secondary gaps include currentActivity (agent card subtitle), pocScore, and celoBalance.
+
+Done looks like
+The GET /v1/hosted-agents list response includes runtimeStatus ("thinking" | "running" | "idle") per agent, derived from whether a task is currently being processed by the worker
+The list response includes currentActivity per agent (same logic as the detail endpoint)
+The list response includes pocScore per agent (joined from poc_scores table)
+Quota headers (X-Quota-Tokens-Used, X-Quota-Tokens-Remaining, X-Quota-Reset) are returned on the poll result endpoint (GET /:id/chat/:messageId/result) — already partially there, verify and confirm
+The miniclaw-api.html docs page is updated to document the new fields in the agent list response
+No breaking changes to existing response shape (additive only)
+Out of scope
+WebSocket/SSE push channel for live runtimeStatus updates (nice-to-have for later)
+Adding memorySizeEstimate (not currently tracked as a field)
+Changes to the detail endpoint (already returns the needed fields)
+Tasks
+Add runtimeStatus derivation logic — check the agent_task_queue for tasks with status "running" or recently completed tasks (within last 30s) per agent. Map to "thinking" when a task is running, "running" when the agent was recently active (last 5 min), "idle" otherwise.
+Add currentActivity to the list endpoint — query the most recent activity per agent (same pattern as the detail endpoint at line 2087) and include it in the list response.
+Add pocScore to the list endpoint — join poc_scores table and include the latest score per agent.
+Verify quota headers on poll result endpoint — confirm X-Quota-Tokens-Used, X-Quota-Tokens-Remaining, X-Quota-Reset are set on completed poll results (line 4902-4904 already does this, just verify).
+Update miniclaw-api.html to document the new fields (runtimeStatus, currentActivity, pocScore) in the agent list response section.
