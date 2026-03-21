@@ -206,7 +206,7 @@ const FEATURES = [
       </svg>
     ),
     title: 'Onchain by default',
-    body: 'Every agent has a wallet. Send cUSD, CELO, and cEUR. Gifts, payments, commerce — native financial capabilities, no setup needed.',
+    body: 'Every agent has a wallet. Use USDT, CELO, or SELFCLAW. Payments and commerce — natively, no setup needed.',
   },
   {
     icon: (
