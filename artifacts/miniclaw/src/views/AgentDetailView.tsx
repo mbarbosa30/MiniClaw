@@ -348,18 +348,22 @@ function AgentHeader({
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 4, maxWidth: '100%', overflow: 'hidden' }}>
             <span style={{ display: 'block', width: 4, height: 4, borderRadius: '50%', background: dotColor, flexShrink: 0 }} />
-            <span style={{
-              fontSize: 9,
-              fontWeight: 300,
-              color: t.faint,
-              letterSpacing: '0.01em',
-              lineHeight: 1,
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-            }}>
-              {activityText}
-            </span>
+            {(() => {
+              const m = activityText.match(/^(.*?)\s*[·•]\s*(\d+\s*(?:s|sec|m|min|h|hr|d|day)s?\s+ago)$/i);
+              if (m) {
+                return (
+                  <span style={{ display: 'flex', alignItems: 'baseline', gap: 3, overflow: 'hidden', minWidth: 0 }}>
+                    <span style={{ fontSize: 9, fontWeight: 300, color: t.faint, letterSpacing: '0.01em', lineHeight: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m[1]}</span>
+                    <span style={{ fontSize: 8, fontWeight: 300, color: t.faint, letterSpacing: '0.01em', lineHeight: 1, whiteSpace: 'nowrap', flexShrink: 0, opacity: 0.75 }}>{m[2]}</span>
+                  </span>
+                );
+              }
+              return (
+                <span style={{ fontSize: 9, fontWeight: 300, color: t.faint, letterSpacing: '0.01em', lineHeight: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {activityText}
+                </span>
+              );
+            })()}
           </div>
         </div>
 
