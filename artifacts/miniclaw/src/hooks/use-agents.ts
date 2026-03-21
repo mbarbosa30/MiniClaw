@@ -44,19 +44,37 @@ export interface AgentListResult {
   summary?: AgentListSummary;
 }
 
+type RawAgent = Agent & { currentActivity?: string | null };
+
+function normalizeListAgent(agent: RawAgent): Agent {
+  // currentActivity may arrive as a top-level field on list responses
+  // (detail endpoint nests it inside stats). Merge into stats so
+  // HomeView's agent.stats?.currentActivity reference always works.
+  const topLevel = agent.currentActivity ?? null;
+  if (topLevel != null) {
+    agent.stats = {
+      ...(agent.stats ?? { totalActionsCount: 0, pendingTasksCount: 0, memoriesCount: 0, currentActivity: null }),
+      currentActivity: agent.stats?.currentActivity ?? topLevel,
+    };
+  }
+  return agent as Agent;
+}
+
 export function useAgents() {
   return useQuery<AgentListResult>({
     queryKey: ['agents'],
     queryFn: async () => {
       // The live API returns { agents: [], summary: {} } or a plain Agent[].
       // Tolerate both shapes; extract summary when present.
-      const raw = await apiFetch<{ agents: Agent[]; summary?: AgentListSummary } | Agent[]>('/api/selfclaw/v1/hosted-agents');
+      const raw = await apiFetch<{ agents: RawAgent[]; summary?: AgentListSummary } | RawAgent[]>('/api/selfclaw/v1/hosted-agents');
       if (Array.isArray(raw)) {
-        return { agents: raw };
+        return { agents: raw.map(normalizeListAgent) };
       }
-      const envelope = raw as { agents: Agent[]; summary?: AgentListSummary };
-      return { agents: envelope.agents ?? [], summary: envelope.summary };
+      const envelope = raw as { agents: RawAgent[]; summary?: AgentListSummary };
+      return { agents: (envelope.agents ?? []).map(normalizeListAgent), summary: envelope.summary };
     },
+    refetchInterval: 12_000,
+    refetchIntervalInBackground: false,
   });
 }
 
