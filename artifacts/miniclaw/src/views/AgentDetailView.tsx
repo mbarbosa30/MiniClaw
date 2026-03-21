@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useAgent, useConversations, useMessages, useAwareness, useCompactConversation } from '@/hooks/use-agents';
 import { useRouter } from '@/lib/store';
 import { useTheme } from '@/lib/theme';
@@ -6,6 +6,8 @@ import { Button } from '@/components/ui';
 import { MoreHorizontal } from 'lucide-react';
 import { apiFetch, apiFetchWithHeaders, apiFetchStream, ApiError } from '@/lib/api-client';
 import type { Agent, ChatMessage } from '@/types';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 const MONO = {
   fontFamily: 'ui-monospace, Menlo, monospace',
@@ -310,6 +312,68 @@ function QuotaBar({ quota }: { quota: QuotaState | null }) {
   );
 }
 
+// --- Markdown renderer for assistant messages ---
+
+function MdContent({ content, t }: { content: string; t: ReturnType<typeof useTheme> }) {
+  const components = useMemo(() => ({
+    p: ({ children }: { children?: React.ReactNode }) => (
+      <p style={{ fontSize: 14, fontWeight: 300, lineHeight: 1.6, color: t.text, margin: '0 0 6px 0' }}>{children}</p>
+    ),
+    strong: ({ children }: { children?: React.ReactNode }) => (
+      <strong style={{ fontWeight: 600, color: t.text }}>{children}</strong>
+    ),
+    em: ({ children }: { children?: React.ReactNode }) => (
+      <em style={{ fontStyle: 'italic', color: t.text }}>{children}</em>
+    ),
+    pre: ({ children }: { children?: React.ReactNode }) => (
+      <pre style={{ background: t.surface, borderRadius: 5, padding: '7px 10px', overflowX: 'auto', margin: '3px 0 6px 0', lineHeight: 1.5 }}>{children}</pre>
+    ),
+    code: ({ children, className }: { children?: React.ReactNode; className?: string }) => {
+      const isBlock = !!className;
+      return isBlock ? (
+        <code style={{ fontFamily: 'ui-monospace, Menlo, monospace', fontSize: 12, color: t.text }}>{children}</code>
+      ) : (
+        <code style={{ fontFamily: 'ui-monospace, Menlo, monospace', fontSize: 12, background: t.surface, padding: '1px 5px', borderRadius: 3, color: t.text }}>{children}</code>
+      );
+    },
+    ul: ({ children }: { children?: React.ReactNode }) => (
+      <ul style={{ paddingLeft: 18, margin: '2px 0 6px 0', color: t.text }}>{children}</ul>
+    ),
+    ol: ({ children }: { children?: React.ReactNode }) => (
+      <ol style={{ paddingLeft: 18, margin: '2px 0 6px 0', color: t.text }}>{children}</ol>
+    ),
+    li: ({ children }: { children?: React.ReactNode }) => (
+      <li style={{ fontSize: 14, fontWeight: 300, lineHeight: 1.6, color: t.text, marginBottom: 2 }}>{children}</li>
+    ),
+    h1: ({ children }: { children?: React.ReactNode }) => (
+      <h1 style={{ fontSize: 17, fontWeight: 500, lineHeight: 1.3, color: t.text, margin: '8px 0 4px 0' }}>{children}</h1>
+    ),
+    h2: ({ children }: { children?: React.ReactNode }) => (
+      <h2 style={{ fontSize: 15, fontWeight: 500, lineHeight: 1.3, color: t.text, margin: '6px 0 3px 0' }}>{children}</h2>
+    ),
+    h3: ({ children }: { children?: React.ReactNode }) => (
+      <h3 style={{ fontSize: 14, fontWeight: 500, lineHeight: 1.3, color: t.text, margin: '4px 0 2px 0' }}>{children}</h3>
+    ),
+    a: ({ children, href }: { children?: React.ReactNode; href?: string }) => (
+      <a href={href} style={{ color: t.text, textDecoration: 'underline', opacity: 0.8 }} target="_blank" rel="noopener noreferrer">{children}</a>
+    ),
+    blockquote: ({ children }: { children?: React.ReactNode }) => (
+      <blockquote style={{ borderLeft: `2px solid ${t.divider}`, margin: '4px 0 6px 0', paddingLeft: 10, color: t.faint }}>{children}</blockquote>
+    ),
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    hr: () => <hr style={{ border: 'none', borderTop: `1px solid ${t.divider}`, margin: '8px 0' }} />,
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), [t.text, t.surface, t.faint, t.divider]);
+
+  return (
+    <div style={{ fontSize: 14, fontWeight: 300, lineHeight: 1.6, color: t.text }}>
+      <ReactMarkdown remarkPlugins={[remarkGfm]} components={components as Parameters<typeof ReactMarkdown>[0]['components']}>
+        {content}
+      </ReactMarkdown>
+    </div>
+  );
+}
+
 // --- Agent Header ---
 
 function AgentHeader({
@@ -355,8 +419,22 @@ function AgentHeader({
           </button>
         </div>
 
-        {/* Center — single-line agent name */}
-        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+        {/* Center — agent name + status dot */}
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', gap: 7 }}>
+          {(() => {
+            const rts = agent.runtimeStatus;
+            const isActive = rts === 'thinking' || rts === 'running' || rts === 'waiting';
+            return (
+              <span style={{
+                width: 6,
+                height: 6,
+                borderRadius: '50%',
+                flexShrink: 0,
+                background: isActive ? '#f59e0b' : '#22c55e',
+                animation: isActive ? 'statusPulse 1.6s ease-in-out infinite' : undefined,
+              }} />
+            );
+          })()}
           <span style={{
             fontSize: 15,
             fontWeight: 300,
@@ -1010,22 +1088,17 @@ function ChatTab({
                   </span>
                 )}
               </div>
-              <p style={{
-                fontSize: 14,
-                fontWeight: 300,
-                lineHeight: 1.6,
-                color: t.text,
-                margin: 0,
-                whiteSpace: 'pre-wrap',
-              }}>
-                {isActiveStream && !m.content ? (
+              {isActiveStream && !m.content ? (
+                <p style={{ fontSize: 14, fontWeight: 300, lineHeight: 1.6, color: t.text, margin: 0 }}>
                   <span className="typing-dots" style={{ display: 'inline-flex', gap: 4, alignItems: 'center' }}>
                     <span style={{ width: 5, height: 5, borderRadius: '50%', background: t.faint, animation: 'dotPulse 1.4s ease-in-out infinite', animationDelay: '0s' }} />
                     <span style={{ width: 5, height: 5, borderRadius: '50%', background: t.faint, animation: 'dotPulse 1.4s ease-in-out infinite', animationDelay: '0.2s' }} />
                     <span style={{ width: 5, height: 5, borderRadius: '50%', background: t.faint, animation: 'dotPulse 1.4s ease-in-out infinite', animationDelay: '0.4s' }} />
                   </span>
-                ) : m.content}
-              </p>
+                </p>
+              ) : (
+                <MdContent content={m.content} t={t} />
+              )}
               {!isActiveStream && m.latencyMs !== undefined && (
                 <p style={{
                   fontFamily: 'ui-monospace, Menlo, monospace',
@@ -1190,6 +1263,7 @@ function ChatTab({
 
       <style>{`
         @keyframes dotPulse { 0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); } 40% { opacity: 1; transform: scale(1.2); } }
+        @keyframes statusPulse { 0%, 100% { opacity: 0.45; } 50% { opacity: 1; } }
         textarea::placeholder { color: ${t.faint}; opacity: 1; }
       `}</style>
     </div>
