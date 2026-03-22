@@ -93,6 +93,7 @@ function useEventNotifications() {
         qc.invalidateQueries({ queryKey: ['tasks', ev.agentId] });
         qc.invalidateQueries({ queryKey: ['tasks', ev.agentId, 'pending'] });
         qc.invalidateQueries({ queryKey: ['tasks', ev.agentId, 'all'] });
+        qc.invalidateQueries({ queryKey: ['task-summary', ev.agentId] });
       }
       // Marketplace order events — target actual query keys used in use-agents.ts
       if (['order_in_progress', 'order_delivered', 'order_completed', 'order_failed'].includes(ev.event)) {

@@ -16,9 +16,9 @@ export function AppNav() {
   const push = useRouter((s) => s.push);
   const currentView = useRouter((s) => s.currentView.name) as ViewName;
 
-  const activeTab: NavTab = TABS.some(tab => tab.id === currentView)
+  const activeTab: NavTab | null = TABS.some(tab => tab.id === currentView)
     ? (currentView as NavTab)
-    : 'home';
+    : null;
 
   return (
     <div
