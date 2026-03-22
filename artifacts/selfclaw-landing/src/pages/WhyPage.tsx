@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { Link } from 'wouter';
 
 const T = {
@@ -14,6 +15,16 @@ const MONO: React.CSSProperties = {
 };
 
 const MAX_W = 1100;
+
+function useMobile(breakpoint = 640) {
+  const [mobile, setMobile] = useState(() => window.innerWidth < breakpoint);
+  useEffect(() => {
+    const handler = () => setMobile(window.innerWidth < breakpoint);
+    window.addEventListener('resize', handler);
+    return () => window.removeEventListener('resize', handler);
+  }, [breakpoint]);
+  return mobile;
+}
 
 // ── Nav ──────────────────────────────────────────────────────────────────────
 
@@ -251,6 +262,7 @@ const EQUALIZER_EXAMPLES = [
 ];
 
 function TheEqualizer() {
+  const mobile = useMobile();
   return (
     <section style={{ borderBottom: `1px solid ${T.divider}`, background: T.surface, padding: '72px 24px' }}>
       <div style={{ maxWidth: MAX_W, margin: '0 auto' }}>
@@ -269,14 +281,14 @@ function TheEqualizer() {
           {EQUALIZER_EXAMPLES.map((e, i) => (
             <div key={e.who} style={{
               display: 'grid',
-              gridTemplateColumns: '220px 1fr',
-              gap: 32,
+              gridTemplateColumns: mobile ? '1fr' : '220px 1fr',
+              gap: mobile ? 0 : 32,
               paddingTop: i > 0 ? 28 : 0,
               paddingBottom: i < EQUALIZER_EXAMPLES.length - 1 ? 28 : 0,
               borderTop: i > 0 ? `1px solid ${T.divider}` : 'none',
               alignItems: 'start',
             }}>
-              <span style={{ fontSize: 13, fontWeight: 400, letterSpacing: '-0.01em', color: T.text, lineHeight: 1.5 }}>{e.who}</span>
+              <span style={{ fontSize: 13, fontWeight: 400, letterSpacing: '-0.01em', color: T.text, lineHeight: 1.5, marginBottom: mobile ? 6 : 0 }}>{e.who}</span>
               <p style={{ fontSize: 13, fontWeight: 300, lineHeight: 1.65, color: T.label, margin: 0 }}>{e.what}</p>
             </div>
           ))}
@@ -467,6 +479,7 @@ const ECONOMY_POINTS = [
 ];
 
 function Economy() {
+  const mobile = useMobile();
   return (
     <section style={{ borderBottom: `1px solid ${T.divider}`, background: T.surface, padding: '72px 24px' }}>
       <div style={{ maxWidth: MAX_W, margin: '0 auto' }}>
@@ -480,14 +493,14 @@ function Economy() {
           {ECONOMY_POINTS.map((p, i) => (
             <div key={p.label} style={{
               display: 'grid',
-              gridTemplateColumns: '200px 1fr',
-              gap: 32,
+              gridTemplateColumns: mobile ? '1fr' : '200px 1fr',
+              gap: mobile ? 0 : 32,
               paddingTop: i > 0 ? 28 : 0,
               paddingBottom: i < ECONOMY_POINTS.length - 1 ? 28 : 0,
               borderTop: i > 0 ? `1px solid ${T.divider}` : 'none',
               alignItems: 'start',
             }}>
-              <span style={{ fontSize: 14, fontWeight: 400, letterSpacing: '-0.01em', color: T.text }}>{p.label}</span>
+              <span style={{ fontSize: 14, fontWeight: 400, letterSpacing: '-0.01em', color: T.text, marginBottom: mobile ? 6 : 0 }}>{p.label}</span>
               <p style={{ fontSize: 14, fontWeight: 300, lineHeight: 1.65, color: T.label, margin: 0 }}>{p.body}</p>
             </div>
           ))}
