@@ -47,7 +47,11 @@ export default defineConfig({
       strict: true,
       deny: ["**/.*"],
     },
-
+    // Force no-cache so MiniPay WebView never serves stale JS bundles
+    headers: {
+      'Cache-Control': 'no-store, no-cache, must-revalidate',
+      'Pragma': 'no-cache',
+    },
   },
   preview: {
     port,

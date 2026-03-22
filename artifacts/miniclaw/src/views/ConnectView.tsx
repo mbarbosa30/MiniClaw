@@ -1,12 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { Bot, Loader2, RefreshCw } from 'lucide-react';
+import { Bot, Loader2, RefreshCw, Zap } from 'lucide-react';
 import { useAuthStore, useRouter } from '@/lib/store';
 import { useTheme } from '@/lib/theme';
 import { setWalletAddress } from '@/lib/api-client';
 
-// In dev keep a short timeout so the bypass button appears quickly,
-// but still give wagmi a chance to auto-connect (e.g. when testing in MiniPay).
 const TIMEOUT_MS = import.meta.env.DEV ? 5000 : 8000;
 
 function resolveAuthErrorMessage(raw: string): { text: string; canRetry: boolean } {
@@ -33,61 +31,85 @@ function resolveAuthErrorMessage(raw: string): { text: string; canRetry: boolean
 
 const DEV_WALLET = '0xDEADBEEF00000000000000000000000000000001';
 
-type EthDebug = {
-  exists: boolean;
-  selectedAddress: string | null;
-  isMetaMask?: boolean;
+type EthProvider = {
+  selectedAddress?: string | null;
   isMiniPay?: boolean;
+  isMetaMask?: boolean;
+  request?: (args: { method: string; params?: unknown[] }) => Promise<string[]>;
 };
 
-function getEthDebug(): EthDebug {
-  const eth = (window as { ethereum?: Record<string, unknown> }).ethereum;
-  if (!eth) return { exists: false, selectedAddress: null };
-  return {
-    exists: true,
-    selectedAddress: typeof eth.selectedAddress === 'string' ? eth.selectedAddress : null,
-    isMetaMask: Boolean(eth.isMetaMask),
-    isMiniPay: Boolean(eth.isMiniPay),
-  };
+function getEthDebug() {
+  const eth = (window as { ethereum?: EthProvider }).ethereum;
+  if (!eth) return 'eth:✗';
+  const addr = eth.selectedAddress;
+  const tag = eth.isMiniPay ? 'miniPay' : eth.isMetaMask ? 'metaMask' : 'wallet';
+  return `eth:✓ ${tag} addr:${addr ? addr.slice(0, 8) + '…' : 'null'}`;
 }
 
 export function ConnectView() {
   const t = useTheme();
-  // Always start false — let the timeout effect control when timedOut flips.
-  // Starting true in dev caused the bypass button to appear instantly, which
-  // let users click it before wagmi auto-connected, resulting in a missing
-  // wallet address and a 401 on the first API call.
   const [timedOut, setTimedOut] = useState(false);
-  const [ethDebug, setEthDebug] = useState<EthDebug>(getEthDebug);
+  const [ethDebug, setEthDebug] = useState(getEthDebug);
+  const [connectLog, setConnectLog] = useState<string | null>(null);
+  const [connecting, setConnecting] = useState(false);
 
-  // Re-read provider info when MiniPay injects asynchronously
+  const authError = useAuthStore(s => s.authError);
+  const setAuthenticated = useAuthStore(s => s.setAuthenticated);
+  const resetRoute = useRouter(s => s.reset);
+
+  // Keep debug line fresh as MiniPay may inject provider asynchronously
   useEffect(() => {
     const refresh = () => setEthDebug(getEthDebug());
     window.addEventListener('ethereum#initialized', refresh, { once: true });
-    // Also poll briefly in case the event already fired
-    const t1 = setTimeout(refresh, 200);
-    const t2 = setTimeout(refresh, 1000);
+    const t1 = setTimeout(refresh, 300);
+    const t2 = setTimeout(refresh, 1500);
     return () => {
       window.removeEventListener('ethereum#initialized', refresh);
       clearTimeout(t1);
       clearTimeout(t2);
     };
   }, []);
-  const authError = useAuthStore(s => s.authError);
-  const setAuthenticated = useAuthStore(s => s.setAuthenticated);
-  const resetRoute = useRouter(s => s.reset);
+
+  // Timeout to show manual connect / bypass options
+  useEffect(() => {
+    if (authError) return;
+    const timer = setTimeout(() => setTimedOut(true), TIMEOUT_MS);
+    return () => clearTimeout(timer);
+  }, [authError]);
+
+  // Manual connect — called by the "tap to connect" button.
+  // Runs eth_requestAccounts directly and shows the result on screen.
+  const handleManualConnect = useCallback(async () => {
+    setConnecting(true);
+    setConnectLog(null);
+    const eth = (window as { ethereum?: EthProvider }).ethereum;
+    if (!eth) {
+      setConnectLog('no wallet: window.ethereum is undefined');
+      setConnecting(false);
+      return;
+    }
+    try {
+      setConnectLog('calling eth_requestAccounts…');
+      const accounts = await eth.request?.({ method: 'eth_requestAccounts', params: [] });
+      if (accounts?.[0]) {
+        setConnectLog(`got address: ${accounts[0]}`);
+        setWalletAddress(accounts[0]);
+        setAuthenticated(accounts[0]);
+        resetRoute('home');
+      } else {
+        setConnectLog('eth_requestAccounts returned empty array');
+      }
+    } catch (err) {
+      setConnectLog(`error: ${err instanceof Error ? err.message : String(err)}`);
+    }
+    setConnecting(false);
+  }, [setAuthenticated, resetRoute]);
 
   const handleDevBypass = () => {
     setWalletAddress(DEV_WALLET);
     setAuthenticated(DEV_WALLET);
     resetRoute('home');
   };
-
-  useEffect(() => {
-    if (authError) return;
-    const timer = setTimeout(() => setTimedOut(true), TIMEOUT_MS);
-    return () => clearTimeout(timer);
-  }, [authError]);
 
   const resolved = authError ? resolveAuthErrorMessage(authError) : null;
 
@@ -155,22 +177,7 @@ export function ConnectView() {
             </p>
             {resolved.canRetry && (
               <button
-                style={{
-                  marginTop: 4,
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  fontSize: 11,
-                  fontWeight: 600,
-                  color: t.text,
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  padding: 0,
-                  fontFamily: 'ui-monospace, Menlo, monospace',
-                  letterSpacing: '0.05em',
-                  textTransform: 'uppercase',
-                }}
+                style={{ marginTop: 4, display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 600, color: t.text, background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'ui-monospace, Menlo, monospace', letterSpacing: '0.05em', textTransform: 'uppercase' }}
                 onClick={() => window.location.reload()}
               >
                 <RefreshCw size={12} />
@@ -179,20 +186,7 @@ export function ConnectView() {
             )}
             {import.meta.env.DEV && (
               <button
-                style={{
-                  marginTop: 12,
-                  padding: '8px 20px',
-                  borderRadius: 8,
-                  fontSize: 11,
-                  fontWeight: 600,
-                  color: t.bg,
-                  background: t.text,
-                  border: 'none',
-                  cursor: 'pointer',
-                  fontFamily: 'ui-monospace, Menlo, monospace',
-                  letterSpacing: '0.05em',
-                  textTransform: 'uppercase',
-                }}
+                style={{ marginTop: 12, padding: '8px 20px', borderRadius: 8, fontSize: 11, fontWeight: 600, color: t.bg, background: t.text, border: 'none', cursor: 'pointer', fontFamily: 'ui-monospace, Menlo, monospace', letterSpacing: '0.05em', textTransform: 'uppercase' }}
                 onClick={handleDevBypass}
               >
                 dev preview
@@ -203,8 +197,8 @@ export function ConnectView() {
           <>
             <Loader2 size={18} color={t.faint} style={{ animation: 'spin 1s linear infinite' }} />
             <p style={{ fontSize: 12, color: t.label, fontFamily: 'ui-monospace, Menlo, monospace', letterSpacing: '0.02em' }}>connecting wallet…</p>
-            <p style={{ fontSize: 10, color: t.faint, fontFamily: 'ui-monospace, Menlo, monospace', marginTop: 4, lineHeight: 1.6 }}>
-              eth:{ethDebug.exists ? '✓' : '✗'} · addr:{ethDebug.selectedAddress ? ethDebug.selectedAddress.slice(0,8) + '…' : 'null'} · miniPay:{ethDebug.isMiniPay ? '✓' : '✗'}
+            <p style={{ fontSize: 10, color: t.faint, fontFamily: 'ui-monospace, Menlo, monospace', marginTop: 2, lineHeight: 1.6 }}>
+              {ethDebug}
             </p>
             <motion.div
               initial={{ opacity: 0, y: 4 }}
@@ -223,47 +217,53 @@ export function ConnectView() {
         ) : (
           <>
             <p style={{ fontSize: 12, color: t.label, lineHeight: 1.7, fontFamily: 'ui-monospace, Menlo, monospace', letterSpacing: '0.01em' }}>
-              couldn't connect to wallet.
-              <br />open inside minipay and try again.
+              couldn't connect automatically.
             </p>
+            <p style={{ fontSize: 10, color: t.faint, fontFamily: 'ui-monospace, Menlo, monospace', marginTop: 2, lineHeight: 1.6 }}>
+              {ethDebug}
+            </p>
+
+            {/* Manual connect button — always visible after timeout */}
             <button
               style={{
-                marginTop: 4,
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 6,
-                fontSize: 11,
+                marginTop: 12,
+                padding: '10px 24px',
+                borderRadius: 10,
+                fontSize: 13,
                 fontWeight: 600,
-                color: t.text,
-                background: 'none',
+                color: '#fff',
+                background: '#5b4ef8',
                 border: 'none',
                 cursor: 'pointer',
-                padding: 0,
-                fontFamily: 'ui-monospace, Menlo, monospace',
-                letterSpacing: '0.05em',
-                textTransform: 'uppercase',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                opacity: connecting ? 0.6 : 1,
               }}
+              onClick={handleManualConnect}
+              disabled={connecting}
+            >
+              <Zap size={14} />
+              {connecting ? 'connecting…' : 'tap to connect wallet'}
+            </button>
+
+            {connectLog && (
+              <p style={{ fontSize: 10, color: t.label, fontFamily: 'ui-monospace, Menlo, monospace', marginTop: 8, maxWidth: 260, wordBreak: 'break-all', lineHeight: 1.6 }}>
+                {connectLog}
+              </p>
+            )}
+
+            <button
+              style={{ marginTop: 8, display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 600, color: t.text, background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'ui-monospace, Menlo, monospace', letterSpacing: '0.05em', textTransform: 'uppercase' }}
               onClick={() => window.location.reload()}
             >
               <RefreshCw size={12} />
-              retry
+              reload
             </button>
+
             {import.meta.env.DEV && (
               <button
-                style={{
-                  marginTop: 12,
-                  padding: '8px 20px',
-                  borderRadius: 8,
-                  fontSize: 11,
-                  fontWeight: 600,
-                  color: t.bg,
-                  background: t.text,
-                  border: 'none',
-                  cursor: 'pointer',
-                  fontFamily: 'ui-monospace, Menlo, monospace',
-                  letterSpacing: '0.05em',
-                  textTransform: 'uppercase',
-                }}
+                style={{ marginTop: 8, padding: '8px 20px', borderRadius: 8, fontSize: 11, fontWeight: 600, color: t.bg, background: t.text, border: 'none', cursor: 'pointer', fontFamily: 'ui-monospace, Menlo, monospace', letterSpacing: '0.05em', textTransform: 'uppercase' }}
                 onClick={handleDevBypass}
               >
                 dev preview
