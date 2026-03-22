@@ -56,17 +56,87 @@ const CALL_TYPE_LABELS: Record<string, string> = {
   guard: 'Guard',
 };
 
+// --- Aggregate usage across multiple agents ---
+
+function aggregateUsage(allStats: AgentUsageStats[]): AgentUsageStats {
+  if (allStats.length === 0) {
+    return {
+      tokens: { last24h: 0, last7d: 0, last30d: 0 },
+      cost: { last24h: 0, last7d: 0, last30d: 0 },
+      totalCalls30d: 0,
+      avgLatencyMs: 0,
+      callsByType: [],
+      callsByModel: undefined,
+    };
+  }
+
+  const tokens = { last24h: 0, last7d: 0, last30d: 0 };
+  const cost = { last24h: 0, last7d: 0, last30d: 0 };
+  let totalCalls30d = 0;
+  let weightedLatency = 0;
+  let totalCallsForLatency = 0;
+  const typeMap: Record<string, number> = {};
+  const modelMap: Record<string, { calls: number; tokens: number; provider?: string; costUsd: number }> = {};
+
+  for (const s of allStats) {
+    tokens.last24h += s.tokens.last24h;
+    tokens.last7d += s.tokens.last7d;
+    tokens.last30d += s.tokens.last30d;
+    if (s.cost) {
+      cost.last24h += s.cost.last24h;
+      cost.last7d += s.cost.last7d;
+      cost.last30d += s.cost.last30d;
+    }
+    totalCalls30d += s.totalCalls30d;
+    weightedLatency += s.avgLatencyMs * s.totalCalls30d;
+    totalCallsForLatency += s.totalCalls30d;
+
+    for (const ct of s.callsByType) {
+      typeMap[ct.type] = (typeMap[ct.type] ?? 0) + ct.calls;
+    }
+    for (const m of s.callsByModel ?? []) {
+      const existing = modelMap[m.model];
+      if (existing) {
+        existing.calls += m.calls;
+        existing.tokens += m.tokens;
+        existing.costUsd += m.costUsd ?? 0;
+      } else {
+        modelMap[m.model] = { calls: m.calls, tokens: m.tokens, provider: m.provider, costUsd: m.costUsd ?? 0 };
+      }
+    }
+  }
+
+  const callsByType = Object.entries(typeMap)
+    .sort(([, a], [, b]) => b - a)
+    .map(([type, calls]) => ({ type, calls }));
+
+  const callsByModel = Object.entries(modelMap)
+    .sort(([, a], [, b]) => b.calls - a.calls)
+    .map(([model, v]) => ({ model, calls: v.calls, tokens: v.tokens, provider: v.provider, costUsd: v.costUsd }));
+
+  return {
+    tokens,
+    cost,
+    totalCalls30d,
+    avgLatencyMs: totalCallsForLatency > 0 ? weightedLatency / totalCallsForLatency : 0,
+    callsByType,
+    callsByModel: callsByModel.length > 0 ? callsByModel : undefined,
+  };
+}
+
+// --- Per-agent usage fetcher — renders null, reports data up via callback ---
+
 function UsageFetcher({
   agentId,
   onData,
 }: {
   agentId: string | number;
-  onData: (data: AgentUsageStats | undefined, loading: boolean) => void;
+  onData: (id: string | number, data: AgentUsageStats | undefined, loading: boolean) => void;
 }) {
   const { data, isLoading } = useUsageStats(agentId);
   useEffect(() => {
-    onData(data, isLoading);
-  }, [data, isLoading]);
+    onData(agentId, data, isLoading);
+  }, [data, isLoading, agentId]);
   return null;
 }
 
@@ -114,7 +184,7 @@ function AgentGrowthFetcher({
     if (!isLoading) {
       onData(agentId, data);
     }
-  }, [data, isLoading]);
+  }, [data, isLoading, agentId]);
 
   return null;
 }
@@ -129,18 +199,20 @@ export function GrowthView() {
   const [summaryByAgent, setSummaryByAgent] = useState<Record<string, GrowthSummary>>({});
   const [resolvedAgents, setResolvedAgents] = useState<Set<string>>(new Set());
 
-  // Usage stats — fetch for the first agent
-  const [usageData, setUsageData] = useState<AgentUsageStats | undefined>();
-  const [usageLoading, setUsageLoading] = useState(true);
+  // Usage stats — fetch for all agents
+  const [usageByAgent, setUsageByAgent] = useState<Record<string, AgentUsageStats>>({});
+  const [usageLoadingSet, setUsageLoadingSet] = useState<Set<string>>(new Set());
 
-  // Reset when the agent set changes (prune stale summaries)
+  // Reset when the agent set changes (prune stale data)
   const agentIdsKey = agents.map(a => String(a.id)).sort().join(',');
   useEffect(() => {
     setSummaryByAgent({});
     setResolvedAgents(new Set());
+    setUsageByAgent({});
+    setUsageLoadingSet(new Set());
   }, [agentIdsKey]);
 
-  const handleData = (id: string | number, summary: GrowthSummary | undefined) => {
+  const handleGrowthData = (id: string | number, summary: GrowthSummary | undefined) => {
     const key = String(id);
     setResolvedAgents(prev => {
       if (prev.has(key)) return prev;
@@ -156,8 +228,29 @@ export function GrowthView() {
     }
   };
 
+  const handleUsageData = (id: string | number, usageData: AgentUsageStats | undefined, loading: boolean) => {
+    const key = String(id);
+    setUsageLoadingSet(prev => {
+      const isLoading = prev.has(key);
+      if (loading && !isLoading) {
+        const next = new Set(prev); next.add(key); return next;
+      }
+      if (!loading && isLoading) {
+        const next = new Set(prev); next.delete(key); return next;
+      }
+      return prev;
+    });
+    if (!loading && usageData) {
+      setUsageByAgent(prev => {
+        if (prev[key] === usageData) return prev;
+        return { ...prev, [key]: usageData };
+      });
+    }
+  };
+
   // Show skeletons until agents have loaded AND all per-agent summaries have resolved
   const isLoading = agentsLoading || (agents.length > 0 && resolvedAgents.size < agents.length);
+  const usageLoading = usageLoadingSet.size > 0 || (agents.length > 0 && Object.keys(usageByAgent).length === 0 && !agentsLoading);
 
   const { combinedTotal, sortedCategories, maxStreak, totalActiveDays } = useMemo(() => {
     let total = 0;
@@ -178,8 +271,12 @@ export function GrowthView() {
     return { combinedTotal: total, sortedCategories: sorted, maxStreak, totalActiveDays };
   }, [summaryByAgent]);
 
-  const maxCount = sortedCategories[0]?.[1] ?? 1;
+  const usageData = useMemo(
+    () => aggregateUsage(Object.values(usageByAgent)),
+    [usageByAgent]
+  );
 
+  const maxCount = sortedCategories[0]?.[1] ?? 1;
   const streakColor = maxStreak >= 7 ? '#22c55e' : maxStreak > 0 ? '#f59e0b' : t.faint;
 
   const motivational = combinedTotal === 0
@@ -188,21 +285,19 @@ export function GrowthView() {
     ? 'Your Claw helped you act on 1 thing this month.'
     : `Your Claw helped you act on ${combinedTotal} things this month.`;
 
+  const totalMemKB = agents.reduce((sum, a) => sum + (a.memoriesSizeEstimate ?? 0), 0);
+
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: t.bg, transition: 'background 0.3s ease', minHeight: 0 }}>
       <div className="flex-1 overflow-y-auto no-scrollbar" style={{ padding: '0 32px 40px' }}>
 
         {/* Invisible data fetchers for each agent */}
         {agents.map(agent => (
-          <AgentGrowthFetcher key={agent.id} agentId={agent.id} onData={handleData} />
+          <AgentGrowthFetcher key={agent.id} agentId={agent.id} onData={handleGrowthData} />
         ))}
-        {/* Usage stats fetcher for the first agent */}
-        {agents[0] && (
-          <UsageFetcher
-            agentId={agents[0].id}
-            onData={(d, loading) => { setUsageData(d); setUsageLoading(loading); }}
-          />
-        )}
+        {agents.map(agent => (
+          <UsageFetcher key={agent.id} agentId={agent.id} onData={handleUsageData} />
+        ))}
 
         <p style={{
           fontSize: 22,
@@ -323,7 +418,7 @@ export function GrowthView() {
               letterSpacing: '0.08em',
               marginBottom: 20,
             }}>
-              Usage{agents[0] ? ` · ${agents[0].name}` : ''}
+              Usage{agents.length > 1 ? ` · ${agents.length} agents` : agents[0] ? ` · ${agents[0].name}` : ''}
             </p>
 
             {usageLoading ? (
@@ -353,7 +448,7 @@ export function GrowthView() {
                   ))}
                 </div>
               </div>
-            ) : !usageData ? (
+            ) : usageData.totalCalls30d === 0 && usageData.tokens.last30d === 0 ? (
               <p style={{ fontSize: 12, color: t.faint, fontWeight: 300 }}>
                 No usage data available.
               </p>
@@ -423,18 +518,20 @@ export function GrowthView() {
                       calls (30d)
                     </span>
                   </div>
-                  <div>
-                    <span style={{ fontSize: 14, fontWeight: 300, color: t.text }}>
-                      {fmtLatency(usageData.avgLatencyMs)}
-                    </span>
-                    <span style={{ ...MONO_STYLE, fontSize: 9, color: t.faint, marginLeft: 6, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                      avg latency
-                    </span>
-                  </div>
-                  {agents[0]?.memorySizeEstimate != null && agents[0].memorySizeEstimate > 0 && (
+                  {usageData.avgLatencyMs > 0 && (
                     <div>
                       <span style={{ fontSize: 14, fontWeight: 300, color: t.text }}>
-                        {(agents[0].memorySizeEstimate / 1_048_576).toFixed(1)} MB
+                        {fmtLatency(usageData.avgLatencyMs)}
+                      </span>
+                      <span style={{ ...MONO_STYLE, fontSize: 9, color: t.faint, marginLeft: 6, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                        avg latency
+                      </span>
+                    </div>
+                  )}
+                  {totalMemKB > 0 && (
+                    <div>
+                      <span style={{ fontSize: 14, fontWeight: 300, color: t.text }}>
+                        {totalMemKB >= 1024 ? `${(totalMemKB / 1024).toFixed(1)} MB` : `${totalMemKB.toFixed(0)} KB`}
                       </span>
                       <span style={{ ...MONO_STYLE, fontSize: 9, color: t.faint, marginLeft: 6, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                         memory
@@ -449,7 +546,6 @@ export function GrowthView() {
                     {usageData.callsByType.map((ct, idx) => {
                       const maxCalls = Math.max(...usageData.callsByType.map(c => c.calls), 1);
                       const pct = ct.calls / maxCalls;
-                      const costStr = ct.costUsd != null && ct.costUsd > 0 ? ` · ${fmtCostUsd(ct.costUsd)}` : '';
                       return (
                         <motion.div
                           key={ct.type}
@@ -462,7 +558,7 @@ export function GrowthView() {
                               {CALL_TYPE_LABELS[ct.type] ?? ct.type}
                             </span>
                             <span style={{ ...MONO_STYLE, fontSize: 9, color: t.faint }}>
-                              {ct.calls} · {fmtNum(ct.tokens)}{costStr}
+                              {ct.calls}
                             </span>
                           </div>
                           <div style={{ height: 1.5, background: t.surface, borderRadius: 1 }}>
@@ -489,7 +585,7 @@ export function GrowthView() {
                       {usageData.callsByModel.map((m, idx) => {
                         const maxCalls = Math.max(...(usageData.callsByModel?.map(x => x.calls) ?? []), 1);
                         const pct = m.calls / maxCalls;
-                        const costStr = m.costUsd > 0 ? ` · ${fmtCostUsd(m.costUsd)}` : '';
+                        const costStr = (m.costUsd ?? 0) > 0 ? ` · ${fmtCostUsd(m.costUsd!)}` : '';
                         return (
                           <motion.div
                             key={m.model}
@@ -521,7 +617,7 @@ export function GrowthView() {
                 )}
 
                 {/* Burn-rate line */}
-                {usageData.cost?.last7d != null && usageData.cost.last7d > 0 && (
+                {(usageData.cost?.last7d ?? 0) > 0 && (
                   <p style={{
                     ...MONO_STYLE,
                     fontSize: 9,
@@ -529,7 +625,7 @@ export function GrowthView() {
                     letterSpacing: '0.05em',
                     marginTop: 20,
                   }}>
-                    At this pace, ~{fmtCostUsd(usageData.cost.last7d * 4.3)} / mo
+                    At this pace, ~{fmtCostUsd(usageData.cost!.last7d * 4.3)} / mo
                   </p>
                 )}
               </motion.div>

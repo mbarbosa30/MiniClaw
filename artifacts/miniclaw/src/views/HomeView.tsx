@@ -254,12 +254,14 @@ function AgentRow({
     (agent.description ? agent.description.slice(0, 52) + (agent.description.length > 52 ? '…' : '') : null);
 
   const statSegments: string[] = [];
-  if (agent.llmTokensUsedToday) statSegments.push(`${agent.llmTokensUsedToday.toLocaleString()} tok`);
-  if (agent.memorySizeEstimate != null && agent.memorySizeEstimate > 0) {
-    statSegments.push(`${(agent.memorySizeEstimate / 1_048_576).toFixed(1)} MB`);
+  if (agent.tokensUsedToday) statSegments.push(`${agent.tokensUsedToday.toLocaleString()} tok`);
+  if (agent.memoriesSizeEstimate != null && agent.memoriesSizeEstimate > 0) {
+    const kb = agent.memoriesSizeEstimate;
+    statSegments.push(kb >= 1024 ? `${(kb / 1024).toFixed(1)} MB` : `${kb.toFixed(0)} KB`);
   }
-  if (agent.pocScore != null && agent.pocScore.totalScore > 0) statSegments.push(`PoC ${agent.pocScore.totalScore}`);
-  if (agent.celoBalance != null && agent.celoBalance > 0) statSegments.push(`${agent.celoBalance} CELO`);
+  if (agent.pocScore != null && agent.pocScore > 0) statSegments.push(`PoC ${agent.pocScore}`);
+  const celoFloat = parseFloat(agent.celoBalance ?? '0');
+  if (celoFloat > 0) statSegments.push(`${celoFloat.toFixed(4)} CELO`);
 
   const pColor = agent.phase ? phaseColor(agent.phase) : null;
 

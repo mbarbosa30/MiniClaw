@@ -513,6 +513,9 @@ type LocalMessage = ChatMessage & {
   _ts?: number;
   latencyMs?: number;
   tokensUsed?: number;
+  promptTokens?: number;
+  completionTokens?: number;
+  memoriesUsed?: number;
   model?: string;
 };
 
@@ -767,7 +770,7 @@ function ChatTab({
               if (!line.startsWith('data: ')) continue;
               const jsonStr = line.slice(6).trim();
               if (!jsonStr) continue;
-              let evt: { content?: string; done?: boolean; conversationId?: number; suggestedChips?: string[]; error?: string };
+              let evt: { content?: string; done?: boolean; conversationId?: number; suggestedChips?: string[]; error?: string; meta?: { latencyMs?: number; tokensUsed?: number; promptTokens?: number; completionTokens?: number; memoriesUsed?: number; model?: string } };
               try { evt = JSON.parse(jsonStr); } catch { continue; }
 
               // Only mark SSE active when a valid event is parsed (not on raw bytes)
@@ -794,15 +797,20 @@ function ChatTab({
                   refetchConversations();
                 }
                 setChips(evt.suggestedChips ?? []);
-                const latencyMs = Date.now() - sendTime;
-                const tokensUsed = usedAfterSSE !== undefined && quotaUsedBefore !== undefined
-                  ? Math.max(0, usedAfterSSE - quotaUsedBefore)
-                  : undefined;
+                const latencyMs = evt.meta?.latencyMs ?? (Date.now() - sendTime);
+                const tokensUsed = evt.meta?.tokensUsed
+                  ?? (usedAfterSSE !== undefined && quotaUsedBefore !== undefined
+                    ? Math.max(0, usedAfterSSE - quotaUsedBefore)
+                    : undefined);
+                const promptTokens = evt.meta?.promptTokens;
+                const completionTokens = evt.meta?.completionTokens;
+                const memoriesUsed = evt.meta?.memoriesUsed;
+                const model = evt.meta?.model ?? msgModel;
                 setMessages(prev => {
                   const msgs = [...prev];
                   const last = msgs[msgs.length - 1];
                   if (last?.role === 'assistant') {
-                    msgs[msgs.length - 1] = { ...last, _ts: Date.now(), latencyMs, tokensUsed, model: msgModel };
+                    msgs[msgs.length - 1] = { ...last, _ts: Date.now(), latencyMs, tokensUsed, promptTokens, completionTokens, memoriesUsed, model };
                   }
                   setCachedMessages(agent.id, msgs);
                   return msgs;
@@ -990,14 +998,29 @@ function ChatTab({
               )}
               {!isActiveStream && m.latencyMs !== undefined && (() => {
                 const relTime = fmtRelative(m._ts, m.createdAt);
+                const tokStr = (() => {
+                  if (m.promptTokens != null && m.completionTokens != null) {
+                    return `${(m.promptTokens + m.completionTokens).toLocaleString()} tok`;
+                  }
+                  if (m.tokensUsed != null && m.tokensUsed > 0) {
+                    return `${m.tokensUsed.toLocaleString()} tok`;
+                  }
+                  return undefined;
+                })();
+                const memStr = m.memoriesUsed != null && m.memoriesUsed > 0
+                  ? `${m.memoriesUsed} mem`
+                  : undefined;
                 const parts = [
                   `${(m.latencyMs / 1000).toFixed(1)}s`,
-                  m.tokensUsed != null && m.tokensUsed > 0 ? `${m.tokensUsed.toLocaleString()} tok` : undefined,
+                  tokStr,
+                  memStr,
                   relTime || undefined,
                 ].filter(Boolean);
+                const totalTok = (m.promptTokens ?? 0) + (m.completionTokens ?? 0);
                 const PER_MSG_MAX = 4000;
-                const effortW = m.tokensUsed != null && m.tokensUsed > 0
-                  ? `${Math.min(Math.max(m.tokensUsed / PER_MSG_MAX, 0.08), 1) * 100}%`
+                const tokForBar = totalTok > 0 ? totalTok : (m.tokensUsed ?? 0);
+                const effortW = tokForBar > 0
+                  ? `${Math.min(Math.max(tokForBar / PER_MSG_MAX, 0.08), 1) * 100}%`
                   : '8%';
                 return (
                   <>

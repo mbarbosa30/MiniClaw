@@ -20,8 +20,8 @@ export interface AgentStats {
 export interface AgentListSummary {
   activeCount: number;
   totalCount: number;
-  totalTokens: number;
-  totalCostUsd: number;
+  combinedTokensToday: number;
+  combinedCostUsd: number;
 }
 
 // Runtime status from the API — more granular than status (active/paused/error)
@@ -39,13 +39,6 @@ export interface ModelInfo {
   tier: 'free' | 'premium' | 'fallback';
   provider: string;
   availableModels: AvailableModel[];
-}
-
-export interface PocScore {
-  totalScore: number;
-  grade: string;
-  rank: number;
-  percentile: number;
 }
 
 export interface Agent {
@@ -70,13 +63,14 @@ export interface Agent {
 
   // Runtime metrics — returned by both list and detail endpoints
   runtimeStatus?: AgentRuntimeStatus | null;
-  llmTokensUsedToday?: number | null;
-  llmTokensLimit?: number | null;
-  pocScore?: PocScore | null;
+  tokensUsedToday?: number | null;
+  tokensLimit?: number | null;
+  pocScore?: number | null;
   economicsEarnedToday?: number | null;
-  memorySizeEstimate?: number | null;
-  memorySizeLimit?: number | null;
-  enabledSkillNames?: string[] | null;
+  memoriesSizeEstimate?: number | null;
+  memoriesLimit?: number | null;
+  memoriesCount?: number | null;
+  activeSkillsCount?: number | null;
 
   // Model info — returned on agent detail, awareness, and settings GET
   modelInfo?: ModelInfo;
@@ -84,9 +78,9 @@ export interface Agent {
   // Suggested quick-reply chips — returned on list and detail endpoints
   suggestedChips?: string[];
 
-  // Detail-only fields — only populated on GET /v1/hosted-agents/:id
+  // Detail-only fields — present on both list (enriched) and detail endpoints
   tokenCostUsd?: number | null;
-  celoBalance?: number | null;
+  celoBalance?: string | null;
   holdingsUsd?: number | null;
   uptimePercent?: number | null;
   progressPercent?: number | null;
@@ -100,6 +94,7 @@ export interface Agent {
   phaseProgress?: number | null;
   pendingTaskCount?: number | null;
   recentActivity?: string | null;
+  recentActivities?: { type: string; summary: string; timestamp: string }[] | null;
 }
 
 // GET /:id/spawning-status — live research pipeline progress
@@ -336,27 +331,21 @@ export interface DailyBriefResponse {
 }
 
 // GET /:id/usage-stats — per-agent LLM consumption stats (30d window)
+// Normalized from API response (which uses keys like "24h", "7d", "30d" and callTypeBreakdown object)
 export interface UsageCallType {
   type: string;
   calls: number;
-  tokens: number;
-  avgLatencyMs: number;
-  costUsd?: number;
 }
 
 export interface UsageModelBreakdown {
   model: string;
+  provider?: string;
   calls: number;
   tokens: number;
-  costUsd: number;
+  costUsd?: number;
 }
 
 export interface AgentUsageStats {
-  agentId: string | number;
-  period: {
-    from: string;
-    to: string;
-  };
   tokens: {
     last24h: number;
     last7d: number;

@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { useTheme } from '@/lib/theme';
-import { useAgents, useActivity } from '@/hooks/use-agents';
+import { useAgents } from '@/hooks/use-agents';
 import { StateIndicator, agentVisualState, STATE_COLOR, STATE_LABEL } from '@/components/StateIndicator';
 import type { Agent, AgentListSummary } from '@/types';
 
@@ -35,8 +35,9 @@ function fmtCost(n: number): string {
   return `$${n.toFixed(2)}`;
 }
 
-function fmtMB(bytes: number): string {
-  return `${(bytes / 1_048_576).toFixed(1)} MB`;
+function fmtKB(kb: number): string {
+  if (kb >= 1024) return `${(kb / 1024).toFixed(1)} MB`;
+  return `${kb.toFixed(0)} KB`;
 }
 
 function fmtUptime(pct: number): string {
@@ -101,15 +102,11 @@ function AgentCard({ agent, i }: { agent: Agent; i: number }) {
   const state = agentVisualState(agent);
   const color = STATE_COLOR[state];
 
-  const memLimit = agent.memorySizeLimit ?? 8_388_608; // 8 MB default
-  const memBar = (agent.memorySizeEstimate != null && agent.memorySizeEstimate > 0)
-    ? agent.memorySizeEstimate / memLimit
-    : undefined;
+  const memoriesKB = agent.memoriesSizeEstimate ?? 0;
+  const memoriesLimitKB = (agent.memoriesLimit ?? 1000) * 0.5;
+  const memBar = memoriesKB > 0 ? memoriesKB / memoriesLimitKB : undefined;
 
-  const skillNames = (agent.enabledSkillNames ?? []).filter(Boolean);
-
-  const { data: activityItems, isLoading: activityLoading } = useActivity(agent.id);
-  const recentItems = (activityItems ?? []).slice(0, 2);
+  const celoFloat = parseFloat(agent.celoBalance ?? '0');
 
   return (
     <motion.div
@@ -156,23 +153,23 @@ function AgentCard({ agent, i }: { agent: Agent; i: number }) {
       </div>
 
       {/* MEMORY */}
-      {agent.memorySizeEstimate != null && agent.memorySizeEstimate > 0 && (
+      {memoriesKB > 0 && (
         <MetricRow
           label="Memory"
-          value={fmtMB(agent.memorySizeEstimate)}
-          sub={`/ ${fmtMB(memLimit)}`}
+          value={fmtKB(memoriesKB)}
+          sub={`/ ${fmtKB(memoriesLimitKB)}`}
           bar={memBar}
           barColor={memBar != null && memBar > 0.7 ? '#f59e0b' : t.text}
         />
       )}
 
       {/* TOKENS */}
-      {agent.llmTokensUsedToday != null && agent.llmTokensUsedToday > 0 && (
+      {agent.tokensUsedToday != null && agent.tokensUsedToday > 0 && (
         <MetricRow
           label="Tokens"
-          value={agent.llmTokensUsedToday.toLocaleString()}
+          value={agent.tokensUsedToday.toLocaleString()}
           sub={agent.tokenCostUsd != null ? `${fmtCost(agent.tokenCostUsd)} today` : undefined}
-          bar={Math.min(agent.llmTokensUsedToday / 20000, 1)}
+          bar={Math.min(agent.tokensUsedToday / (agent.tokensLimit ?? 50_000), 1)}
         />
       )}
 
@@ -185,28 +182,27 @@ function AgentCard({ agent, i }: { agent: Agent; i: number }) {
       )}
 
       {/* POC SCORE */}
-      {agent.pocScore != null && agent.pocScore.totalScore > 0 && (
+      {agent.pocScore != null && agent.pocScore > 0 && (
         <MetricRow
           label="PoC Score"
-          value={`${agent.pocScore.totalScore} pts`}
-          bar={agent.pocScore.totalScore / 100}
+          value={`${agent.pocScore} pts`}
+          bar={agent.pocScore / 100}
         />
       )}
 
       {/* SKILLS */}
-      {skillNames.length > 0 && (
+      {agent.activeSkillsCount != null && agent.activeSkillsCount > 0 && (
         <MetricRow
           label="Skills"
-          value={`${skillNames.length} active`}
-          sub={skillNames.slice(0, 3).join(', ')}
+          value={`${agent.activeSkillsCount} active`}
         />
       )}
 
-      {/* HOLDINGS — detail-only, null on list endpoint, hidden when null */}
-      {agent.celoBalance != null && agent.celoBalance > 0 && (
+      {/* HOLDINGS */}
+      {celoFloat > 0 && (
         <MetricRow
           label="Holdings"
-          value={`${agent.celoBalance} CELO`}
+          value={`${celoFloat.toFixed(4)} CELO`}
           sub={agent.holdingsUsd != null ? `$${agent.holdingsUsd.toFixed(2)}` : undefined}
         />
       )}
@@ -221,15 +217,8 @@ function AgentCard({ agent, i }: { agent: Agent; i: number }) {
         />
       )}
 
-      {/* RECENT ACTIVITY */}
-      {activityLoading && (
-        <div style={{ marginBottom: 14 }}>
-          <div style={{ height: 9, width: '18%', background: t.surface, borderRadius: 2, marginBottom: 8 }} />
-          <div style={{ height: 9, width: '78%', background: t.surface, borderRadius: 2, marginBottom: 5 }} />
-          <div style={{ height: 9, width: '62%', background: t.surface, borderRadius: 2 }} />
-        </div>
-      )}
-      {!activityLoading && recentItems.length > 0 && (
+      {/* RECENT ACTIVITY — from inline recentActivities on the agent list response */}
+      {(agent.recentActivities ?? []).length > 0 && (
         <div style={{ marginBottom: 14 }}>
           <span style={{
             fontFamily: 'ui-monospace, Menlo, monospace',
@@ -242,12 +231,11 @@ function AgentCard({ agent, i }: { agent: Agent; i: number }) {
           }}>
             Recent
           </span>
-          {recentItems.map((item, idx) => {
-            const text = item.summary || item.description || item.content || item.type;
-            const ts = relativeTime(item.timestamp ?? item.createdAt);
+          {(agent.recentActivities ?? []).slice(0, 2).map((item, idx) => {
+            const ts = relativeTime(item.timestamp);
             return (
               <div
-                key={item.id != null ? String(item.id) : `${item.type}-${idx}`}
+                key={`${item.type}-${idx}`}
                 style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8, marginBottom: 5 }}
               >
                 <span style={{
@@ -260,7 +248,7 @@ function AgentCard({ agent, i }: { agent: Agent; i: number }) {
                   whiteSpace: 'nowrap',
                   lineHeight: 1.4,
                 }}>
-                  {text}
+                  {item.summary}
                 </span>
                 {ts && (
                   <span style={{
@@ -317,8 +305,8 @@ function SummaryHeader({ summary, agentCount }: { summary?: AgentListSummary; ag
     ? `${summary.activeCount}`
     : '—';
   const totalStr = summary ? ` / ${summary.totalCount}` : ` / ${agentCount}`;
-  const tokStr = summary ? fmtTokens(summary.totalTokens) : '—';
-  const costStr = summary ? fmtCost(summary.totalCostUsd) : '—';
+  const tokStr = summary ? fmtTokens(summary.combinedTokensToday) : '—';
+  const costStr = summary ? fmtCost(summary.combinedCostUsd) : '—';
 
   const col = (main: string, label: string, sub?: string) => (
     <div>

@@ -54,17 +54,28 @@ export interface AgentListResult {
   summary?: AgentListSummary;
 }
 
-type RawAgent = Agent & {
+type RawAgent = Omit<Agent, 'pocScore'> & {
   currentActivity?: string | null;
   pendingTaskCount?: number | null;
   recentActivity?: string | null;
   phase?: string | null;
   phaseProgress?: number | null;
+  // API may return pocScore as plain int OR legacy object with totalScore
+  pocScore?: number | { totalScore: number } | null;
 };
 
-function normalizeListAgent(agent: RawAgent): Agent {
+function normalizeListAgent(raw: RawAgent): Agent {
+  const agent = raw as unknown as Agent;
+
+  // Normalize pocScore — API now returns plain int, but guard against legacy object
+  if (raw.pocScore != null && typeof raw.pocScore === 'object') {
+    agent.pocScore = (raw.pocScore as { totalScore: number }).totalScore ?? null;
+  } else {
+    agent.pocScore = (raw.pocScore as number | null | undefined) ?? null;
+  }
+
   // Determine the best activity string — prefer currentActivity, fall back to recentActivity
-  const activityFromTop = agent.currentActivity ?? agent.recentActivity ?? null;
+  const activityFromTop = (raw as RawAgent & { currentActivity?: string | null }).currentActivity ?? raw.recentActivity ?? null;
 
   // Merge activity into stats so HomeView's agent.stats?.currentActivity reference works either way.
   if (activityFromTop != null) {
@@ -78,7 +89,7 @@ function normalizeListAgent(agent: RawAgent): Agent {
   }
 
   // Merge inline pendingTaskCount → stats.pendingTasksCount (inline wins; always write through)
-  const inlinePending = agent.pendingTaskCount ?? null;
+  const inlinePending = raw.pendingTaskCount ?? null;
   if (inlinePending != null) {
     if (agent.stats) {
       agent.stats = { ...agent.stats, pendingTasksCount: inlinePending };
@@ -87,7 +98,7 @@ function normalizeListAgent(agent: RawAgent): Agent {
     }
   }
 
-  return agent as Agent;
+  return agent;
 }
 
 export function useAgents() {
@@ -100,8 +111,8 @@ export function useAgents() {
       const computeFallbackSummary = (agents: Agent[]): AgentListSummary => ({
         activeCount: agents.filter(a => a.status === 'active').length,
         totalCount: agents.length,
-        totalTokens: agents.reduce((sum, a) => sum + (a.llmTokensUsedToday ?? 0), 0),
-        totalCostUsd: agents.reduce((sum, a) => sum + (a.tokenCostUsd ?? 0), 0),
+        combinedTokensToday: agents.reduce((sum, a) => sum + (a.tokensUsedToday ?? 0), 0),
+        combinedCostUsd: agents.reduce((sum, a) => sum + (a.tokenCostUsd ?? 0), 0),
       });
 
       if (Array.isArray(raw)) {
@@ -124,7 +135,7 @@ type DetailEnvelope = {
   stats?: AgentStats;
   recentTasks?: Agent['recentTasks'];
   tokenCostUsd?: number | null;
-  celoBalance?: number | null;
+  celoBalance?: string | null;
   holdingsUsd?: number | null;
   uptimePercent?: number | null;
   progressPercent?: number | null;
@@ -521,14 +532,59 @@ export function useAwareness(agentId: string | number | undefined) {
 
 // --- USAGE STATS ---
 
+type RawUsageStats = {
+  tokens?: Record<string, number>;
+  cost?: Record<string, number>;
+  totalCalls30d?: number;
+  avgLatencyMs?: number;
+  topModels?: { model: string; provider?: string; calls: number; tokens: number; costUsd?: number }[];
+  callTypeBreakdown?: Record<string, number>;
+};
+
+function normalizeUsageStats(raw: RawUsageStats): AgentUsageStats {
+  const tokens = raw.tokens ?? {};
+  const cost = raw.cost ?? {};
+
+  const callsByType: AgentUsageStats['callsByType'] = Object.entries(raw.callTypeBreakdown ?? {}).map(
+    ([type, calls]) => ({ type, calls })
+  );
+
+  const callsByModel: AgentUsageStats['callsByModel'] = (raw.topModels ?? []).map(m => ({
+    model: m.model,
+    provider: m.provider,
+    calls: m.calls,
+    tokens: m.tokens,
+    costUsd: m.costUsd,
+  }));
+
+  return {
+    tokens: {
+      last24h: tokens['24h'] ?? 0,
+      last7d: tokens['7d'] ?? 0,
+      last30d: tokens['30d'] ?? 0,
+    },
+    cost: {
+      last24h: cost['24h'] ?? 0,
+      last7d: cost['7d'] ?? 0,
+      last30d: cost['30d'] ?? 0,
+    },
+    totalCalls30d: raw.totalCalls30d ?? 0,
+    avgLatencyMs: raw.avgLatencyMs ?? 0,
+    callsByType,
+    callsByModel: callsByModel.length > 0 ? callsByModel : undefined,
+  };
+}
+
 // GET /:id/usage-stats — per-agent LLM consumption (owner-only)
 export function useUsageStats(agentId: string | number | undefined) {
   return useQuery<AgentUsageStats>({
     queryKey: ['usage-stats', qid(agentId)],
-    queryFn: () =>
-      apiFetch<AgentUsageStats>(
+    queryFn: async () => {
+      const raw = await apiFetch<RawUsageStats>(
         `/api/selfclaw/v1/hosted-agents/${sid(agentId!)}/usage-stats`
-      ),
+      );
+      return normalizeUsageStats(raw);
+    },
     enabled: agentId != null && agentId !== '',
     staleTime: 120_000,
   });
