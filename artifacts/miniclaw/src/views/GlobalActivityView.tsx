@@ -268,6 +268,8 @@ export function GlobalActivityView() {
   const running: TaskWithAgent[] = [];
   const completed: TaskWithAgent[] = [];
 
+  const cutoff48h = Date.now() - 48 * 60 * 60 * 1000;
+
   summaries.forEach((result, i) => {
     const agent = agents[i];
     if (!result.data || !agent) return;
@@ -282,8 +284,19 @@ export function GlobalActivityView() {
     (result.data.pending?.items ?? []).forEach((t) => pending.push(attach(t)));
     (result.data.running?.items ?? []).forEach((t) => running.push(attach(t)));
     (result.data.scheduled?.items ?? []).forEach((t) => running.push(attach(t)));
-    (result.data.recentlyCompleted?.items ?? []).slice(0, 5).forEach((t) => completed.push(attach(t)));
+    (result.data.recentlyCompleted?.items ?? [])
+      .filter((t) => !t.createdAt || new Date(t.createdAt).getTime() >= cutoff48h)
+      .slice(0, 5)
+      .forEach((t) => completed.push(attach(t)));
   });
+
+  const byTime = (a: TaskWithAgent, b: TaskWithAgent) => {
+    const ta = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+    const tb = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+    return tb - ta;
+  };
+  running.sort(byTime);
+  completed.sort(byTime);
 
   const visibleFeed = feedPosts.slice(0, 10);
 
