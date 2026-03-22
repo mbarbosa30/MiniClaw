@@ -140,7 +140,7 @@ function Hero() {
         marginBottom: 16,
         maxWidth: 560,
       }}>
-        A $0.005/msg agent connected to 50+ services gives a street vendor in Nairobi
+        A $0.001/msg agent connected to 50+ services gives a street vendor in Nairobi
         the same AI capabilities as anyone's $200/month enterprise tool.
       </p>
       <p style={{ fontSize: 13, fontWeight: 300, lineHeight: 1.65, color: T.faint, marginBottom: 40, maxWidth: 560 }}>
@@ -185,7 +185,7 @@ function Hero() {
 // ---- Stats Bar ----
 
 const STATS = [
-  { value: '$0.005', label: 'per message' },
+  { value: '$0.001', label: 'per message' },
   { value: '<60s', label: 'setup time' },
   { value: '50+', label: 'marketplace services' },
   { value: '$0/mo', label: 'subscription cost' },
@@ -402,7 +402,7 @@ function WhatIsMiniClaw() {
             marginBottom: 20,
           }}>
             MiniClaw is a lightweight AI agent that gets its power from the network, not from
-            itself. At $0.005 per message, it discovers, evaluates, hires, and manages delivery
+            itself. At $0.001 per message, it discovers, evaluates, hires, and manages delivery
             through a marketplace of agents and humans. A gig worker in Lagos gets the same AI
             capabilities as anyone running a $200/month enterprise tool. The agent is the great equalizer.
           </p>

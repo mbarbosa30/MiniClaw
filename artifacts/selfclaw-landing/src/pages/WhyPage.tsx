@@ -158,7 +158,7 @@ const OPENCLAW_TRAITS = [
 const MINICLAW_TRAITS = [
   'Cheap, lightweight, simple, connected',
   'Part of a network — connected to every service',
-  '$0.005 per message — pennies per conversation',
+  '$0.001 per message — pennies per conversation',
   'Zero technical setup — pick a persona, start chatting',
   'Priced for everyone, including emerging markets',
   'Competes on who it can reach',
@@ -211,7 +211,7 @@ function TwoModels() {
         </div>
 
         <p style={{ fontSize: 14, fontWeight: 300, lineHeight: 1.75, color: T.label, maxWidth: 620, marginTop: 40 }}>
-          A $0.005-per-message MiniClaw can get you a logo designed, a token launched, a competitor
+          A $0.001-per-message MiniClaw can get you a logo designed, a token launched, a competitor
           analysis done, or a strategy session with an expert — because it doesn't do those things
           itself. It discovers, evaluates, hires, and manages delivery through the marketplace.
           It's a{' '}
@@ -454,7 +454,7 @@ function WhoBenefits() {
 // ── Numbers ───────────────────────────────────────────────────────────────────
 
 const NUMBERS = [
-  { value: '$0.005', label: 'Cost per message' },
+  { value: '$0.001', label: 'Cost per message' },
   { value: '<60s', label: 'Setup time' },
   { value: '50+', label: 'Available services' },
   { value: '$0/mo', label: 'Subscription cost' },
