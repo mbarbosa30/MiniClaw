@@ -209,6 +209,8 @@ export interface UpdateAgentSettingsPayload {
   personalContext?: string;
   humorStyle?: HumorStyle;
   premiumModel?: string | null;
+  digestFrequency?: 'daily' | 'weekly' | 'disabled';
+  digestTimeOfDay?: 'morning' | 'evening';
 }
 
 // GET /:id/settings response — full agent settings object
@@ -228,6 +230,8 @@ export interface AgentSettings {
   humorStyle?: HumorStyle;
   premiumModel?: PremiumModel | null;
   modelInfo?: ModelInfo;
+  digestFrequency?: 'daily' | 'weekly' | 'disabled';
+  digestTimeOfDay?: 'morning' | 'evening';
 }
 
 // Knowledge entry — title is required per API docs
@@ -284,6 +288,7 @@ export interface AgentTask {
   category?: string;
   payload?: Record<string, unknown>;
   createdAt?: string;
+  scheduledFor?: string;
 }
 
 export interface TaskSummarySection {

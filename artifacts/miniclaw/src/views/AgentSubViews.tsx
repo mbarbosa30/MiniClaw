@@ -9,6 +9,7 @@ import {
   useMemories, useUpdateMemory, useDeleteMemory,
   useTasks, useResolveTask,
   useTelegramStatus, useUpdateTelegramSettings,
+  useAgentSettings, useUpdateAgentSettings,
   useUpdateAgent, useDeleteAgent,
   useAwareness,
   useWallet, useCreateWallet, useRequestGas,
@@ -489,6 +490,11 @@ export function TasksView() {
                       <p style={{ fontSize: 11, color: t.label, lineHeight: 1.5, marginBottom: 12 }}>{descVal}</p>
                     ) : null;
                   })()}
+                  {task.taskType === 'reminder' && task.scheduledFor && (
+                    <p style={{ fontSize: 9, fontFamily: 'ui-monospace, Menlo, monospace', color: t.faint, letterSpacing: '0.04em', marginBottom: 8 }}>
+                      {fmtScheduled(task.scheduledFor)}
+                    </p>
+                  )}
                   {needsAction && !isLowRisk(task) && (
                     <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
                       <button
@@ -738,6 +744,19 @@ export function AgentOptionsView() {
   );
 }
 
+// Forward-looking relative time for scheduled reminders
+function fmtScheduled(iso?: string): string {
+  if (!iso) return '';
+  const diff = new Date(iso).getTime() - Date.now();
+  if (diff <= 0) return 'overdue';
+  const mins = Math.floor(diff / 60_000);
+  if (mins < 60) return `in ${mins}m`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `in ${hrs}h`;
+  const days = Math.floor(hrs / 24);
+  return `in ${days}d`;
+}
+
 // --- AGENT SETTINGS VIEW (helpers) ---
 const FALLBACK_MODELS: AvailableModel[] = [
   { id: 'none', label: 'standard', tier: 'free' },
@@ -939,6 +958,13 @@ function SettingsForm({ agent, onDeleted }: { agent: Agent; onDeleted: () => voi
   const [resetDone, setResetDone] = useState(false);
   const [resetError, setResetError] = useState<string | null>(null);
 
+  // --- Digest settings state ---
+  const { data: agentSettings } = useAgentSettings(agent.id);
+  const updateSettings = useUpdateAgentSettings();
+  const [localFreq, setLocalFreq] = useState<'daily' | 'weekly' | 'disabled'>('daily');
+  const [localTimeOfDay, setLocalTimeOfDay] = useState<'morning' | 'evening'>('morning');
+  const [digestSaved, setDigestSaved] = useState(false);
+
   const baseSoul = soul?.soul ?? '';
 
   useEffect(() => {
@@ -946,6 +972,11 @@ function SettingsForm({ agent, onDeleted }: { agent: Agent; onDeleted: () => voi
     setHustleMode(soul.soul.includes(HUSTLE_MODE_SOUL_APPEND.trim()));
     if (!soulExpanded) setSoulText(soul.soul);
   }, [soul?.soul, soulExpanded]);
+
+  useEffect(() => {
+    if (agentSettings?.digestFrequency) setLocalFreq(agentSettings.digestFrequency);
+    if (agentSettings?.digestTimeOfDay) setLocalTimeOfDay(agentSettings.digestTimeOfDay);
+  }, [agentSettings?.digestFrequency, agentSettings?.digestTimeOfDay]);
 
   // --- Tune handlers ---
 
@@ -1014,6 +1045,38 @@ function SettingsForm({ agent, onDeleted }: { agent: Agent; onDeleted: () => voi
       setLocalModelId(prevId);
     } finally {
       setSavingModel(false);
+    }
+  };
+
+  // --- Digest handlers ---
+
+  const handleCycleFreq = async () => {
+    const freqs: Array<'daily' | 'weekly' | 'disabled'> = ['daily', 'weekly', 'disabled'];
+    const next = freqs[(freqs.indexOf(localFreq) + 1) % freqs.length];
+    const prev = localFreq;
+    setLocalFreq(next);
+    setDigestSaved(false);
+    try {
+      await updateSettings.mutateAsync({ id: agent.id, data: { digestFrequency: next } });
+      setDigestSaved(true);
+      setTimeout(() => setDigestSaved(false), 2000);
+    } catch {
+      setLocalFreq(prev);
+    }
+  };
+
+  const handleCycleTimeOfDay = async () => {
+    const times: Array<'morning' | 'evening'> = ['morning', 'evening'];
+    const next = times[(times.indexOf(localTimeOfDay) + 1) % times.length];
+    const prev = localTimeOfDay;
+    setLocalTimeOfDay(next);
+    setDigestSaved(false);
+    try {
+      await updateSettings.mutateAsync({ id: agent.id, data: { digestTimeOfDay: next } });
+      setDigestSaved(true);
+      setTimeout(() => setDigestSaved(false), 2000);
+    } catch {
+      setLocalTimeOfDay(prev);
     }
   };
 
@@ -1303,6 +1366,34 @@ function SettingsForm({ agent, onDeleted }: { agent: Agent; onDeleted: () => voi
         <p style={{ fontSize: 10, color: t.faint, fontFamily: 'ui-monospace, Menlo, monospace', letterSpacing: '0.02em', paddingTop: 6, paddingBottom: 2 }}>
           {agent.modelInfo.provider ? `${agent.modelInfo.provider} · ` : ''}{agent.modelInfo.chat}
         </p>
+      )}
+
+      {/* ── DAILY DIGEST ── */}
+      <SLabel>Daily Digest</SLabel>
+      <SRow label="Frequency">
+        <button
+          onClick={handleCycleFreq}
+          disabled={updateSettings.isPending}
+          style={{ fontFamily: 'ui-monospace, Menlo, monospace', fontSize: 10, color: t.text, letterSpacing: '0.02em', background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, opacity: updateSettings.isPending ? 0.5 : 1 }}
+        >
+          {localFreq === 'disabled' ? 'off' : localFreq}
+          <span style={{ color: t.faint, fontSize: 8 }}>▼</span>
+        </button>
+      </SRow>
+      {localFreq !== 'disabled' && (
+        <SRow label="Send time">
+          <button
+            onClick={handleCycleTimeOfDay}
+            disabled={updateSettings.isPending}
+            style={{ fontFamily: 'ui-monospace, Menlo, monospace', fontSize: 10, color: t.text, letterSpacing: '0.02em', background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, opacity: updateSettings.isPending ? 0.5 : 1 }}
+          >
+            {localTimeOfDay}
+            <span style={{ color: t.faint, fontSize: 8 }}>▼</span>
+          </button>
+        </SRow>
+      )}
+      {digestSaved && (
+        <p style={{ fontSize: 10, color: t.faint, fontFamily: 'ui-monospace, Menlo, monospace', paddingTop: 6, letterSpacing: '0.02em' }}>Saved.</p>
       )}
 
       {/* ── RESET ── */}
