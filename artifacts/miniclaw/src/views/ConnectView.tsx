@@ -1,52 +1,35 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Bot, Loader2, RefreshCw, Zap } from 'lucide-react';
-import { useAuthStore, useRouter } from '@/lib/store';
+import { Bot, Loader2 } from 'lucide-react';
+import { useAuthStore } from '@/lib/store';
 import { useTheme } from '@/lib/theme';
-import { setWalletAddress } from '@/lib/api-client';
 
 const TIMEOUT_MS = import.meta.env.DEV ? 5000 : 10000;
 
-function resolveAuthErrorMessage(raw: string): { text: string; canRetry: boolean } {
+const LANDING_URL = (import.meta.env.VITE_LANDING_URL as string | undefined) ?? '/ing/';
+
+type EthProvider = {
+  isMiniPay?: boolean;
+};
+
+function resolveAuthErrorMessage(raw: string): string {
   if (
     raw === 'X-Wallet-Address header is required' ||
     raw === 'X-Wallet-Address is not a valid EVM address'
   ) {
-    return {
-      text: "MiniPay didn't share your wallet address.\nTry restarting MiniPay.",
-      canRetry: true,
-    };
+    return "MiniPay didn't share your wallet address.\nTry restarting MiniPay.";
   }
   if (raw === 'Invalid or revoked platform API key') {
-    return {
-      text: 'Service configuration error.\nPlease contact support.',
-      canRetry: false,
-    };
+    return 'Service configuration error.\nPlease contact support.';
   }
-  return {
-    text: 'Authentication failed.\nOpen this app inside MiniPay.',
-    canRetry: true,
-  };
+  return 'Authentication failed.\nOpen this app inside MiniPay.';
 }
-
-const DEV_WALLET = '0xDEADBEEF00000000000000000000000000000001';
-
-type EthProvider = {
-  selectedAddress?: string | null;
-  isMiniPay?: boolean;
-  isMetaMask?: boolean;
-  request?: (args: { method: string; params?: unknown[] }) => Promise<string[]>;
-};
 
 export function ConnectView() {
   const t = useTheme();
   const [timedOut, setTimedOut] = useState(false);
-  const [connectLog, setConnectLog] = useState<string | null>(null);
-  const [connecting, setConnecting] = useState(false);
 
   const authError = useAuthStore(s => s.authError);
-  const setAuthenticated = useAuthStore(s => s.setAuthenticated);
-  const resetRoute = useRouter(s => s.reset);
 
   useEffect(() => {
     if (authError) return;
@@ -54,37 +37,15 @@ export function ConnectView() {
     return () => clearTimeout(timer);
   }, [authError]);
 
-  const handleManualConnect = useCallback(async () => {
-    setConnecting(true);
-    setConnectLog(null);
+  useEffect(() => {
+    if (!timedOut) return;
+    if (import.meta.env.DEV) return;
     const eth = (window as { ethereum?: EthProvider }).ethereum;
-    if (!eth) {
-      setConnectLog('No wallet found. Open this app inside MiniPay.');
-      setConnecting(false);
-      return;
-    }
-    try {
-      const accounts = await eth.request?.({ method: 'eth_requestAccounts', params: [] });
-      if (accounts?.[0]) {
-        setWalletAddress(accounts[0]);
-        setAuthenticated(accounts[0]);
-        resetRoute('home');
-      } else {
-        setConnectLog('Wallet returned no address. Try restarting MiniPay.');
-      }
-    } catch (err) {
-      setConnectLog(err instanceof Error ? err.message : 'Connection failed.');
-    }
-    setConnecting(false);
-  }, [setAuthenticated, resetRoute]);
+    if (eth?.isMiniPay === true) return;
+    window.location.href = LANDING_URL;
+  }, [timedOut]);
 
-  const handleDevBypass = () => {
-    setWalletAddress(DEV_WALLET);
-    setAuthenticated(DEV_WALLET);
-    resetRoute('home');
-  };
-
-  const resolved = authError ? resolveAuthErrorMessage(authError) : null;
+  const resolvedText = authError ? resolveAuthErrorMessage(authError) : null;
 
   return (
     <div
@@ -143,60 +104,10 @@ export function ConnectView() {
           padding: '0 32px',
         }}
       >
-        {resolved ? (
-          <>
-            <p style={{ fontSize: 13, color: t.label, lineHeight: 1.7, whiteSpace: 'pre-line' }}>
-              {resolved.text}
-            </p>
-
-            <button
-              style={{
-                marginTop: 6,
-                padding: '10px 24px',
-                borderRadius: 10,
-                fontSize: 13,
-                fontWeight: 600,
-                color: '#fff',
-                background: '#5b4ef8',
-                border: 'none',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-                opacity: connecting ? 0.6 : 1,
-              }}
-              onClick={handleManualConnect}
-              disabled={connecting}
-            >
-              <Zap size={14} />
-              {connecting ? 'connecting…' : 'try again'}
-            </button>
-
-            {connectLog && (
-              <p style={{ fontSize: 11, color: t.faint, marginTop: 4, maxWidth: 240, lineHeight: 1.5 }}>
-                {connectLog}
-              </p>
-            )}
-
-            {resolved.canRetry && (
-              <button
-                style={{ marginTop: 4, display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 600, color: t.faint, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
-                onClick={() => window.location.reload()}
-              >
-                <RefreshCw size={11} />
-                reload
-              </button>
-            )}
-
-            {import.meta.env.DEV && (
-              <button
-                style={{ marginTop: 8, padding: '8px 20px', borderRadius: 8, fontSize: 11, fontWeight: 600, color: t.bg, background: t.text, border: 'none', cursor: 'pointer', fontFamily: 'ui-monospace, Menlo, monospace', letterSpacing: '0.05em', textTransform: 'uppercase' }}
-                onClick={handleDevBypass}
-              >
-                dev preview
-              </button>
-            )}
-          </>
+        {resolvedText ? (
+          <p style={{ fontSize: 13, color: t.label, lineHeight: 1.7, whiteSpace: 'pre-line' }}>
+            {resolvedText}
+          </p>
         ) : !timedOut ? (
           <>
             <Loader2 size={18} color={t.faint} style={{ animation: 'spin 1s linear infinite' }} />
@@ -217,57 +128,9 @@ export function ConnectView() {
             </motion.div>
           </>
         ) : (
-          <>
-            <p style={{ fontSize: 13, color: t.label, lineHeight: 1.6 }}>
-              Couldn't connect automatically.
-            </p>
-
-            <button
-              style={{
-                marginTop: 6,
-                padding: '10px 24px',
-                borderRadius: 10,
-                fontSize: 13,
-                fontWeight: 600,
-                color: '#fff',
-                background: '#5b4ef8',
-                border: 'none',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-                opacity: connecting ? 0.6 : 1,
-              }}
-              onClick={handleManualConnect}
-              disabled={connecting}
-            >
-              <Zap size={14} />
-              {connecting ? 'connecting…' : 'connect wallet'}
-            </button>
-
-            {connectLog && (
-              <p style={{ fontSize: 11, color: t.faint, marginTop: 4, maxWidth: 240, lineHeight: 1.5 }}>
-                {connectLog}
-              </p>
-            )}
-
-            <button
-              style={{ marginTop: 6, display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 600, color: t.faint, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
-              onClick={() => window.location.reload()}
-            >
-              <RefreshCw size={11} />
-              reload
-            </button>
-
-            {import.meta.env.DEV && (
-              <button
-                style={{ marginTop: 8, padding: '8px 20px', borderRadius: 8, fontSize: 11, fontWeight: 600, color: t.bg, background: t.text, border: 'none', cursor: 'pointer', fontFamily: 'ui-monospace, Menlo, monospace', letterSpacing: '0.05em', textTransform: 'uppercase' }}
-                onClick={handleDevBypass}
-              >
-                dev preview
-              </button>
-            )}
-          </>
+          <p style={{ fontSize: 13, color: t.label, lineHeight: 1.6 }}>
+            Couldn't connect automatically.
+          </p>
         )}
       </motion.div>
 
