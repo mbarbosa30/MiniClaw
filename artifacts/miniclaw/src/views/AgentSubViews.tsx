@@ -750,11 +750,12 @@ function fmtScheduled(iso?: string): string {
   const diff = new Date(iso).getTime() - Date.now();
   if (diff <= 0) return 'overdue';
   const mins = Math.floor(diff / 60_000);
-  if (mins < 60) return `in ${mins}m`;
+  if (mins < 60) return `in ${mins} min`;
   const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `in ${hrs}h`;
+  if (hrs < 24) return `in ${hrs} hr`;
   const days = Math.floor(hrs / 24);
-  return `in ${days}d`;
+  if (days === 1) return 'tomorrow';
+  return `in ${days} days`;
 }
 
 // --- AGENT SETTINGS VIEW (helpers) ---
@@ -964,6 +965,7 @@ function SettingsForm({ agent, onDeleted }: { agent: Agent; onDeleted: () => voi
   const [localFreq, setLocalFreq] = useState<'daily' | 'weekly' | 'disabled'>('daily');
   const [localTimeOfDay, setLocalTimeOfDay] = useState<'morning' | 'evening'>('morning');
   const [digestSaved, setDigestSaved] = useState(false);
+  const [digestError, setDigestError] = useState<string | null>(null);
 
   const baseSoul = soul?.soul ?? '';
 
@@ -1056,12 +1058,14 @@ function SettingsForm({ agent, onDeleted }: { agent: Agent; onDeleted: () => voi
     const prev = localFreq;
     setLocalFreq(next);
     setDigestSaved(false);
+    setDigestError(null);
     try {
       await updateSettings.mutateAsync({ id: agent.id, data: { digestFrequency: next } });
       setDigestSaved(true);
       setTimeout(() => setDigestSaved(false), 2000);
-    } catch {
+    } catch (err) {
       setLocalFreq(prev);
+      setDigestError(err instanceof Error ? err.message : 'Failed to save.');
     }
   };
 
@@ -1071,12 +1075,14 @@ function SettingsForm({ agent, onDeleted }: { agent: Agent; onDeleted: () => voi
     const prev = localTimeOfDay;
     setLocalTimeOfDay(next);
     setDigestSaved(false);
+    setDigestError(null);
     try {
       await updateSettings.mutateAsync({ id: agent.id, data: { digestTimeOfDay: next } });
       setDigestSaved(true);
       setTimeout(() => setDigestSaved(false), 2000);
-    } catch {
+    } catch (err) {
       setLocalTimeOfDay(prev);
+      setDigestError(err instanceof Error ? err.message : 'Failed to save.');
     }
   };
 
@@ -1393,7 +1399,10 @@ function SettingsForm({ agent, onDeleted }: { agent: Agent; onDeleted: () => voi
         </SRow>
       )}
       {digestSaved && (
-        <p style={{ fontSize: 10, color: t.faint, fontFamily: 'ui-monospace, Menlo, monospace', paddingTop: 6, letterSpacing: '0.02em' }}>Saved.</p>
+        <p style={{ fontSize: 11, color: t.label, fontFamily: 'ui-monospace, Menlo, monospace', paddingTop: 6 }}>Settings saved.</p>
+      )}
+      {digestError && (
+        <p style={{ fontSize: 11, color: '#f87171', fontFamily: 'ui-monospace, Menlo, monospace', paddingTop: 6 }}>{digestError}</p>
       )}
 
       {/* ── RESET ── */}
