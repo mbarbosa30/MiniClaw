@@ -1,28 +1,9 @@
 import { Router } from 'express';
-import fs from 'fs';
+import { db, waitlistEmailsTable } from '@workspace/db';
 
 const router = Router();
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-const WAITLIST_FILE = '/tmp/waitlist.json';
-
-function readWaitlist(): string[] {
-  try {
-    if (!fs.existsSync(WAITLIST_FILE)) return [];
-    return JSON.parse(fs.readFileSync(WAITLIST_FILE, 'utf8')) as string[];
-  } catch {
-    return [];
-  }
-}
-
-function appendEmail(email: string) {
-  const list = readWaitlist();
-  if (!list.includes(email)) {
-    list.push(email);
-    fs.writeFileSync(WAITLIST_FILE, JSON.stringify(list, null, 2), 'utf8');
-  }
-}
 
 const ipHits = new Map<string, { count: number; resetAt: number }>();
 const RATE_LIMIT = 3;
@@ -40,7 +21,7 @@ function isRateLimited(ip: string): boolean {
   return false;
 }
 
-router.post('/waitlist', (req, res) => {
+router.post('/waitlist', async (req, res) => {
   const ip = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.ip || 'unknown';
 
   if (isRateLimited(ip)) {
@@ -63,10 +44,10 @@ router.post('/waitlist', (req, res) => {
   }
 
   try {
-    appendEmail(trimmed);
+    await db.insert(waitlistEmailsTable).values({ email: trimmed }).onConflictDoNothing();
     res.json({ ok: true });
   } catch (err) {
-    console.error('[waitlist] write error:', err);
+    console.error('[waitlist] db error:', err);
     res.status(500).json({ error: 'Failed to save. Please try again.' });
   }
 });
