@@ -181,21 +181,14 @@ function ServiceCard({ service, onTap, savedIds, onToggleSave }: {
         </p>
       )}
 
-      {/* Row 4: delivery + rating (no wrapping tags) */}
-      {(service.estimatedDelivery || service.averageRating != null) && (
+      {/* Row 4: rating only (delivery shown in confirmation sheet) */}
+      {service.averageRating != null && (
         <div style={{ display: 'flex', gap: 10, alignItems: 'center', paddingLeft: 36 }}>
-          {service.estimatedDelivery && (
-            <span style={{ ...MONO, fontSize: 8, color: t.faint, letterSpacing: '0.04em' }}>
-              {service.estimatedDelivery}
-            </span>
-          )}
-          {service.averageRating != null && (
-            <span style={{ ...MONO, fontSize: 8, color: t.faint, letterSpacing: '0.04em', display: 'flex', alignItems: 'center', gap: 2 }}>
-              <Star size={8} strokeWidth={1.5} fill="#f59e0b" color="#f59e0b" />
-              {(service.averageRating as number).toFixed(1)}
-              {service.ratingCount != null && <span> ({service.ratingCount})</span>}
-            </span>
-          )}
+          <span style={{ ...MONO, fontSize: 8, color: t.faint, letterSpacing: '0.04em', display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Star size={8} strokeWidth={1.5} fill="#f59e0b" color="#f59e0b" />
+            {(service.averageRating as number).toFixed(1)}
+            {service.ratingCount != null && <span> ({service.ratingCount})</span>}
+          </span>
         </div>
       )}
 
