@@ -247,13 +247,9 @@ export function GlobalActivityView() {
 
   const { data: agentData, isLoading: agentsLoading } = useAgents();
   const agents = agentData?.agents ?? [];
-  const activeAgents = useMemo(
-    () => agents.filter((a) => a.status === 'active'),
-    [agents],
-  );
 
   const summaries = useAllTaskSummaries(
-    agentsLoading ? [] : activeAgents.map((a) => a.id),
+    agentsLoading ? [] : agents.map((a) => a.id),
   );
 
   const { data: feedPosts = [], isLoading: feedLoading } = useFeed();
@@ -273,7 +269,7 @@ export function GlobalActivityView() {
   const completed: TaskWithAgent[] = [];
 
   summaries.forEach((result, i) => {
-    const agent = activeAgents[i];
+    const agent = agents[i];
     if (!result.data || !agent) return;
     const attach = (task: AgentTask): TaskWithAgent => ({
       ...task,

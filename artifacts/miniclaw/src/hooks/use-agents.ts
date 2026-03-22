@@ -469,6 +469,7 @@ export function useResolveTask() {
     onSuccess: (_, variables) => {
       qc.invalidateQueries({ queryKey: ['tasks', qid(variables.agentId), 'pending'] });
       qc.invalidateQueries({ queryKey: ['tasks', qid(variables.agentId), 'all'] });
+      qc.invalidateQueries({ queryKey: ['task-summary', qid(variables.agentId)] });
     },
   });
 }
