@@ -521,7 +521,7 @@ export function HomeView() {
             }} />
           </p>
           <button
-            onClick={() => push('growth')}
+            onClick={() => push('overview')}
             style={{
               display: 'flex',
               alignItems: 'center',
