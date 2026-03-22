@@ -3,7 +3,7 @@ import { useAgent, useConversations, useMessages, useAwareness, useCompactConver
 import { useRouter } from '@/lib/store';
 import { useTheme } from '@/lib/theme';
 import { Button } from '@/components/ui';
-import { MoreHorizontal } from 'lucide-react';
+import { MoreHorizontal, Copy, Check, RefreshCw } from 'lucide-react';
 import { apiFetch, apiFetchWithHeaders, apiFetchStream, ApiError } from '@/lib/api-client';
 import type { Agent, ChatMessage, AgentAwareness } from '@/types';
 import ReactMarkdown from 'react-markdown';
@@ -546,6 +546,104 @@ function fmtRelative(ts?: number, iso?: string): string {
   }
 }
 
+function mdToPlainText(md: string): string {
+  return md
+    .replace(/```[\s\S]*?```/g, (m) => m.replace(/```\w*\n?/, '').replace(/```$/, '').trim())
+    .replace(/`([^`]+)`/g, '$1')
+    .replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1')
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
+    .replace(/^#{1,6}\s+/gm, '')
+    .replace(/(\*\*|__)(.*?)\1/g, '$2')
+    .replace(/(\*|_)(.*?)\1/g, '$2')
+    .replace(/~~(.*?)~~/g, '$1')
+    .replace(/^[-*+]\s+/gm, '')
+    .replace(/^\d+\.\s+/gm, '')
+    .replace(/^>\s+/gm, '')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+function MessageActions({
+  content,
+  isAssistant,
+  onRegenerate,
+  t,
+}: {
+  content: string;
+  isAssistant: boolean;
+  onRegenerate?: () => void;
+  t: ReturnType<typeof useTheme>;
+}) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    const text = isAssistant ? mdToPlainText(content) : content;
+    const execCommandFallback = () => {
+      try {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 1500);
+      } catch {
+      }
+    };
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(text).then(() => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 1500);
+      }).catch(execCommandFallback);
+    } else {
+      execCommandFallback();
+    }
+  };
+
+  const btnStyle: React.CSSProperties = {
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    background: 'none',
+    border: 'none',
+    padding: 4,
+    borderRadius: 5,
+    cursor: 'pointer',
+    color: t.faint,
+    lineHeight: 1,
+    transition: 'color 0.15s',
+  };
+
+  return (
+    <div style={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+      <button
+        style={btnStyle}
+        onClick={handleCopy}
+        title="Copy"
+        onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = t.label; }}
+        onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = t.faint; }}
+      >
+        {copied
+          ? <Check size={13} />
+          : <Copy size={13} />}
+      </button>
+      {isAssistant && onRegenerate && (
+        <button
+          style={btnStyle}
+          onClick={onRegenerate}
+          title="Regenerate"
+          onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = t.label; }}
+          onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = t.faint; }}
+        >
+          <RefreshCw size={13} />
+        </button>
+      )}
+    </div>
+  );
+}
 
 function ChatTab({
   agent,
@@ -585,6 +683,8 @@ function ChatTab({
   const [isStreaming, setIsStreaming] = useState(false);
   const [chips, setChips] = useState<string[]>(agent.suggestedChips ?? []);
   const [compactBanner, setCompactBanner] = useState<{ tokensSaved: number; error?: boolean } | null>(null);
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+  const [tappedIndex, setTappedIndex] = useState<number | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const compact = useCompactConversation();
@@ -961,6 +1061,7 @@ function ChatTab({
       <div
         className="no-scrollbar"
         style={{ flex: 1, overflowY: 'auto', padding: '24px 32px 8px', display: 'flex', flexDirection: 'column', gap: 28 }}
+        onTouchStart={() => setTappedIndex(null)}
       >
         {messages.map((m, i) => {
           const isActiveStream = isStreaming && i === messages.length - 1 && m.role === 'assistant';
@@ -980,10 +1081,24 @@ function ChatTab({
           }
 
           const isUser = m.role === 'user';
+          const isVisible = hoveredIndex === i || tappedIndex === i;
 
           if (isUser) {
             return (
-              <div key={i} style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <div
+                key={i}
+                style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'flex-end', gap: 6 }}
+                onMouseEnter={() => setHoveredIndex(i)}
+                onMouseLeave={() => setHoveredIndex(null)}
+                onTouchStart={e => { e.stopPropagation(); setTappedIndex(i); }}
+              >
+                <div style={{
+                  opacity: isVisible ? 1 : 0,
+                  transition: 'opacity 0.15s',
+                  pointerEvents: isVisible ? 'auto' : 'none',
+                }}>
+                  <MessageActions content={m.content} isAssistant={false} t={t} />
+                </div>
                 <div style={{
                   background: t.surface,
                   borderRadius: 14,
@@ -997,6 +1112,7 @@ function ChatTab({
                     color: t.text,
                     margin: 0,
                     whiteSpace: 'pre-wrap',
+                    userSelect: 'text',
                   }}>
                     {m.content}
                   </p>
@@ -1005,8 +1121,21 @@ function ChatTab({
             );
           }
 
+          const lastUserMsgIdx = [...messages].slice(0, i).map((_, idx) => idx).reverse().find(idx => messages[idx].role === 'user');
+          const lastUserMsg = lastUserMsgIdx !== undefined ? messages[lastUserMsgIdx] : undefined;
+          const handleRegenerate = lastUserMsg && lastUserMsgIdx !== undefined ? () => {
+            setMessages(prev => prev.slice(0, lastUserMsgIdx));
+            handleSend(lastUserMsg.content);
+          } : undefined;
+
           return (
-            <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <div
+              key={i}
+              style={{ display: 'flex', flexDirection: 'column', gap: 6 }}
+              onMouseEnter={() => setHoveredIndex(i)}
+              onMouseLeave={() => setHoveredIndex(null)}
+              onTouchStart={e => { e.stopPropagation(); setTappedIndex(i); }}
+            >
               <span style={{
                 fontSize: 9,
                 fontFamily: 'ui-monospace, Menlo, monospace',
@@ -1026,7 +1155,23 @@ function ChatTab({
                   </span>
                 </p>
               ) : (
-                <MdContent content={m.content} t={t} />
+                <div style={{ userSelect: 'text' }}>
+                  <MdContent content={m.content} t={t} />
+                </div>
+              )}
+              {!isActiveStream && m.content && (
+                <div style={{
+                  opacity: isVisible ? 1 : 0,
+                  transition: 'opacity 0.15s',
+                  pointerEvents: isVisible ? 'auto' : 'none',
+                }}>
+                  <MessageActions
+                    content={m.content}
+                    isAssistant={true}
+                    onRegenerate={handleRegenerate}
+                    t={t}
+                  />
+                </div>
               )}
               {!isActiveStream && m.latencyMs !== undefined && (() => {
                 const relTime = fmtRelative(m._ts, m.createdAt);
