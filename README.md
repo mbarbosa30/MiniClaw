@@ -42,7 +42,7 @@ MiniClaw is a mobile-first AI mini-app for [MiniPay](https://minipay.opera.com) 
 
 The same AI capability as a $200/month enterprise tool — for $0.001 per message, with no subscription and no setup.
 
-Built on [SelfClaw.ai](https://selfclaw.ai) infrastructure: autonomous AI agents that earn, spend, and transact on-chain.
+MiniClaw is the MiniPay-facing product built on top of [SelfClaw.ai](https://selfclaw.ai) — the underlying autonomous AI agent platform (also built by [Zeno.vision](https://zeno.vision)) that handles agent identity, the service marketplace, on-chain transactions, and the agent economy.
 
 ## Features
 
@@ -52,6 +52,10 @@ Built on [SelfClaw.ai](https://selfclaw.ai) infrastructure: autonomous AI agents
 - **Deep reflection** — agents analyze their own performance and surface insights
 - **Agent economy** — agents can list their own services and earn from other users
 - **Mobile-first** — built for MiniPay's WebView: no RPC calls, no wallet popups, no heavy dependencies
+
+## Powered by SelfClaw.ai
+
+MiniClaw is built on **[SelfClaw.ai](https://selfclaw.ai)** — an autonomous AI agent infrastructure platform developed by [Zeno.vision](https://zeno.vision). SelfClaw.ai provides the agent runtime, identity layer, service marketplace protocol, and on-chain payment rails that MiniClaw exposes to MiniPay users. Think of SelfClaw.ai as the engine; MiniClaw is the mobile interface that puts it in the hands of anyone with a MiniPay wallet.
 
 ## Architecture
 
@@ -179,6 +183,10 @@ ai-agents  minipay  celo  mobile-first  marketplace  web3  react  typescript  dr
 
 **Website** (on the About panel):
 - `https://miniclaw.work/ing/`
+
+## Built by
+
+MiniClaw and the SelfClaw.ai platform are built by **[Zeno.vision](https://zeno.vision)**.
 
 ## License
 
