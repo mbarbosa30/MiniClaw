@@ -1,5 +1,4 @@
 import { useEffect } from 'react';
-import { useConnect, useConnectors, useDisconnect, useAccount } from 'wagmi';
 import { useMutation } from '@tanstack/react-query';
 import { apiFetch, apiEvents, setWalletAddress } from '@/lib/api-client';
 import { useAuthStore, useRouter } from '@/lib/store';
@@ -11,89 +10,61 @@ type EthProvider = {
 
 /**
  * Auto-connect to the injected MiniPay wallet on page load.
- * As soon as the wallet address is available, navigate straight to home.
- * No signing required — platform key + wallet address is sufficient auth.
+ * Reads the wallet address directly from window.ethereum — no wagmi needed.
+ * wagmi was removed because it uses new EventTarget() internally, which
+ * crashes in MiniPay's older Android WebView with "The object does not
+ * support the operation or argument."
  *
- * Strategy (in order):
- *  1. Read window.ethereum.selectedAddress synchronously — set immediately by
- *     MiniPay when it injects the provider, no async handshake required.
- *  2. Call eth_accounts asynchronously — covers wallets that don't set
- *     selectedAddress but respond to the JSON-RPC call instantly.
- *  3. Let wagmi's injected() connector do its full handshake — fallback for
- *     browser wallets (MetaMask, etc.) where steps 1 & 2 may not be enough.
+ * MiniPay injects window.ethereum ASYNCHRONOUSLY after the page loads, so
+ * we handle two cases:
+ *   (a) Provider already present on mount → read it immediately.
+ *   (b) Provider injected later → listen for 'ethereum#initialized' event.
  */
 export function useAutoConnect() {
-  const connectors = useConnectors();
-  const { connect } = useConnect();
-  const { address } = useAccount();
   const { setAuthenticated } = useAuthStore();
   const resetRoute = useRouter(s => s.reset);
 
-  const applyAddress = (addr: string) => {
-    setWalletAddress(addr);
-    setAuthenticated(addr);
-    resetRoute('home');
-  };
-
-  // Strategy 1 & 2: read directly from window.ethereum — works in MiniPay
-  // even when wagmi's connect() fails or takes too long.
-  //
-  // IMPORTANT: MiniPay (and many mobile wallets) inject window.ethereum
-  // ASYNCHRONOUSLY after the page loads. The provider may not be present
-  // when this effect fires on mount. We handle both cases:
-  //   a) Provider already injected → read it immediately.
-  //   b) Provider injected later → listen for 'ethereum#initialized' event.
   useEffect(() => {
     let done = false;
 
-    async function tryEthereum() {
+    const applyAddress = (addr: string) => {
       if (done) return;
+      done = true;
+      setWalletAddress(addr);
+      setAuthenticated(addr);
+      resetRoute('home');
+    };
+
+    async function tryEthereum() {
       const eth = (window as { ethereum?: EthProvider }).ethereum;
       if (!eth) return;
-      done = true;
 
-      // selectedAddress is set synchronously by MiniPay on inject
+      // selectedAddress is set synchronously by some wallets on inject
       if (eth.selectedAddress) {
         applyAddress(eth.selectedAddress);
         return;
       }
 
-      // eth_requestAccounts is the correct call in MiniPay — auto-approved
-      // instantly since the user is already authenticated. eth_accounts would
-      // return [] if the DApp hasn't been granted permission in this session.
+      // eth_requestAccounts is auto-approved in MiniPay (user already authenticated)
       try {
         const accounts = await eth.request?.({ method: 'eth_requestAccounts' });
         if (accounts?.[0]) applyAddress(accounts[0]);
       } catch {
-        // silently fall through to wagmi
+        // wallet declined or unavailable — show timeout screen
       }
     }
 
     // Case (a): provider already present
     tryEthereum();
 
-    // Case (b): provider injected after mount — MiniPay dispatches this event
+    // Case (b): MiniPay dispatches this event when the provider becomes ready
     window.addEventListener('ethereum#initialized', tryEthereum, { once: true });
 
     return () => {
       done = true;
       window.removeEventListener('ethereum#initialized', tryEthereum);
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Strategy 3: wagmi's full connector handshake — handles MetaMask and other
-  // injected wallets where selectedAddress / eth_accounts alone isn't enough.
-  useEffect(() => {
-    if (connectors.length > 0) {
-      connect({ connector: connectors[0] });
-    }
-  }, [connectors, connect]);
-
-  useEffect(() => {
-    if (address) applyAddress(address);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [address]);
+  }, [setAuthenticated, resetRoute]);
 }
 
 /**
@@ -120,7 +91,6 @@ export function useRestoreSession() {
 export function useLogout() {
   const { logout } = useAuthStore();
   const resetRoute = useRouter(s => s.reset);
-  const { disconnect } = useDisconnect();
 
   return useMutation({
     mutationFn: async () => {
@@ -128,7 +98,6 @@ export function useLogout() {
     },
     onSettled: () => {
       setWalletAddress(null);
-      disconnect();
       logout();
       resetRoute('connect');
     },

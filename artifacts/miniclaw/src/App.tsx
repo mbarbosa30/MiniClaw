@@ -1,10 +1,7 @@
 import { useState, useEffect } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { WagmiProvider } from "wagmi";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-
-import { wagmiConfig } from "@/lib/wagmi";
 import { useAutoConnect, useRestoreSession } from "@/hooks/use-auth";
 import { useGatewayEndpoints } from "@/hooks/use-agents";
 import { useRouter, useAppStore } from "@/lib/store";
@@ -116,13 +113,11 @@ function ThemedApp() {
 
 function App() {
   return (
-    <WagmiProvider config={wagmiConfig}>
-      <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          <ThemedApp />
-        </TooltipProvider>
-      </QueryClientProvider>
-    </WagmiProvider>
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <ThemedApp />
+      </TooltipProvider>
+    </QueryClientProvider>
   );
 }
 
