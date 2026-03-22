@@ -124,7 +124,6 @@ function ServiceCard({ service, onTap, savedIds, onToggleSave }: {
   onToggleSave?: (id: string) => void;
 }) {
   const t = useTheme();
-  const Icon = categoryIcon(service.category);
   const isSaved = savedIds?.has(String(service.id)) ?? false;
   return (
     <motion.button
@@ -145,14 +144,8 @@ function ServiceCard({ service, onTap, savedIds, onToggleSave }: {
         gap: 6,
       }}
     >
-      {/* Row 1: icon + name + heart */}
+      {/* Row 1: name + heart */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <span style={{
-          width: 28, height: 28, borderRadius: 8, background: t.divider,
-          display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-        }}>
-          <Icon size={14} strokeWidth={1.5} color={t.label} />
-        </span>
         <span style={{ fontSize: 13, fontWeight: 400, color: t.text, letterSpacing: '-0.01em', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {service.name}
         </span>
@@ -168,23 +161,35 @@ function ServiceCard({ service, onTap, savedIds, onToggleSave }: {
         )}
       </div>
 
-      {/* Row 2: agent name */}
-      {service.agentName && (
-        <span style={{ ...MONO, fontSize: 9, color: t.faint, textTransform: 'uppercase', letterSpacing: '0.06em', paddingLeft: 36 }}>
-          by {service.agentName}
-        </span>
-      )}
+      {/* Row 2: by agent · category badge · price */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+        {service.agentName && (
+          <span style={{ ...MONO, fontSize: 9, color: t.faint, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+            by {service.agentName}
+          </span>
+        )}
+        {service.category && (
+          <span style={{ ...MONO, fontSize: 8, color: t.faint, background: t.bg, border: `1px solid ${t.divider}`, borderRadius: 4, padding: '2px 5px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            {service.category}
+          </span>
+        )}
+        {fmtPrice(service) && (
+          <span style={{ ...MONO, fontSize: 11, color: t.text, fontWeight: 400 }}>
+            {fmtPrice(service)}
+          </span>
+        )}
+      </div>
 
       {/* Row 3: description */}
       {service.description && (
-        <p style={{ fontSize: 11, fontWeight: 300, color: t.label, lineHeight: 1.5, paddingLeft: 36, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', margin: 0 }}>
+        <p style={{ fontSize: 11, fontWeight: 300, color: t.label, lineHeight: 1.5, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', margin: 0 }}>
           {service.description}
         </p>
       )}
 
-      {/* Row 4: rating only (delivery shown in confirmation sheet) */}
+      {/* Row 4: rating */}
       {service.averageRating != null && (
-        <div style={{ display: 'flex', gap: 10, alignItems: 'center', paddingLeft: 36 }}>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
           <span style={{ ...MONO, fontSize: 8, color: t.faint, letterSpacing: '0.04em', display: 'flex', alignItems: 'center', gap: 2 }}>
             <Star size={8} strokeWidth={1.5} fill="#f59e0b" color="#f59e0b" />
             {(service.averageRating as number).toFixed(1)}
@@ -192,23 +197,6 @@ function ServiceCard({ service, onTap, savedIds, onToggleSave }: {
           </span>
         </div>
       )}
-
-      {/* Bottom row: category badge + price left (aligned with description), time-ago right */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 2, paddingLeft: 36 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          {service.category && (
-            <span style={{ ...MONO, fontSize: 8, color: t.faint, background: t.bg, border: `1px solid ${t.divider}`, borderRadius: 4, padding: '2px 5px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              {service.category}
-            </span>
-          )}
-          <span style={{ ...MONO, fontSize: 11, color: t.text, fontWeight: 400 }}>
-            {fmtPrice(service)}
-          </span>
-        </div>
-        <span style={{ ...MONO, fontSize: 8, color: t.faint, letterSpacing: '0.04em', marginLeft: 'auto' }}>
-          {fmtRelTime(service.createdAt)}
-        </span>
-      </div>
     </motion.button>
   );
 }
