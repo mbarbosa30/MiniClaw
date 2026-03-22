@@ -454,8 +454,10 @@ export function AgentDetailView() {
   }
 
   if (isError) {
-    const is404 = error instanceof ApiError && error.status === 404;
-    if (is404) {
+    // Only show "Agent not found" when selfclaw.ai itself confirmed it (isBackend404).
+    // A proxy 404 (API server temporarily down) must show the retry screen instead.
+    const isGenuine404 = error instanceof ApiError && error.status === 404 && error.isBackend404;
+    if (isGenuine404) {
       return (
         <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, padding: 32, textAlign: 'center', background: t.bg }}>
           <p style={{ fontSize: 14, fontWeight: 600, color: t.text }}>Agent not found</p>
@@ -465,8 +467,8 @@ export function AgentDetailView() {
     }
     return (
       <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, padding: 32, textAlign: 'center', background: t.bg }}>
-        <p style={{ fontSize: 14, fontWeight: 600, color: t.text }}>Couldn't load agent</p>
-        <p style={{ fontSize: 12, color: t.faint }}>A network error occurred. Please try again.</p>
+        <p style={{ fontSize: 14, fontWeight: 600, color: t.text }}>Service temporarily unavailable</p>
+        <p style={{ fontSize: 12, color: t.faint }}>Please try again in a moment.</p>
         <Button variant="ghost" size="sm" onClick={() => refetch()}>Retry</Button>
         <Button variant="ghost" size="sm" onClick={pop}>Go Back</Button>
       </div>

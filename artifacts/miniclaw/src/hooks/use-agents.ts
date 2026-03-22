@@ -169,7 +169,10 @@ export function useAgent(id: string | number | undefined, options?: { refetchInt
     },
     enabled: id != null && id !== '',
     retry: (failureCount, err) => {
-      if (err instanceof ApiError && err.status === 404) return false;
+      // Only stop retrying if selfclaw.ai itself confirmed the agent doesn't
+      // exist (isBackend404 === true). A proxy-generated 404 (API server down)
+      // should still be retried so we don't show a false "Agent not found".
+      if (err instanceof ApiError && err.status === 404 && err.isBackend404) return false;
       return failureCount < 3;
     },
     retryDelay: 800,

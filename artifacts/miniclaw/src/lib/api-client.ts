@@ -5,10 +5,17 @@ export const BASE_URL = '';
 
 export class ApiError extends Error {
   status: number;
-  constructor(message: string, status: number) {
+  /**
+   * true  → the 404 was returned by selfclaw.ai itself (agent genuinely missing)
+   * false → the 404 came from the Replit proxy (API server temporarily down)
+   * Only meaningful when status === 404.
+   */
+  isBackend404: boolean;
+  constructor(message: string, status: number, isBackend404 = false) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
+    this.isBackend404 = isBackend404;
   }
 }
 
@@ -84,6 +91,24 @@ async function withRetryAfter(fn: () => Promise<Response>): Promise<Response> {
   return fn();
 }
 
+/**
+ * Determine whether a 404 response actually came from the selfclaw.ai backend
+ * (agent genuinely missing) vs. the Replit proxy (API server temporarily down).
+ *
+ * selfclaw.ai sends structured JSON with a Content-Type of application/json AND
+ * an `error` or `message` field whose text matches known not-found language.
+ * The Replit proxy returns a bare HTML page (no JSON, no Content-Type:
+ * application/json) when the downstream service is unavailable.
+ */
+function isBackend404Response(response: Response, data: Record<string, unknown>): boolean {
+  const ct = response.headers.get('content-type') ?? '';
+  if (!ct.includes('application/json')) return false;
+  const text = String(data.error ?? data.message ?? '').toLowerCase();
+  // Matches selfclaw.ai messages like "agent not found", "not found",
+  // "does not exist", "resource not found", etc.
+  return /not.?found|does.?not.?exist|no.?such/i.test(text) || text.includes('404');
+}
+
 export async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
   const headers = buildHeaders(options?.headers, options?.body);
   const response = await withRetryAfter(() => fetch(`${BASE_URL}${path}`, { ...options, headers }));
@@ -95,13 +120,17 @@ export async function apiFetch<T>(path: string, options?: RequestInit): Promise<
 
   if (!response.ok) {
     let errorMessage = 'An error occurred';
+    let isBackend404 = false;
     try {
       const data = await response.json();
       errorMessage = data.message || data.error || response.statusText;
+      if (response.status === 404) {
+        isBackend404 = isBackend404Response(response, data);
+      }
     } catch {
       errorMessage = response.statusText;
     }
-    throw new ApiError(errorMessage, response.status);
+    throw new ApiError(errorMessage, response.status, isBackend404);
   }
 
   if (response.status === 204) return {} as T;
@@ -120,13 +149,17 @@ export async function apiFetchWithHeaders<T>(path: string, options?: RequestInit
 
   if (!response.ok) {
     let errorMessage = 'An error occurred';
+    let isBackend404 = false;
     try {
       const data = await response.json();
       errorMessage = data.message || data.error || response.statusText;
+      if (response.status === 404) {
+        isBackend404 = isBackend404Response(response, data);
+      }
     } catch {
       errorMessage = response.statusText;
     }
-    throw new ApiError(errorMessage, response.status);
+    throw new ApiError(errorMessage, response.status, isBackend404);
   }
 
   if (response.status === 204) return { data: {} as T, headers: response.headers, status: 204 };
@@ -147,13 +180,17 @@ export async function apiFetchStream(path: string, options?: RequestInit): Promi
 
   if (!response.ok) {
     let errorMessage = 'An error occurred';
+    let isBackend404 = false;
     try {
       const data = await response.json();
       errorMessage = data.message || data.error || response.statusText;
+      if (response.status === 404) {
+        isBackend404 = isBackend404Response(response, data);
+      }
     } catch {
       errorMessage = response.statusText;
     }
-    throw new ApiError(errorMessage, response.status);
+    throw new ApiError(errorMessage, response.status, isBackend404);
   }
 
   return response;
