@@ -660,21 +660,28 @@ function ChatTab({
           status: string;
           content?: string;
           suggestedChips?: string[];
+          meta?: { latencyMs?: number; tokensUsed?: number; promptTokens?: number; completionTokens?: number; memoriesUsed?: number; model?: string };
         }>(`/api/selfclaw/v1/hosted-agents/${agentId}/chat/${messageId}/result`);
 
         const usedAfter = parseQuotaHeaders(res.headers);
 
         if (res.status === 200 && res.data.status === 'completed') {
           const content = res.data.content ?? '';
-          const latencyMs = Date.now() - meta.sendTime;
-          const tokensUsed = usedAfter !== undefined && meta.quotaUsedBefore !== undefined
-            ? Math.max(0, usedAfter - meta.quotaUsedBefore)
-            : undefined;
+          const pollMeta = res.data.meta;
+          const latencyMs = pollMeta?.latencyMs ?? (Date.now() - meta.sendTime);
+          const tokensUsed = pollMeta?.tokensUsed
+            ?? (usedAfter !== undefined && meta.quotaUsedBefore !== undefined
+              ? Math.max(0, usedAfter - meta.quotaUsedBefore)
+              : undefined);
+          const promptTokens = pollMeta?.promptTokens;
+          const completionTokens = pollMeta?.completionTokens;
+          const memoriesUsed = pollMeta?.memoriesUsed;
+          const model = pollMeta?.model ?? meta.model;
           setMessages(prev => {
             const msgs = [...prev];
             const last = msgs[msgs.length - 1];
             if (last && last.role === 'assistant') {
-              msgs[msgs.length - 1] = { ...last, content, _ts: Date.now(), latencyMs, tokensUsed, model: meta.model };
+              msgs[msgs.length - 1] = { ...last, content, _ts: Date.now(), latencyMs, tokensUsed, promptTokens, completionTokens, memoriesUsed, model };
             }
             setCachedMessages(agentId, msgs);
             return msgs;
