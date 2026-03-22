@@ -29,13 +29,22 @@ function useMobile(breakpoint = 640) {
 // ── Nav ──────────────────────────────────────────────────────────────────────
 
 function WhyNav() {
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 10);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
   return (
     <nav style={{
       position: 'sticky',
       top: 0,
       zIndex: 100,
       background: T.bg,
-      borderBottom: `1px solid ${T.divider}`,
+      borderBottom: scrolled ? `1px solid ${T.divider}` : '1px solid transparent',
+      transition: 'border-color 0.2s',
     }}>
       <div style={{
         maxWidth: MAX_W,
@@ -46,7 +55,7 @@ function WhyNav() {
         alignItems: 'center',
         justifyContent: 'space-between',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
           <Link href="/" style={{ textDecoration: 'none' }}>
             <span style={{
               ...MONO,
@@ -58,8 +67,14 @@ function WhyNav() {
               MiniClaw
             </span>
           </Link>
-          <span style={{ ...MONO, fontSize: 10, color: T.divider }}>·</span>
-          <span style={{ ...MONO, fontSize: 10, color: T.faint, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+          <span style={{
+            ...MONO,
+            fontSize: 10,
+            fontWeight: 500,
+            letterSpacing: '0.05em',
+            textTransform: 'uppercase',
+            color: T.faint,
+          }}>
             Why MiniClaw
           </span>
         </div>
