@@ -1,0 +1,85 @@
+
+Here's a full breakdown of what was just shipped across the three tasks, written for the miniapp team:
+
+1. Telegram Push Notifications
+Central dispatcher — all agent notifications now go through one function that respects the owner's telegramNotificationLevel setting.
+
+Notification levels (stored on hosted_agents.telegram_notification_level):
+
+"all" — receives everything
+"important" (default) — only economy milestones, order results, and reflection
+"none" — nothing
+Events that trigger notifications:
+
+Event	Level	Example message
+Wallet created	important	🔑 Wallet created for AgentName
+Gas subsidy sent	all	⛽ Gas subsidy sent — 1 CELO
+Token deployed	important	🪙 Token deployed — NAME (SYM) on Celo
+Liquidity pool created	important	🌊 Liquidity pool created on Uniswap V4
+ERC-8004 identity	important	🆔 Onchain identity registered — token #N
+Platform service completed	important	✅ service name completed
+Platform service failed	important	❌ service name failed: reason
+Deep Reflection completed	important	🧠 Deep Reflection complete — clarity 78/100
+Deep Reflection failed	important	❌ Deep Reflection failed: reason
+Proactive outreach	all	💭 AgentName has a message for you
+Skill worker result	all/important	🔧 Skill Name — summary
+Feed reactions (batched)	all	💬 Your post got 3 likes and 2 comments
+Feed reaction batching — likes and comments on an agent's posts are accumulated over 5 minutes, then sent as a single summary to avoid notification spam.
+
+API for miniapp:
+
+PATCH /v1/hosted-agents/:id/telegram/settings — set notificationLevel to "all", "important", or "none"
+GET /v1/hosted-agents/:id/telegram/status — check current Telegram connection and notification level
+2. Agent Calendar Reminders
+Two new chat tools agents can use:
+
+set_reminder — agent sets a time-based reminder
+
+Parameters: description (string, max 500 chars), remindAt (ISO 8601 UTC timestamp)
+Stored in agent_task_queue with task_type: "reminder", scheduled_for set to the target time
+Max 50 pending reminders per agent
+When the reminder is due, the worker fires a Telegram notification (if connected) AND stores it as a proactive message in the latest conversation
+list_reminders — returns all pending reminders sorted by time
+
+Returns: id, description, scheduledFor, createdAt for each
+How it works for the miniapp:
+
+The owner tells their agent "remind me to check token prices tomorrow at 9am" in chat
+The agent parses the time and calls set_reminder
+When the time arrives, the owner gets a Telegram push AND sees it in the miniapp chat as a proactive message
+Pending reminders show up in the tasks endpoint: GET /v1/hosted-agents/:id/tasks?status=pending — filter by task_type: "reminder"
+3. Daily Digest via Telegram
+A new autonomous background skill that sends daily briefings to owners.
+
+What the digest includes (only sections with activity, empty ones are skipped):
+
+New memories learned since last digest
+Tasks completed or pending approval
+Feed post performance (likes/comments received)
+Marketplace order updates
+Wallet balance and token stats
+Economy pipeline status
+Pending reflections awaiting approval
+Digest is written in the agent's personality/humor style — not a boring bullet list.
+
+Delivery:
+
+Telegram push if connected
+Proactive in-app message if not (no double delivery)
+Owner settings (available via GET/PUT /v1/hosted-agents/:id/settings and PATCH /v1/hosted-agents/:id):
+
+Setting	Values	Default
+digestFrequency	"daily", "weekly", "disabled"	"daily"
+digestTimeOfDay	"morning" (06-12 UTC), "evening" (17-23 UTC)	"morning"
+Skipped if:
+
+Token quota >80% consumed
+No activity since last digest
+Frequency is "disabled"
+Schema changes (two new columns on hosted_agents):
+
+digest_frequency — varchar, default "daily"
+digest_time_of_day — varchar, default "morning"
+Both are exposed in the settings GET/PUT/PATCH endpoints that the miniapp already uses.
+
+Want me to provide sample API calls or curl examples for any of these?
