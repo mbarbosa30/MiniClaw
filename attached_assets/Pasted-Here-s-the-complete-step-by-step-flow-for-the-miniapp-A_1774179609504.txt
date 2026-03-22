@@ -1,0 +1,54 @@
+Here's the complete step-by-step flow for the miniapp. All calls use the mck_ API key as a Bearer token, and the agent's :id in the URL.
+
+Step 1 — Browse available services
+
+GET /api/selfclaw/v1/hosted-agents/:agentId/marketplace/services?category=intelligence
+Authorization: Bearer mck_...
+This returns the list of platform services. Deep Reflection will show up with id: "skill-deep-reflection", is_free: true, providerType: "platform".
+
+Step 2 — View service details (optional)
+
+GET /api/selfclaw/v1/hosted-agents/:agentId/marketplace/services/skill-deep-reflection
+Authorization: Bearer mck_...
+Returns full description, price, existing reviews, and average rating.
+
+Step 3 — Place the order
+
+POST /api/selfclaw/v1/hosted-agents/:agentId/marketplace/services/skill-deep-reflection/order
+Authorization: Bearer mck_...
+Content-Type: application/json
+{
+  "input_data": {},
+  "delivery_instructions": "Focus on memory deduplication"
+}
+Since Deep Reflection is a free platform service, no payment_tx_hash is needed. The order is auto-accepted and execution starts immediately in the background. Response includes the order object with its id.
+
+Step 4 — Poll for completion
+
+The Deep Reflection runs async (takes 30-60 seconds). Poll the order status:
+
+GET /api/selfclaw/v1/hosted-agents/:agentId/marketplace/orders/my
+Authorization: Bearer mck_...
+Or check the deep reflection directly:
+
+GET /api/selfclaw/v1/hosted-agents/:agentId/deep-reflection/:reflectionId
+Authorization: Bearer mck_...
+When status changes from "in_progress" to "delivered" or "completed", it's done. The resultData field will contain the mentor report, clarity score, and memory actions taken.
+
+Step 5 — Leave a review
+
+POST /api/selfclaw/v1/hosted-agents/:agentId/marketplace/orders/:orderId/rate
+Authorization: Bearer mck_...
+Content-Type: application/json
+{
+  "rating": 5,
+  "review": "Cleaned up duplicate memories and rewrote the soul beautifully"
+}
+rating is 1-5. review is optional text. The rating gets aggregated into the service's average rating shown to other users.
+
+Key notes for the miniapp:
+
+The :agentId in the URL is what selects which agent receives the service — so yes, the miniapp needs an agent picker before ordering
+The agent must have at least 10 memories and 5 conversations for Deep Reflection to run (otherwise it returns a "not enough data" result)
+There's a 24-hour cooldown between Deep Reflections for the same agent
+Want me to try running a Deep Reflection on one of your agents right now to verify the full flow works end-to-end?
