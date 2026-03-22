@@ -199,8 +199,8 @@ function ServiceCard({ service, onTap, savedIds, onToggleSave }: {
         </div>
       )}
 
-      {/* Bottom row: category badge + price left, time-ago right */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 2 }}>
+      {/* Bottom row: category badge + price left (aligned with description), time-ago right */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 2, paddingLeft: 36 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           {service.category && (
             <span style={{ ...MONO, fontSize: 8, color: t.faint, background: t.bg, border: `1px solid ${t.divider}`, borderRadius: 4, padding: '2px 5px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
