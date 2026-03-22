@@ -932,12 +932,13 @@ function normaliseServiceList(raw: unknown): MarketplaceService[] {
 }
 
 function normaliseOrderList(raw: unknown): MarketplaceOrder[] {
-  const list: unknown[] = Array.isArray(raw)
+  const candidate = Array.isArray(raw)
     ? raw
-    : ((raw as Record<string, unknown>).orders
-        ?? (raw as Record<string, unknown>).items
-        ?? (raw as Record<string, unknown>).data
-        ?? []) as unknown[];
+    : (raw as Record<string, unknown>).orders
+      ?? (raw as Record<string, unknown>).items
+      ?? (raw as Record<string, unknown>).data
+      ?? [];
+  const list: unknown[] = Array.isArray(candidate) ? candidate : [];
   return (list as MarketplaceOrder[]).map(o => ({ ...o, id: String((o as MarketplaceOrder).id) }));
 }
 
