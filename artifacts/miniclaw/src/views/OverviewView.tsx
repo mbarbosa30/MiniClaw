@@ -121,8 +121,10 @@ function DeepReflectionWidget({ agentId }: { agentId: string | number }) {
   const running = polling && !done && !failed;
 
   function handleTrigger() {
-    if (triggering || triggered) return;
+    if (triggering) return;
     setTriggerError(null);
+    setJobId(undefined);
+    setTriggered(false);
     trigger(agentId, {
       onSuccess: (res) => {
         setJobId(res.jobId);
@@ -134,9 +136,12 @@ function DeepReflectionWidget({ agentId }: { agentId: string | number }) {
     });
   }
 
+  const showTriggerBtn = !triggered && !triggering;
+  const showRetryBtn = (failed || !!triggerError) && !triggering;
+
   return (
     <div style={{ marginBottom: 14 }}>
-      {!triggered && !triggering && (
+      {showTriggerBtn && (
         <button
           onClick={handleTrigger}
           style={{
@@ -167,11 +172,26 @@ function DeepReflectionWidget({ agentId }: { agentId: string | number }) {
       )}
 
       {triggerError && (
-        <p style={{ fontSize: 10, color: '#ef4444', fontFamily: 'inherit', fontWeight: 300 }}>{triggerError}</p>
+        <p style={{ fontSize: 10, color: '#ef4444', fontFamily: 'inherit', fontWeight: 300, marginBottom: 6 }}>{triggerError}</p>
       )}
 
-      {failed && (
-        <p style={{ fontSize: 10, color: '#ef4444', fontFamily: 'ui-monospace, Menlo, monospace', letterSpacing: '0.04em' }}>Reflection failed.</p>
+      {failed && !triggerError && (
+        <p style={{ fontSize: 10, color: '#ef4444', fontFamily: 'ui-monospace, Menlo, monospace', letterSpacing: '0.04em', marginBottom: 6 }}>
+          Reflection failed.
+        </p>
+      )}
+
+      {showRetryBtn && (
+        <button
+          onClick={handleTrigger}
+          style={{
+            background: 'none', border: `1px solid #ef444440`, borderRadius: 8,
+            padding: '5px 10px', fontSize: 9, fontFamily: 'ui-monospace, Menlo, monospace',
+            color: '#ef4444', cursor: 'pointer', letterSpacing: '0.04em',
+          }}
+        >
+          Try again · $1
+        </button>
       )}
 
       {done && reflection && (

@@ -964,6 +964,7 @@ export function usePlaceOrder() {
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['marketplace-orders-my'] });
+      qc.invalidateQueries({ queryKey: ['marketplace-orders-incoming'] });
     },
   });
 }
