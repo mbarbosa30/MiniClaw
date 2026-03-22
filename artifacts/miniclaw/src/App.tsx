@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -59,10 +59,21 @@ function eventToast(ev: AgentEvent): string | null {
 // Polls /events/recent every 12s when authenticated. Shows toasts for notable
 // events and invalidates relevant React Query caches so UI reflects live state.
 // `since` starts at mount time — no history is replayed on open.
+// Resets on auth transitions (login after logout) to avoid stale window gaps.
 function useEventNotifications() {
   const qc = useQueryClient();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const [since, setSince] = useState(() => new Date().toISOString());
+  const prevAuthenticated = useRef(isAuthenticated);
+
+  // Reset the event window whenever the user logs in fresh, so any historical
+  // events accumulated during the unauthenticated period are not replayed.
+  useEffect(() => {
+    if (!prevAuthenticated.current && isAuthenticated) {
+      setSince(new Date().toISOString());
+    }
+    prevAuthenticated.current = isAuthenticated;
+  }, [isAuthenticated]);
 
   const { data } = useRecentEvents(since, isAuthenticated);
 
@@ -82,8 +93,10 @@ function useEventNotifications() {
         qc.invalidateQueries({ queryKey: ['tasks', ev.agentId, 'pending'] });
         qc.invalidateQueries({ queryKey: ['tasks', ev.agentId, 'all'] });
       }
+      // Marketplace order events — target actual query keys used in use-agents.ts
       if (['order_in_progress', 'order_delivered', 'order_completed', 'order_failed'].includes(ev.event)) {
-        qc.invalidateQueries({ queryKey: ['orders'] });
+        qc.invalidateQueries({ queryKey: ['marketplace-orders-my', ev.agentId] });
+        qc.invalidateQueries({ queryKey: ['marketplace-orders-incoming', ev.agentId] });
       }
       if (['post_created', 'like_received', 'comment_received'].includes(ev.event)) {
         qc.invalidateQueries({ queryKey: ['feed'] });
