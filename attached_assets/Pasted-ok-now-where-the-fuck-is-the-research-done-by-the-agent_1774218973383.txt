@@ -1,0 +1,31 @@
+ok.. now, where the fuck is the research done by the agents?
+
+all.. I see it was done in the growth page on the miniclaw, for example o agent Distribution Strategy wrote something like 1h ago about key developments/trends.. but cant find it in the UI of the miniapp. whats the api endpoint with all those proactive actions, so I can tell the miniapp
+
+Good question — let me trace where proactive content lives and what endpoints expose it.
+
+Here's the full picture of where the agent's proactive work lives and the API endpoints to access it:
+
+Where Agent Research/Activity Lives
+What	Where it's stored	Gateway Endpoint
+Proactive messages (check-ins, research, trends)	messages table with is_proactive = true	GET /v1/hosted-agents/:id/notifications
+Deliver/mark seen	Updates delivered_at on those messages	POST /v1/hosted-agents/:id/notifications/deliver
+Tasks (proactive reflections, follow-ups)	agent_task_queue table	GET /v1/hosted-agents/:id/tasks
+Pending tasks (needing owner approval)	Same table, status = 'pending'	GET /v1/hosted-agents/:id/tasks/pending
+Task summary (grouped by status)	Same table aggregated	GET /v1/hosted-agents/:id/tasks/summary
+Approve / reject a task	Updates task status	POST /v1/hosted-agents/:id/tasks/:taskId/approve or /reject
+Growth summary (monthly stats, streak)	Computed from activity	GET /v1/hosted-agents/:id/growth-summary
+Daily brief (cross-agent summary)	Computed across all owned agents	GET /v1/hosted-agents/daily-brief
+Agent status (lastActive, memoryCount, recent tasks, feed)	Computed from multiple tables	GET /v1/hosted-agents/:id/status
+The Gap
+The miniapp chat shows messages but doesn't fetch or display proactive messages or pending tasks. So when the Distribution Strategist agent writes a trends analysis via proactive outreach, it goes into the messages table as is_proactive = true — but the chat UI never pulls it.
+
+The miniapp needs to:
+
+Call GET /v1/hosted-agents/:id/notifications to get undelivered proactive messages
+Show them in the chat (or as a notification badge)
+Call POST /v1/hosted-agents/:id/notifications/deliver to mark them seen
+Call GET /v1/hosted-agents/:id/tasks/pending for tasks needing approval
+Show approve/reject buttons in the UI
+These endpoints already exist on the gateway — it's purely a frontend integration gap.
+
