@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { useAgent, useConversations, useMessages, useAwareness, useCompactConversation } from '@/hooks/use-agents';
+import { useAgent, useConversations, useMessages, useAwareness, useCompactConversation, useNotifications, useDeliverNotifications, useTasks, useResolveTask } from '@/hooks/use-agents';
 import { useRouter } from '@/lib/store';
 import { useTheme } from '@/lib/theme';
 import { Button } from '@/components/ui';
@@ -525,6 +525,9 @@ type LocalMessage = ChatMessage & {
   completionTokens?: number;
   memoriesUsed?: number;
   model?: string;
+  // Proactive notification metadata — present only for injected notification messages
+  _proactiveId?: string;
+  _proactiveType?: string;
 };
 
 function fmtRelative(ts?: number, iso?: string): string {
@@ -668,6 +671,17 @@ function ChatTab({
   const { data: history, refetch: refetchMessages } = useMessages(agent.id, activeConversationId);
   const [historyLoaded, setHistoryLoaded] = useState(false);
 
+  // Notifications (proactive messages) — captured once in local state so they survive the
+  // deliver mutation invalidating/refetching the query (which filters to undelivered only).
+  const { data: notifications } = useNotifications(agent.id);
+  const deliverNotifications = useDeliverNotifications();
+  const [surfacedNotifications, setSurfacedNotifications] = useState<LocalMessage[]>([]);
+  const [notificationsDelivered, setNotificationsDelivered] = useState(false);
+
+  // Pending tasks for approval
+  const { data: pendingTasks, refetch: refetchPendingTasks } = useTasks(agent.id, 'pending');
+  const resolveTask = useResolveTask();
+
   const makeGreeting = (name: string, description?: string) =>
     description
       ? `I'm ${name} — ${description.endsWith('.') ? description.slice(0, -1).toLowerCase() : description.toLowerCase()}. What would you like to work on?`
@@ -697,9 +711,14 @@ function ChatTab({
 
   useEffect(() => {
     if (history && history.length > 0 && !historyLoaded) {
-      setMessages(history);
+      // Normalize _ts from createdAt so the merge sort has stable timestamps for all messages
+      const normalized: LocalMessage[] = history.map(msg => ({
+        ...msg,
+        _ts: msg.createdAt ? new Date(msg.createdAt).getTime() : undefined,
+      }));
+      setMessages(normalized);
       setHistoryLoaded(true);
-      setCachedMessages(agent.id, history);
+      setCachedMessages(agent.id, normalized);
     }
   }, [history, historyLoaded]);
 
@@ -715,8 +734,44 @@ function ChatTab({
     if (newChatTrigger === 0) return;
     setActiveConversationId(undefined);
     setHistoryLoaded(false);
+    setNotificationsDelivered(false);
+    setSurfacedNotifications([]);
     setMessages([{ role: 'assistant', content: makeGreeting(agentName, agent.description ?? undefined), _ts: Date.now() }]);
   }, [newChatTrigger]);
+
+  // Reset notification delivery state when the viewed agent changes so stale state
+  // from a previous agent doesn't carry over if the component instance is reused.
+  const prevAgentIdRef = useRef<string | number | undefined>(undefined);
+  useEffect(() => {
+    if (prevAgentIdRef.current !== undefined && prevAgentIdRef.current !== agent.id) {
+      setNotificationsDelivered(false);
+      setSurfacedNotifications([]);
+    }
+    prevAgentIdRef.current = agent.id;
+  }, [agent.id]);
+
+  // Capture undelivered notifications into local state (so they remain visible after deliver
+  // fires and invalidates the query), then mark them delivered on the server.
+  useEffect(() => {
+    if (notificationsDelivered) return;
+    if (!notifications || notifications.length === 0) return;
+    const undelivered = notifications.filter(n => !n.delivered && !n.deliveredAt);
+    if (undelivered.length === 0) return;
+    setNotificationsDelivered(true);
+    // Snapshot the undelivered notifications as LocalMessages so they persist
+    const asMessages: LocalMessage[] = undelivered.map(n => ({
+      id: `notif-${n.id}`,
+      role: 'assistant' as const,
+      content: n.content,
+      createdAt: n.createdAt,
+      _ts: n.createdAt ? new Date(n.createdAt).getTime() : Date.now(),
+      _proactiveId: n.id,
+      _proactiveType: n.type,
+    }));
+    setSurfacedNotifications(asMessages);
+    // Mark as delivered on the server — fire-and-forget; UI state is already captured
+    deliverNotifications.mutate(agent.id);
+  }, [notifications, notificationsDelivered, agent.id]);
 
   // Brief context — inject as first user message when provided
   useEffect(() => {
@@ -1055,6 +1110,22 @@ function ChatTab({
 
   const agentLabel = agentName.toUpperCase();
 
+  // Merge proactive notification messages into the chat timeline, sorted chronologically.
+  // surfacedNotifications are captured once and survive the deliver mutation.
+  const mergedMessages = useMemo<LocalMessage[]>(() => {
+    if (surfacedNotifications.length === 0) return messages;
+    // Unified timestamp resolver: prefer _ts, fall back to parsing createdAt, then 0 (stable).
+    // Using 0 rather than Date.now() avoids non-deterministic ordering across renders.
+    const ts = (m: LocalMessage): number =>
+      m._ts ?? (m.createdAt ? new Date(m.createdAt).getTime() : 0);
+    const combined = [...messages, ...surfacedNotifications];
+    combined.sort((a, b) => ts(a) - ts(b));
+    return combined;
+  }, [messages, surfacedNotifications]);
+
+  // Pending tasks needing approval (exclude auto-resolved ones in flight)
+  const approvalTasks = (pendingTasks ?? []).filter(t => t.status === 'pending' || !t.status);
+
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: t.bg }}>
       {/* Messages */}
@@ -1063,12 +1134,12 @@ function ChatTab({
         style={{ flex: 1, overflowY: 'auto', padding: '24px 32px 8px', display: 'flex', flexDirection: 'column', gap: 28 }}
         onTouchStart={() => setTappedIndex(null)}
       >
-        {messages.map((m, i) => {
-          const isActiveStream = isStreaming && i === messages.length - 1 && m.role === 'assistant';
+        {mergedMessages.map((m, i) => {
+          const isActiveStream = isStreaming && i === mergedMessages.length - 1 && m.role === 'assistant' && !m._proactiveId;
 
           if (m.role === 'system') {
             return (
-              <p key={i} style={{
+              <p key={m._proactiveId ?? i} style={{
                 fontSize: 11,
                 fontFamily: 'ui-monospace, Menlo, monospace',
                 color: '#f87171',
@@ -1086,7 +1157,7 @@ function ChatTab({
           if (isUser) {
             return (
               <div
-                key={i}
+                key={m._proactiveId ?? i}
                 style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'flex-end', gap: 6 }}
                 onMouseEnter={() => setHoveredIndex(i)}
                 onMouseLeave={() => setHoveredIndex(null)}
@@ -1121,11 +1192,55 @@ function ChatTab({
             );
           }
 
-          const lastUserMsgIdx = [...messages].slice(0, i).map((_, idx) => idx).reverse().find(idx => messages[idx].role === 'user');
-          const lastUserMsg = lastUserMsgIdx !== undefined ? messages[lastUserMsgIdx] : undefined;
-          const handleRegenerate = lastUserMsg && lastUserMsgIdx !== undefined ? () => {
-            setMessages(prev => prev.slice(0, lastUserMsgIdx));
-            handleSend(lastUserMsg.content);
+          // Proactive notification — distinct card style in the timeline
+          if (m._proactiveId) {
+            return (
+              <div key={m._proactiveId} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{
+                    fontFamily: 'ui-monospace, Menlo, monospace',
+                    fontSize: 8,
+                    fontWeight: 600,
+                    letterSpacing: '0.08em',
+                    textTransform: 'uppercase',
+                    color: '#8b5cf6',
+                    background: '#8b5cf61a',
+                    border: '1px solid #8b5cf640',
+                    borderRadius: 3,
+                    padding: '2px 5px',
+                  }}>
+                    {m._proactiveType ? m._proactiveType.replace(/_/g, ' ') : 'proactive'}
+                  </span>
+                  {m.createdAt && (
+                    <span style={{ fontFamily: 'ui-monospace, Menlo, monospace', fontSize: 9, color: t.faint, letterSpacing: '0.04em' }}>
+                      {fmtRelative(undefined, m.createdAt)}
+                    </span>
+                  )}
+                </div>
+                <div style={{
+                  background: '#8b5cf612',
+                  border: '1px solid #8b5cf630',
+                  borderRadius: 10,
+                  padding: '10px 14px',
+                }}>
+                  <p style={{ fontSize: 14, fontWeight: 300, lineHeight: 1.6, color: t.text, margin: 0, whiteSpace: 'pre-wrap', userSelect: 'text' }}>
+                    {m.content}
+                  </p>
+                </div>
+              </div>
+            );
+          }
+
+          // For regenerate: find the preceding user message in the original messages array
+          // (not mergedMessages, since setMessages operates on the original list)
+          const messagesBeforeThis = mergedMessages.slice(0, i).filter(x => !x._proactiveId);
+          const lastRealUserMsg = [...messagesBeforeThis].reverse().find(x => x.role === 'user');
+          const lastRealUserMsgOrigIdx = lastRealUserMsg
+            ? messages.findIndex(x => x === lastRealUserMsg || (x.content === lastRealUserMsg.content && x.role === 'user' && x._ts === lastRealUserMsg._ts))
+            : -1;
+          const handleRegenerate = lastRealUserMsg && lastRealUserMsgOrigIdx >= 0 ? () => {
+            setMessages(prev => prev.slice(0, lastRealUserMsgOrigIdx));
+            handleSend(lastRealUserMsg.content);
           } : undefined;
 
           return (
@@ -1225,6 +1340,107 @@ function ChatTab({
         })}
         <div ref={endRef} />
       </div>
+
+      {/* Pending task approval cards */}
+      {approvalTasks.length > 0 && (
+        <div style={{ flexShrink: 0, padding: '0 16px 4px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {approvalTasks.map(task => (
+            <div key={task.id} style={{
+              background: t.surface,
+              border: `1px solid ${t.divider}`,
+              borderRadius: 10,
+              padding: '12px 14px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 10,
+            }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                <div style={{ flex: 1 }}>
+                  {(task.title || task.taskType) && (
+                    <p style={{
+                      fontFamily: 'ui-monospace, Menlo, monospace',
+                      fontSize: 9,
+                      fontWeight: 600,
+                      letterSpacing: '0.07em',
+                      textTransform: 'uppercase',
+                      color: t.label,
+                      margin: '0 0 4px 0',
+                    }}>
+                      {task.title ?? task.taskType}
+                    </p>
+                  )}
+                  {(task.description || task.action) && (
+                    <p style={{ fontSize: 13, lineHeight: 1.5, color: t.text, margin: 0 }}>
+                      {task.description ?? task.action}
+                    </p>
+                  )}
+                  {!task.title && !task.taskType && !task.description && !task.action && (
+                    <p style={{ fontSize: 13, lineHeight: 1.5, color: t.text, margin: 0 }}>
+                      Pending task requires your approval
+                    </p>
+                  )}
+                </div>
+                {task.riskLevel && task.riskLevel !== 'low' && (
+                  <span style={{
+                    fontFamily: 'ui-monospace, Menlo, monospace',
+                    fontSize: 8,
+                    letterSpacing: '0.06em',
+                    textTransform: 'uppercase',
+                    color: task.riskLevel === 'high' ? '#ef4444' : '#f59e0b',
+                    background: task.riskLevel === 'high' ? '#ef44441a' : '#f59e0b1a',
+                    border: `1px solid ${task.riskLevel === 'high' ? '#ef444430' : '#f59e0b30'}`,
+                    borderRadius: 3,
+                    padding: '2px 5px',
+                    flexShrink: 0,
+                  }}>
+                    {task.riskLevel}
+                  </span>
+                )}
+              </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  disabled={resolveTask.isPending}
+                  onClick={() => resolveTask.mutate({ agentId: agent.id, taskId: task.id, action: 'approve' }, { onSuccess: () => refetchPendingTasks() })}
+                  style={{
+                    flex: 1,
+                    padding: '7px 0',
+                    background: '#22c55e1a',
+                    border: '1px solid #22c55e40',
+                    borderRadius: 7,
+                    color: '#22c55e',
+                    fontSize: 12,
+                    fontWeight: 500,
+                    cursor: resolveTask.isPending ? 'default' : 'pointer',
+                    opacity: resolveTask.isPending ? 0.6 : 1,
+                    letterSpacing: '-0.01em',
+                  }}
+                >
+                  Approve
+                </button>
+                <button
+                  disabled={resolveTask.isPending}
+                  onClick={() => resolveTask.mutate({ agentId: agent.id, taskId: task.id, action: 'reject' }, { onSuccess: () => refetchPendingTasks() })}
+                  style={{
+                    flex: 1,
+                    padding: '7px 0',
+                    background: '#ef44441a',
+                    border: '1px solid #ef444440',
+                    borderRadius: 7,
+                    color: '#ef4444',
+                    fontSize: 12,
+                    fontWeight: 500,
+                    cursor: resolveTask.isPending ? 'default' : 'pointer',
+                    opacity: resolveTask.isPending ? 0.6 : 1,
+                    letterSpacing: '-0.01em',
+                  }}
+                >
+                  Reject
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Quick-reply chips */}
       {!isStreaming && (

@@ -652,3 +652,15 @@ export interface RecentEventsResponse {
   events: AgentEvent[];
   count: number;
 }
+
+// GET /:id/notifications — proactive messages written by the agent
+export interface ProactiveMessage {
+  id: string;
+  agentId?: string | number;
+  content: string;
+  type?: string;
+  isProactive?: boolean;
+  delivered?: boolean;
+  deliveredAt?: string | null;
+  createdAt?: string;
+}

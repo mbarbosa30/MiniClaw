@@ -43,6 +43,7 @@ import type {
   MarketplaceOrder,
   DeepReflection,
   RecentEventsResponse,
+  ProactiveMessage,
 } from '@/types';
 
 export type { Agent, AgentListSummary, PersonaTemplate, SkillDef };
@@ -1156,6 +1157,40 @@ export function useReflectionHistory(agentId: string | number | undefined, enabl
     },
     enabled: enabled && agentId != null,
     staleTime: 60_000,
+  });
+}
+
+// --- NOTIFICATIONS ---
+
+// GET /:id/notifications — fetch proactive messages from the agent
+export function useNotifications(agentId: string | number | undefined, enabled = true) {
+  return useQuery<ProactiveMessage[]>({
+    queryKey: ['notifications', qid(agentId)],
+    queryFn: async () => {
+      const raw = await apiFetch<ProactiveMessage[] | { notifications?: ProactiveMessage[]; messages?: ProactiveMessage[] }>(
+        `/api/selfclaw/v1/hosted-agents/${sid(agentId!)}/notifications`,
+      );
+      if (Array.isArray(raw)) return raw;
+      const env = raw as { notifications?: ProactiveMessage[]; messages?: ProactiveMessage[] };
+      return env.notifications ?? env.messages ?? [];
+    },
+    enabled: enabled && agentId != null && agentId !== '',
+    staleTime: 0,
+    retry: false,
+  });
+}
+
+// POST /:id/notifications/deliver — mark all pending notifications as delivered
+export function useDeliverNotifications() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (agentId: string | number) =>
+      apiFetch<void>(`/api/selfclaw/v1/hosted-agents/${sid(agentId)}/notifications/deliver`, {
+        method: 'POST',
+      }),
+    onSuccess: (_, agentId) => {
+      qc.invalidateQueries({ queryKey: ['notifications', qid(agentId)] });
+    },
   });
 }
 
