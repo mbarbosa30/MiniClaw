@@ -42,6 +42,7 @@ import type {
   MarketplaceService,
   MarketplaceOrder,
   DeepReflection,
+  RecentEventsResponse,
 } from '@/types';
 
 export type { Agent, AgentListSummary, PersonaTemplate, SkillDef };
@@ -1155,5 +1156,25 @@ export function useReflectionHistory(agentId: string | number | undefined, enabl
     },
     enabled: enabled && agentId != null,
     staleTime: 60_000,
+  });
+}
+
+// --- EVENT STREAM POLL FALLBACK (March 2026) ---
+
+// GET /v1/hosted-agents/events/recent?since=<ISO8601>
+// Returns events newer than `since` from a server-side ring buffer (last 200 per owner).
+// Called every 12s — same cadence as the agents list poll. SSE deliberately not used
+// because MiniPay WebView cannot hold persistent connections reliably.
+export function useRecentEvents(since: string, enabled: boolean) {
+  return useQuery<RecentEventsResponse>({
+    queryKey: ['events-recent', since],
+    queryFn: () =>
+      apiFetch<RecentEventsResponse>(
+        `/api/selfclaw/v1/hosted-agents/events/recent?since=${encodeURIComponent(since)}`
+      ),
+    refetchInterval: 12_000,
+    refetchIntervalInBackground: false,
+    staleTime: 0,
+    enabled: enabled && !!since,
   });
 }

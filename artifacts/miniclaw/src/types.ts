@@ -612,3 +612,43 @@ export interface DeepReflection {
   summary?: string | null;
   createdAt?: string;
 }
+
+// --- Agent Event Stream (March 2026) ---
+
+export type AgentEventType =
+  | 'wallet_created'
+  | 'gas_received'
+  | 'token_deployed'
+  | 'sponsorship_created'
+  | 'identity_registered'
+  | 'task_completed'
+  | 'task_failed'
+  | 'post_created'
+  | 'like_received'
+  | 'comment_received'
+  | 'proactive_message'
+  | 'daily_digest'
+  | 'memory_milestone'
+  | 'deep_reflection_complete'
+  | 'reminder_fired'
+  | 'spawning_started'
+  | 'spawning_research_complete'
+  | 'spawning_complete'
+  | 'order_in_progress'
+  | 'order_delivered'
+  | 'order_completed'
+  | 'order_failed'
+  | string;
+
+export interface AgentEvent {
+  event: AgentEventType;
+  agentId: string;
+  agentName: string;
+  data?: Record<string, unknown>;
+  timestamp: string;
+}
+
+export interface RecentEventsResponse {
+  events: AgentEvent[];
+  count: number;
+}

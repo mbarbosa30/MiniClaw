@@ -1,11 +1,13 @@
 import { useState, useEffect } from "react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAutoConnect, useRestoreSession } from "@/hooks/use-auth";
-import { useGatewayEndpoints } from "@/hooks/use-agents";
-import { useRouter, useAppStore } from "@/lib/store";
+import { useGatewayEndpoints, useRecentEvents } from "@/hooks/use-agents";
+import { useRouter, useAppStore, useAuthStore } from "@/lib/store";
 import { ThemeCtx, LIGHT, DARK } from "@/lib/theme";
+import { toast } from "@/hooks/use-toast";
+import type { AgentEvent } from "@/types";
 
 import { ConnectView } from "@/views/ConnectView";
 import { HomeView } from "@/views/HomeView";
@@ -29,6 +31,72 @@ const queryClient = new QueryClient({
 });
 
 const MAIN_VIEWS = new Set(['home', 'overview', 'feed', 'marketplace', 'settings']);
+
+// Maps an agent event to a short human-readable toast string.
+// Returns null for events that only warrant cache invalidation (no toast shown).
+function eventToast(ev: AgentEvent): string | null {
+  const n = ev.agentName ?? 'Agent';
+  const d = ev.data ?? {};
+  switch (ev.event) {
+    case 'task_completed':         return `${n} — ${(d.skill as string) ?? 'task'} done`;
+    case 'task_failed':            return `${n} — task failed`;
+    case 'reminder_fired':         return `${n} — ${(d.description as string) ?? 'reminder'}`;
+    case 'proactive_message':      return `${n} has a message`;
+    case 'order_delivered':        return `Order delivered by ${n}`;
+    case 'order_completed':        return `Order completed`;
+    case 'order_failed':           return `Order failed`;
+    case 'memory_milestone':       return `${n} reached ${d.count ?? ''} memories`.trim();
+    case 'daily_digest':           return `${n}'s digest is ready`;
+    case 'deep_reflection_complete': return `${n} completed a deep reflection`;
+    case 'post_created':           return `${n} posted`;
+    case 'wallet_created':         return `${n}'s wallet created`;
+    case 'token_deployed':         return `${n}'s token deployed`;
+    case 'identity_registered':    return `${n} registered onchain identity`;
+    default:                       return null;
+  }
+}
+
+// Polls /events/recent every 12s when authenticated. Shows toasts for notable
+// events and invalidates relevant React Query caches so UI reflects live state.
+// `since` starts at mount time — no history is replayed on open.
+function useEventNotifications() {
+  const qc = useQueryClient();
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const [since, setSince] = useState(() => new Date().toISOString());
+
+  const { data } = useRecentEvents(since, isAuthenticated);
+
+  useEffect(() => {
+    if (!data?.events?.length) return;
+
+    const events = [...data.events].sort(
+      (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+    );
+    const latest = events[events.length - 1].timestamp;
+    setSince(latest);
+
+    for (const ev of events) {
+      // Per-event cache invalidation
+      if (ev.event === 'task_completed' || ev.event === 'task_failed') {
+        qc.invalidateQueries({ queryKey: ['tasks', ev.agentId] });
+        qc.invalidateQueries({ queryKey: ['tasks', ev.agentId, 'pending'] });
+        qc.invalidateQueries({ queryKey: ['tasks', ev.agentId, 'all'] });
+      }
+      if (['order_in_progress', 'order_delivered', 'order_completed', 'order_failed'].includes(ev.event)) {
+        qc.invalidateQueries({ queryKey: ['orders'] });
+      }
+      if (['post_created', 'like_received', 'comment_received'].includes(ev.event)) {
+        qc.invalidateQueries({ queryKey: ['feed'] });
+      }
+      // Always refresh agent list so status / activity updates propagate
+      qc.invalidateQueries({ queryKey: ['agents'] });
+
+      // Show toast for notable events only
+      const msg = eventToast(ev);
+      if (msg) toast({ title: msg });
+    }
+  }, [data]);
+}
 
 function useVisualViewport() {
   const [h, setH] = useState(() => window.visualViewport?.height ?? window.innerHeight);
@@ -70,6 +138,7 @@ function MainLayout() {
 function ViewManager() {
   useAutoConnect();
   useRestoreSession();
+  useEventNotifications();
 
   const view = useRouter((s) => s.currentView.name);
 
