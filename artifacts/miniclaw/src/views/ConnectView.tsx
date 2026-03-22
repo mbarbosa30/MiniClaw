@@ -175,9 +175,40 @@ export function ConnectView() {
             <p style={{ fontSize: 12, color: t.label, lineHeight: 1.7, whiteSpace: 'pre-line', fontFamily: 'ui-monospace, Menlo, monospace', letterSpacing: '0.01em' }}>
               {resolved.text}
             </p>
+            {/* Raw API error — tells us exactly what selfclaw.ai returned */}
+            <p style={{ fontSize: 10, color: t.faint, fontFamily: 'ui-monospace, Menlo, monospace', marginTop: 2, lineHeight: 1.6, maxWidth: 260, wordBreak: 'break-all' }}>
+              raw: {authError ?? 'none'} | {ethDebug}
+            </p>
+            <button
+              style={{
+                marginTop: 10,
+                padding: '10px 24px',
+                borderRadius: 10,
+                fontSize: 13,
+                fontWeight: 600,
+                color: '#fff',
+                background: '#5b4ef8',
+                border: 'none',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                opacity: connecting ? 0.6 : 1,
+              }}
+              onClick={handleManualConnect}
+              disabled={connecting}
+            >
+              <Zap size={14} />
+              {connecting ? 'connecting…' : 'tap to connect wallet'}
+            </button>
+            {connectLog && (
+              <p style={{ fontSize: 10, color: t.label, fontFamily: 'ui-monospace, Menlo, monospace', marginTop: 6, maxWidth: 260, wordBreak: 'break-all', lineHeight: 1.6 }}>
+                {connectLog}
+              </p>
+            )}
             {resolved.canRetry && (
               <button
-                style={{ marginTop: 4, display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 600, color: t.text, background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'ui-monospace, Menlo, monospace', letterSpacing: '0.05em', textTransform: 'uppercase' }}
+                style={{ marginTop: 6, display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 600, color: t.text, background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'ui-monospace, Menlo, monospace', letterSpacing: '0.05em', textTransform: 'uppercase' }}
                 onClick={() => window.location.reload()}
               >
                 <RefreshCw size={12} />
@@ -186,7 +217,7 @@ export function ConnectView() {
             )}
             {import.meta.env.DEV && (
               <button
-                style={{ marginTop: 12, padding: '8px 20px', borderRadius: 8, fontSize: 11, fontWeight: 600, color: t.bg, background: t.text, border: 'none', cursor: 'pointer', fontFamily: 'ui-monospace, Menlo, monospace', letterSpacing: '0.05em', textTransform: 'uppercase' }}
+                style={{ marginTop: 8, padding: '8px 20px', borderRadius: 8, fontSize: 11, fontWeight: 600, color: t.bg, background: t.text, border: 'none', cursor: 'pointer', fontFamily: 'ui-monospace, Menlo, monospace', letterSpacing: '0.05em', textTransform: 'uppercase' }}
                 onClick={handleDevBypass}
               >
                 dev preview
