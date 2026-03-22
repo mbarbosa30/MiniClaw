@@ -130,7 +130,7 @@ function Hero() {
         marginBottom: 28,
         maxWidth: 800,
       }}>
-        Your agent doesn't need to be powerful.<br />It needs to be connected.
+        Not powerful.<br />Connected.
       </h1>
       <p style={{
         fontSize: 17,
