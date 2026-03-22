@@ -1402,8 +1402,8 @@ export function EconomyView() {
   const giftOwner = useGiftOwner();
   const commerceRequest = useCommerceRequest();
 
-  const phase = awareness?.phase ?? 'curious';
-  const isPhase3 = phase === 'confident';
+  const phase = awareness?.phase ?? 'nascent';
+  const isPhase3 = phase === 'confident' || phase === 'sovereign';
 
   const [handleInput, setHandleInput] = useState('');
   const [registerError, setRegisterError] = useState<string | null>(null);

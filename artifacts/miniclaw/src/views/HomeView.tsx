@@ -247,9 +247,14 @@ function timeAgo(isoTimestamp: string): string {
 // --- Phase pill helpers (mirrors AgentDetailView) ---
 
 const PHASE_COLOR: Record<string, string> = {
-  curious: '#555555',
+  nascent:    '#888888',
+  curious:    '#64748b',
+  exploring:  '#06b6d4',
+  forming:    '#8b5cf6',
   developing: '#f59e0b',
-  confident: '#22c55e',
+  opinionated:'#f97316',
+  confident:  '#22c55e',
+  sovereign:  '#eab308',
 };
 
 function phaseColor(phase: string): string {

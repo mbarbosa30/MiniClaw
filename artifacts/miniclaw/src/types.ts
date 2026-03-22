@@ -401,7 +401,7 @@ export interface AgentAwareness {
   messageCount: number;
   memoriesLearned: number;
   conversationCount: number;
-  phase: 'curious' | 'developing' | 'confident' | string;
+  phase: 'nascent' | 'curious' | 'exploring' | 'forming' | 'developing' | 'opinionated' | 'confident' | 'sovereign' | string;
   label: string;
   progress: number;
   phaseDetails?: {
