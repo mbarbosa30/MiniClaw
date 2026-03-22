@@ -691,6 +691,12 @@ function BrowseTab() {
 
   const categories = ['all', ...Array.from(new Set(services.map(s => s.category).filter(Boolean) as string[]))];
 
+  useEffect(() => {
+    if (activeCategory !== 'all' && !categories.includes(activeCategory)) {
+      setActiveCategory('all');
+    }
+  }, [categories.join(',')]);
+
   const visible = activeCategory === 'all'
     ? services
     : services.filter(s => s.category === activeCategory);
