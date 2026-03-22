@@ -611,9 +611,14 @@ function WhyFooter() {
         <span style={{ ...MONO, fontSize: 10, color: T.faint, letterSpacing: '0.05em' }}>
           MiniClaw · Powered by SelfClaw AI
         </span>
-        <Link href="/" style={{ ...MONO, fontSize: 10, color: T.faint, textDecoration: 'none', letterSpacing: '0.04em' }}>
-          ← Back to home
-        </Link>
+        <div style={{ display: 'flex', gap: 20 }}>
+          <Link href="/privacy" style={{ ...MONO, fontSize: 10, color: T.faint, textDecoration: 'none', letterSpacing: '0.04em' }}>
+            Privacy
+          </Link>
+          <Link href="/" style={{ ...MONO, fontSize: 10, color: T.faint, textDecoration: 'none', letterSpacing: '0.04em' }}>
+            ← Back to home
+          </Link>
+        </div>
       </div>
     </footer>
   );

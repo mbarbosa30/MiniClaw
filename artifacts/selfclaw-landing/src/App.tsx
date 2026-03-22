@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Router, Route, Switch, Link } from 'wouter';
 import WhyPage from './pages/WhyPage';
+import PrivacyPage from './pages/PrivacyPage';
 
 const T = {
   bg: '#ffffff',
@@ -917,8 +918,10 @@ function Footer() {
           <Link href="/why" style={{ ...MONO, fontSize: 10, color: T.faint, textDecoration: 'none', letterSpacing: '0.04em' }}>
             Why MiniClaw
           </Link>
+          <Link href="/privacy" style={{ ...MONO, fontSize: 10, color: T.faint, textDecoration: 'none', letterSpacing: '0.04em' }}>
+            Privacy
+          </Link>
           {[
-            { label: 'Privacy', href: '#', external: false },
             { label: 'Twitter / X', href: 'https://x.com/selfclaw', external: true },
           ].map(({ label, href, external }) => (
             <a key={label} href={href} {...(external ? { target: '_blank', rel: 'noopener noreferrer' } : {})} style={{
@@ -972,6 +975,7 @@ export default function App() {
     <Router base={base}>
       <Switch>
         <Route path="/why" component={WhyPage} />
+        <Route path="/privacy" component={PrivacyPage} />
         <Route component={LandingPage} />
       </Switch>
     </Router>
