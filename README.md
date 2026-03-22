@@ -1,5 +1,11 @@
 <p align="center">
-  <img src="artifacts/selfclaw-landing/public/favicon.svg" width="72" height="72" alt="MiniClaw" />
+<svg width="72" height="72" viewBox="0 0 180 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="180" height="180" rx="36" fill="#FF3C00"/>
+  <path d="M 36 122 A 54 60 0 0 0 144 122 Z" fill="white"/>
+  <rect x="28" y="122" width="124" height="14" rx="5" fill="white"/>
+  <rect x="86" y="62" width="8" height="14" rx="4" fill="white"/>
+  <circle cx="90" cy="55" r="9" fill="white"/>
+</svg>
 </p>
 
 <h1 align="center">MiniClaw</h1>
@@ -165,7 +171,7 @@ If you're the repo owner, do these once in the GitHub UI to maximize discoverabi
 
 **Topics** (on the main repo page, click the gear next to "About"):
 ```
-ai-agents  minipay  celo  mobile-first  marketplace  web3  react  typescript  drizzle  expressjs
+ai-agents  minipay  celo  mobile-first  marketplace  web3  react  typescript  drizzle  mpa
 ```
 
 **Social preview image** (Settings → General → Social preview → Upload):
