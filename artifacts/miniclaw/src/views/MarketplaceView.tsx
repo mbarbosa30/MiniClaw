@@ -1,7 +1,7 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Search, X, Star,
+  Search, X, Star, Heart, SlidersHorizontal,
   Bot, FileText, TrendingUp, Globe, Code2, BarChart2,
   Megaphone, Languages, Image, Music, Zap, ShoppingBag,
   User,
@@ -116,9 +116,15 @@ function ServiceSkeleton() {
 
 // ── Service card ──────────────────────────────────────────────────────────────
 
-function ServiceCard({ service, onTap }: { service: MarketplaceService; onTap: () => void }) {
+function ServiceCard({ service, onTap, savedIds, onToggleSave }: {
+  service: MarketplaceService;
+  onTap: () => void;
+  savedIds?: Set<string>;
+  onToggleSave?: (id: string) => void;
+}) {
   const t = useTheme();
   const Icon = categoryIcon(service.category);
+  const isSaved = savedIds?.has(String(service.id)) ?? false;
   return (
     <motion.button
       initial={{ opacity: 0, y: 6 }}
@@ -138,7 +144,7 @@ function ServiceCard({ service, onTap }: { service: MarketplaceService; onTap: (
         gap: 6,
       }}
     >
-      {/* Row 1: icon + name only */}
+      {/* Row 1: icon + name + heart */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <span style={{
           width: 28, height: 28, borderRadius: 8, background: t.divider,
@@ -149,6 +155,16 @@ function ServiceCard({ service, onTap }: { service: MarketplaceService; onTap: (
         <span style={{ fontSize: 13, fontWeight: 400, color: t.text, letterSpacing: '-0.01em', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {service.name}
         </span>
+        {onToggleSave && (
+          <span
+            role="button"
+            aria-label={isSaved ? 'Remove from saved' : 'Save'}
+            onClick={e => { e.stopPropagation(); onToggleSave(String(service.id)); }}
+            style={{ flexShrink: 0, cursor: 'pointer', padding: 4, display: 'flex', alignItems: 'center', color: isSaved ? '#ef4444' : t.faint }}
+          >
+            <Heart size={13} strokeWidth={1.5} fill={isSaved ? '#ef4444' : 'none'} />
+          </span>
+        )}
       </div>
 
       {/* Row 2: agent name */}
@@ -183,11 +199,8 @@ function ServiceCard({ service, onTap }: { service: MarketplaceService; onTap: (
         </div>
       )}
 
-      {/* Bottom row: time ago left, category badge + price right */}
+      {/* Bottom row: category badge + price left, time-ago right */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 2 }}>
-        <span style={{ ...MONO, fontSize: 8, color: t.faint, letterSpacing: '0.04em' }}>
-          {fmtRelTime(service.createdAt)}
-        </span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           {service.category && (
             <span style={{ ...MONO, fontSize: 8, color: t.faint, background: t.bg, border: `1px solid ${t.divider}`, borderRadius: 4, padding: '2px 5px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
@@ -198,6 +211,9 @@ function ServiceCard({ service, onTap }: { service: MarketplaceService; onTap: (
             {fmtPrice(service)}
           </span>
         </div>
+        <span style={{ ...MONO, fontSize: 8, color: t.faint, letterSpacing: '0.04em' }}>
+          {fmtRelTime(service.createdAt)}
+        </span>
       </div>
     </motion.button>
   );
@@ -722,13 +738,148 @@ function btnStyle(bg: string, color: string, disabled: boolean): React.CSSProper
   };
 }
 
+// ── Filter types ──────────────────────────────────────────────────────────────
+
+type SortOption = 'newest' | 'top-rated' | 'price-asc' | 'price-desc';
+type PriceFilter = 'all' | 'free' | 'paid';
+type RatingFilter = 'any' | '4+' | '3+';
+
+interface FilterState {
+  sort: SortOption;
+  price: PriceFilter;
+  rating: RatingFilter;
+}
+
+const DEFAULT_FILTERS: FilterState = { sort: 'newest', price: 'all', rating: 'any' };
+
+function isDefaultFilters(f: FilterState): boolean {
+  return f.sort === DEFAULT_FILTERS.sort && f.price === DEFAULT_FILTERS.price && f.rating === DEFAULT_FILTERS.rating;
+}
+
+function applyFilters(services: MarketplaceService[], filters: FilterState): MarketplaceService[] {
+  let list = [...services];
+
+  if (filters.price === 'free') list = list.filter(s => s.isFree || (!s.price));
+  if (filters.price === 'paid') list = list.filter(s => !s.isFree && !!s.price);
+
+  if (filters.rating === '4+') list = list.filter(s => s.averageRating != null && (s.averageRating as number) >= 4);
+  if (filters.rating === '3+') list = list.filter(s => s.averageRating != null && (s.averageRating as number) >= 3);
+
+  if (filters.sort === 'newest') {
+    list.sort((a, b) => new Date(b.createdAt ?? 0).getTime() - new Date(a.createdAt ?? 0).getTime());
+  } else if (filters.sort === 'top-rated') {
+    list.sort((a, b) => ((b.averageRating as number) ?? 0) - ((a.averageRating as number) ?? 0));
+  } else if (filters.sort === 'price-asc') {
+    list.sort((a, b) => {
+      const pa = parseFloat(a.price ?? '0') || 0;
+      const pb = parseFloat(b.price ?? '0') || 0;
+      return pa - pb;
+    });
+  } else if (filters.sort === 'price-desc') {
+    list.sort((a, b) => {
+      const pa = parseFloat(a.price ?? '0') || 0;
+      const pb = parseFloat(b.price ?? '0') || 0;
+      return pb - pa;
+    });
+  }
+
+  return list;
+}
+
+// ── Filter panel ──────────────────────────────────────────────────────────────
+
+function FilterPanel({ filters, onChange, onClose }: { filters: FilterState; onChange: (f: FilterState) => void; onClose: () => void }) {
+  const t = useTheme();
+
+  function row(label: string, options: { value: string; label: string }[], current: string, key: keyof FilterState) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <span style={{ ...MONO, fontSize: 8, color: t.faint, textTransform: 'uppercase', letterSpacing: '0.07em' }}>{label}</span>
+        <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+          {options.map(opt => {
+            const active = opt.value === current;
+            return (
+              <button
+                key={opt.value}
+                onClick={() => onChange({ ...filters, [key]: opt.value })}
+                style={{
+                  background: active ? t.text : t.bg,
+                  color: active ? t.bg : t.label,
+                  border: `1px solid ${active ? t.text : t.divider}`,
+                  borderRadius: 6, padding: '4px 10px',
+                  fontSize: 11, fontFamily: 'inherit', cursor: 'pointer',
+                  transition: 'background 0.12s, color 0.12s',
+                }}
+              >
+                {opt.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -6 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -6 }}
+      transition={{ duration: 0.16 }}
+      style={{
+        background: t.surface,
+        borderRadius: 12,
+        padding: '14px 16px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 14,
+      }}
+    >
+      {row('Sort by', [
+        { value: 'newest', label: 'Newest' },
+        { value: 'top-rated', label: 'Top Rated' },
+        { value: 'price-asc', label: 'Price ↑' },
+        { value: 'price-desc', label: 'Price ↓' },
+      ], filters.sort, 'sort')}
+
+      {row('Price', [
+        { value: 'all', label: 'All' },
+        { value: 'free', label: 'Free' },
+        { value: 'paid', label: 'Paid' },
+      ], filters.price, 'price')}
+
+      {row('Rating', [
+        { value: 'any', label: 'Any' },
+        { value: '4+', label: '4+ ★' },
+        { value: '3+', label: '3+ ★' },
+      ], filters.rating, 'rating')}
+
+      {!isDefaultFilters(filters) && (
+        <button
+          onClick={() => { onChange(DEFAULT_FILTERS); onClose(); }}
+          style={{ alignSelf: 'flex-start', background: 'none', border: 'none', cursor: 'pointer', ...MONO, fontSize: 9, color: t.faint, padding: 0, textDecoration: 'underline', letterSpacing: '0.04em' }}
+        >
+          Reset filters
+        </button>
+      )}
+    </motion.div>
+  );
+}
+
 // ── Browse tab ────────────────────────────────────────────────────────────────
 
-function BrowseTab({ agentId, onSelectService }: { agentId: string | number | undefined; onSelectService: (s: MarketplaceService) => void }) {
+function BrowseTab({ agentId, onSelectService, savedIds, onToggleSave }: {
+  agentId: string | number | undefined;
+  onSelectService: (s: MarketplaceService) => void;
+  savedIds: Set<string>;
+  onToggleSave: (id: string) => void;
+}) {
   const t = useTheme();
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState<string>('all');
+  const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
+  const [filterOpen, setFilterOpen] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   function handleSearch(v: string) {
@@ -749,35 +900,70 @@ function BrowseTab({ agentId, onSelectService }: { agentId: string | number | un
     }
   }, [categories.join(',')]);
 
-  const visible = activeCategory === 'all'
+  const byCat = activeCategory === 'all'
     ? services
     : services.filter(s => s.category === activeCategory);
 
+  const visible = applyFilters(byCat, filters);
+  const hasActiveFilters = !isDefaultFilters(filters);
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12, position: 'relative' }}>
-      {/* Search bar */}
-      <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-        <Search size={14} strokeWidth={1.5} color={t.faint} style={{ position: 'absolute', left: 12, pointerEvents: 'none' }} />
-        <input
-          value={search}
-          onChange={e => handleSearch(e.target.value)}
-          placeholder="Search services…"
+      {/* Search bar + filter button */}
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+        <div style={{ position: 'relative', display: 'flex', alignItems: 'center', flex: 1 }}>
+          <Search size={14} strokeWidth={1.5} color={t.faint} style={{ position: 'absolute', left: 12, pointerEvents: 'none' }} />
+          <input
+            value={search}
+            onChange={e => handleSearch(e.target.value)}
+            placeholder="Search services…"
+            style={{
+              width: '100%', boxSizing: 'border-box',
+              background: t.surface, border: 'none', borderRadius: 10,
+              padding: '10px 12px 10px 34px', fontSize: 12, color: t.text,
+              fontFamily: 'inherit', outline: 'none',
+            }}
+          />
+          {search && (
+            <button
+              onClick={() => { setSearch(''); setDebouncedSearch(''); }}
+              style={{ position: 'absolute', right: 10, background: 'none', border: 'none', cursor: 'pointer', padding: 2, color: t.faint }}
+            >
+              <X size={12} strokeWidth={1.5} />
+            </button>
+          )}
+        </div>
+
+        {/* Filter toggle button */}
+        <button
+          onClick={() => setFilterOpen(v => !v)}
           style={{
-            width: '100%', boxSizing: 'border-box',
-            background: t.surface, border: 'none', borderRadius: 10,
-            padding: '10px 12px 10px 34px', fontSize: 12, color: t.text,
-            fontFamily: 'inherit', outline: 'none',
+            position: 'relative',
+            background: filterOpen ? t.text : t.surface,
+            color: filterOpen ? t.bg : t.label,
+            border: 'none', borderRadius: 10, padding: '10px 12px',
+            cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5,
+            flexShrink: 0, fontSize: 11, fontFamily: 'inherit',
+            transition: 'background 0.15s, color 0.15s',
           }}
-        />
-        {search && (
-          <button
-            onClick={() => { setSearch(''); setDebouncedSearch(''); }}
-            style={{ position: 'absolute', right: 10, background: 'none', border: 'none', cursor: 'pointer', padding: 2, color: t.faint }}
-          >
-            <X size={12} strokeWidth={1.5} />
-          </button>
-        )}
+        >
+          <SlidersHorizontal size={13} strokeWidth={1.5} />
+          {hasActiveFilters && (
+            <span style={{
+              position: 'absolute', top: 6, right: 6,
+              width: 6, height: 6, borderRadius: '50%',
+              background: filterOpen ? t.bg : '#3b82f6',
+            }} />
+          )}
+        </button>
       </div>
+
+      {/* Filter panel */}
+      <AnimatePresence>
+        {filterOpen && (
+          <FilterPanel filters={filters} onChange={setFilters} onClose={() => setFilterOpen(false)} />
+        )}
+      </AnimatePresence>
 
       {/* Category filter chips */}
       {!isLoading && !isError && categories.length > 1 && (
@@ -821,13 +1007,13 @@ function BrowseTab({ agentId, onSelectService }: { agentId: string | number | un
       ) : visible.length === 0 ? (
         <div style={{ textAlign: 'center', paddingTop: 32 }}>
           <p style={{ fontSize: 13, color: t.faint, fontWeight: 300 }}>
-            {debouncedSearch ? `No services found for "${debouncedSearch}".` : activeCategory !== 'all' ? `No services in "${activeCategory}".` : 'No services listed yet.'}
+            {debouncedSearch ? `No services found for "${debouncedSearch}".` : activeCategory !== 'all' ? `No services in "${activeCategory}".` : hasActiveFilters ? 'No services match the active filters.' : 'No services listed yet.'}
           </p>
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {visible.map(s => (
-            <ServiceCard key={s.id} service={s} onTap={() => onSelectService(s)} />
+            <ServiceCard key={s.id} service={s} onTap={() => onSelectService(s)} savedIds={savedIds} onToggleSave={onToggleSave} />
           ))}
         </div>
       )}
@@ -917,9 +1103,70 @@ function OrdersTab({ agentId }: { agentId: string | number | undefined }) {
   );
 }
 
+// ── Saved tab ─────────────────────────────────────────────────────────────────
+
+const SAVED_KEY = 'miniclaw_saved_services';
+
+function useSavedServices(): [Set<string>, (id: string) => void] {
+  const [savedIds, setSavedIds] = useState<Set<string>>(() => {
+    try {
+      const raw = localStorage.getItem(SAVED_KEY);
+      return raw ? new Set(JSON.parse(raw) as string[]) : new Set();
+    } catch {
+      return new Set();
+    }
+  });
+
+  const toggle = useCallback((id: string) => {
+    setSavedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      try { localStorage.setItem(SAVED_KEY, JSON.stringify([...next])); } catch {}
+      return next;
+    });
+  }, []);
+
+  return [savedIds, toggle];
+}
+
+function SavedTab({ agentId, onSelectService, savedIds, onToggleSave }: {
+  agentId: string | number | undefined;
+  onSelectService: (s: MarketplaceService) => void;
+  savedIds: Set<string>;
+  onToggleSave: (id: string) => void;
+}) {
+  const t = useTheme();
+  const { data: services = [], isLoading, isError } = useMarketplaceServices(agentId, undefined);
+
+  if (isLoading) return <ServiceSkeleton />;
+  if (isError) return <p style={{ fontSize: 12, color: t.faint, fontWeight: 300 }}>Unable to load services. Check back soon.</p>;
+
+  const saved = services.filter(s => savedIds.has(String(s.id)));
+
+  if (saved.length === 0) {
+    return (
+      <div style={{ textAlign: 'center', paddingTop: 40 }}>
+        <Heart size={28} strokeWidth={1} color={t.faint} style={{ marginBottom: 12 }} />
+        <p style={{ fontSize: 13, color: t.faint, fontWeight: 300, lineHeight: 1.65 }}>
+          No saved services yet. Tap the heart on any listing to save it.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      {saved.map(s => (
+        <ServiceCard key={s.id} service={s} onTap={() => onSelectService(s)} savedIds={savedIds} onToggleSave={onToggleSave} />
+      ))}
+    </div>
+  );
+}
+
 // ── MarketplaceView ───────────────────────────────────────────────────────────
 
-type MarketplaceTab = 'browse' | 'orders';
+type MarketplaceTab = 'browse' | 'orders' | 'saved';
 
 export function MarketplaceView() {
   const t = useTheme();
@@ -929,11 +1176,12 @@ export function MarketplaceView() {
   const firstAgentId = agentsData?.agents?.[0]?.id;
   const [selectedAgentId, setSelectedAgentId] = useState<string | number | undefined>(undefined);
   const activeAgentId = selectedAgentId ?? firstAgentId;
+  const [savedIds, toggleSave] = useSavedServices();
 
   const tabBtn = (id: MarketplaceTab, label: string): React.CSSProperties => ({
     background: tab === id ? t.text : 'none',
     color: tab === id ? t.bg : t.faint,
-    border: 'none', borderRadius: 8, padding: '6px 18px',
+    border: 'none', borderRadius: 8, padding: '6px 14px',
     fontSize: 12, fontFamily: 'inherit', cursor: 'pointer',
     transition: 'background 0.15s, color 0.15s',
   });
@@ -949,6 +1197,18 @@ export function MarketplaceView() {
         <div style={{ display: 'flex', gap: 4, background: t.surface, borderRadius: 10, padding: 4, marginBottom: 24, alignSelf: 'flex-start' }}>
           <button style={tabBtn('browse', 'Browse')} onClick={() => setTab('browse')}>Browse</button>
           <button style={tabBtn('orders', 'Orders')} onClick={() => setTab('orders')}>Orders</button>
+          <button style={tabBtn('saved', 'Saved')} onClick={() => setTab('saved')}>
+            Saved
+            {savedIds.size > 0 && (
+              <span style={{
+                marginLeft: 5, background: tab === 'saved' ? t.bg : t.text, color: tab === 'saved' ? t.text : t.bg,
+                borderRadius: '50%', width: 14, height: 14, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 9, fontFamily: 'ui-monospace, monospace',
+              }}>
+                {savedIds.size}
+              </span>
+            )}
+          </button>
         </div>
 
         <AnimatePresence mode="wait">
@@ -959,7 +1219,13 @@ export function MarketplaceView() {
             exit={{ opacity: 0, y: -4 }}
             transition={{ duration: 0.18 }}
           >
-            {tab === 'browse' ? <BrowseTab agentId={activeAgentId} onSelectService={setSelectedService} /> : <OrdersTab agentId={activeAgentId} />}
+            {tab === 'browse' ? (
+              <BrowseTab agentId={activeAgentId} onSelectService={setSelectedService} savedIds={savedIds} onToggleSave={toggleSave} />
+            ) : tab === 'orders' ? (
+              <OrdersTab agentId={activeAgentId} />
+            ) : (
+              <SavedTab agentId={activeAgentId} onSelectService={setSelectedService} savedIds={savedIds} onToggleSave={toggleSave} />
+            )}
           </motion.div>
         </AnimatePresence>
       </div>
