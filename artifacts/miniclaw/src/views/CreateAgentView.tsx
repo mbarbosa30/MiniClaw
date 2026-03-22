@@ -786,7 +786,7 @@ function SpawningScreen({
 }) {
   const t = useTheme();
   const { data } = useSpawningStatus(agentId);
-  const status = data?.status ?? 'researching';
+  const status = data?.spawningStatus ?? data?.status ?? 'researching';
   const isReady = status === 'ready';
   const isFailed = status === 'failed';
 

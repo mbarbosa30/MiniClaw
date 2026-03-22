@@ -104,7 +104,8 @@ export interface SpawningProgressStep {
 }
 
 export interface SpawningStatusResponse {
-  status: 'researching' | 'training' | 'ready' | 'failed' | null;
+  status?: 'researching' | 'training' | 'ready' | 'failed' | null;
+  spawningStatus?: 'researching' | 'training' | 'ready' | 'failed' | null;
   progress?: SpawningProgressStep[];
 }
 

@@ -630,7 +630,8 @@ export function useSpawningStatus(
     ),
     enabled: enabled && agentId != null && agentId !== '',
     refetchInterval: (query) => {
-      const s = (query.state.data as SpawningStatusResponse | undefined)?.status;
+      const d = query.state.data as SpawningStatusResponse | undefined;
+      const s = d?.spawningStatus ?? d?.status;
       if (s === 'ready' || s === 'failed') return false;
       return 2500;
     },
