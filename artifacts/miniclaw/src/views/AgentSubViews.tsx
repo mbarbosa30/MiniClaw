@@ -750,6 +750,7 @@ function fmtScheduled(iso?: string): string {
   const diff = new Date(iso).getTime() - Date.now();
   if (diff <= 0) return 'overdue';
   const mins = Math.floor(diff / 60_000);
+  if (mins < 1) return 'soon';
   if (mins < 60) return `in ${mins} min`;
   const hrs = Math.floor(mins / 60);
   if (hrs < 24) return `in ${hrs} hr`;
