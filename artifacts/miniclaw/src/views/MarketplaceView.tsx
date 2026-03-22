@@ -573,15 +573,19 @@ function OrderTimeline({ status }: { status: MarketplaceOrderStatus }) {
 // ── Order card ────────────────────────────────────────────────────────────────
 
 function OrderCard({
-  order,
+  order: orderProp,
   direction,
   agentId,
+  pollAgentId,
 }: {
   order: MarketplaceOrder;
   direction: 'outgoing' | 'incoming';
   agentId: string | number;
+  pollAgentId?: string | number;
 }) {
   const t = useTheme();
+  const { data: liveOrder } = useOrderStatus(pollAgentId, pollAgentId ? orderProp.id : undefined);
+  const order = liveOrder ?? orderProp;
   const { mutate: doAction, isPending } = useOrderAction();
   const [ratingOpen, setRatingOpen] = useState(false);
   const cfg = getStatusConfig(order.status);
@@ -1024,7 +1028,7 @@ function OrderSkeleton() {
 
 const TERMINAL_STATUSES: MarketplaceOrderStatus[] = ['delivered', 'confirmed', 'rated', 'rejected', 'failed', 'cancelled' as MarketplaceOrderStatus];
 
-function OrderTracker({ agentId, orderId, onDone }: { agentId: string | number; orderId: string; onDone: () => void }) {
+function OrderTracker({ agentId, orderId, onDone }: { agentId: string | number; orderId: string; onDone: () => void; }) {
   const t = useTheme();
   const { data: order } = useOrderStatus(agentId, orderId);
   const status = order?.status;
@@ -1086,11 +1090,11 @@ function OrderTracker({ agentId, orderId, onDone }: { agentId: string | number; 
 
 function OrdersTab({
   agentId,
-  lastPlacedOrderId,
+  lastPlacedOrder,
   onClearTracking,
 }: {
   agentId: string | number | undefined;
-  lastPlacedOrderId?: string;
+  lastPlacedOrder?: { orderId: string; agentId: string | number };
   onClearTracking: () => void;
 }) {
   const t = useTheme();
@@ -1112,7 +1116,7 @@ function OrdersTab({
   }
 
   const hasOrders = myOrders.length > 0 || incomingOrders.length > 0;
-  const showTracker = !!lastPlacedOrderId && !!agentId;
+  const showTracker = !!lastPlacedOrder?.orderId;
 
   if (!hasOrders && !showTracker) {
     return (
@@ -1137,8 +1141,8 @@ function OrdersTab({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
       <AnimatePresence>
-        {showTracker && (
-          <OrderTracker agentId={agentId} orderId={lastPlacedOrderId!} onDone={onClearTracking} />
+        {showTracker && lastPlacedOrder && (
+          <OrderTracker agentId={lastPlacedOrder.agentId} orderId={lastPlacedOrder.orderId} onDone={onClearTracking} />
         )}
       </AnimatePresence>
 
@@ -1147,7 +1151,15 @@ function OrdersTab({
           <p style={{ ...MONO, fontSize: 9, color: t.faint, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 12 }}>
             Outgoing · {myOrders.length}
           </p>
-          {myOrders.map(o => <OrderCard key={o.id} order={o} direction="outgoing" agentId={agentId} />)}
+          {myOrders.map(o => (
+            <OrderCard
+              key={o.id}
+              order={o}
+              direction="outgoing"
+              agentId={agentId!}
+              pollAgentId={lastPlacedOrder && o.id === lastPlacedOrder.orderId ? lastPlacedOrder.agentId : undefined}
+            />
+          ))}
         </>
       )}
 
@@ -1237,13 +1249,13 @@ export function MarketplaceView() {
   const [selectedAgentId, setSelectedAgentId] = useState<string | number | undefined>(undefined);
   const activeAgentId = selectedAgentId ?? firstAgentId;
   const [savedIds, toggleSave] = useSavedServices();
-  const [lastPlacedOrderId, setLastPlacedOrderId] = useState<string | undefined>(undefined);
+  const [lastPlacedOrder, setLastPlacedOrder] = useState<{ orderId: string; agentId: string | number } | undefined>(undefined);
 
   const handleOrderPlaced = useCallback((orderId: string) => {
-    setLastPlacedOrderId(orderId);
+    setLastPlacedOrder({ orderId, agentId: activeAgentId! });
     setSelectedService(null);
     setTab('orders');
-  }, []);
+  }, [activeAgentId]);
 
   const tabBtn = (id: MarketplaceTab, label: string): React.CSSProperties => ({
     background: tab === id ? t.text : 'none',
@@ -1289,7 +1301,7 @@ export function MarketplaceView() {
             {tab === 'browse' ? (
               <BrowseTab agentId={activeAgentId} onSelectService={setSelectedService} savedIds={savedIds} onToggleSave={toggleSave} />
             ) : tab === 'orders' ? (
-              <OrdersTab agentId={activeAgentId} lastPlacedOrderId={lastPlacedOrderId} onClearTracking={() => setLastPlacedOrderId(undefined)} />
+              <OrdersTab agentId={activeAgentId} lastPlacedOrder={lastPlacedOrder} onClearTracking={() => setLastPlacedOrder(undefined)} />
             ) : (
               <SavedTab agentId={activeAgentId} onSelectService={setSelectedService} savedIds={savedIds} onToggleSave={toggleSave} />
             )}
