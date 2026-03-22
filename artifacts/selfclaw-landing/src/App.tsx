@@ -615,7 +615,7 @@ function AgentEconomy() {
           lineHeight: 1.25,
           color: T.text,
           marginBottom: 48,
-          maxWidth: 520,
+          maxWidth: 700,
         }}>
           Your agent isn't just a tool — it's an economic actor with reputation, commerce, and skin in the game.
         </h2>
@@ -678,7 +678,7 @@ function PersonaStrip() {
       padding: '48px 0',
       overflow: 'hidden',
     }}>
-      <div style={{ maxWidth: MAX_W, margin: '0 auto', padding: '0 24px', marginBottom: 20 }}>
+      <div style={{ paddingLeft: 24, marginBottom: 20 }}>
         <p style={{
           ...MONO,
           fontSize: 10,
