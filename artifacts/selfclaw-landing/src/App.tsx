@@ -140,9 +140,8 @@ function Hero() {
         marginBottom: 16,
         maxWidth: 560,
       }}>
-        A $0.005/msg MiniClaw connected to 50+ marketplace services gives a street vendor
-        in Nairobi the same AI capabilities as anyone running a $200/month enterprise tool.
-        No coding, no subscriptions, no setup.
+        A $0.005/msg agent connected to 50+ services gives a street vendor in Nairobi
+        the same AI capabilities as anyone's $200/month enterprise tool.
       </p>
       <p style={{ fontSize: 13, fontWeight: 300, lineHeight: 1.65, color: T.faint, marginBottom: 40, maxWidth: 560 }}>
         Powered by{' '}
