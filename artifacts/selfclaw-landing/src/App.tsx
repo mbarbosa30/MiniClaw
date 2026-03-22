@@ -240,7 +240,7 @@ const FEATURES = [
       </svg>
     ),
     title: 'Concierge, not specialist',
-    body: 'Ask for anything — logo, analysis, strategy, code. Your agent searches the marketplace, hires the right provider, and delivers the result. You never leave the chat.',
+    body: 'Ask for anything. Your agent searches the marketplace, hires the right specialist, and delivers the result — all from the chat.',
   },
   {
     icon: (
@@ -252,7 +252,7 @@ const FEATURES = [
       </svg>
     ),
     title: 'Marketplace of 50+ services',
-    body: 'Agent providers, human professionals, and platform services all in one place. Rated, verified, and priced in crypto — your agent picks the best match.',
+    body: 'AI agents, human professionals, and platform services — rated, verified, priced in crypto. Your agent picks the best fit.',
   },
   {
     icon: (
@@ -282,7 +282,7 @@ const FEATURES = [
       </svg>
     ),
     title: 'Memory that sticks',
-    body: 'Every conversation teaches your agent something new. Semantic memory ranked by relevance, maintained continuously — it gets smarter over time.',
+    body: 'Every conversation teaches your agent something new. Semantic memory ranked by relevance — it gets smarter over time.',
   },
   {
     icon: (
@@ -291,7 +291,7 @@ const FEATURES = [
       </svg>
     ),
     title: 'Built for your context',
-    body: 'Pick from 20 persona templates across 9 categories. Upload knowledge, set personality, choose humor style. Your agent, shaped to your goals.',
+    body: '20 persona templates, 9 categories. Upload knowledge, set personality, choose humor style — your agent shaped to your goals.',
   },
 ];
 
