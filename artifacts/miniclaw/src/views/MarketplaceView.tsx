@@ -207,9 +207,13 @@ function ServiceCard({ service, onTap }: { service: MarketplaceService; onTap: (
 
 function ServiceDetailSheet({
   service,
+  selectedAgentId,
+  onAgentChange,
   onClose,
 }: {
   service: MarketplaceService;
+  selectedAgentId: string | number | undefined;
+  onAgentChange: (id: string | number) => void;
   onClose: () => void;
 }) {
   const t = useTheme();
@@ -218,7 +222,6 @@ function ServiceDetailSheet({
   const agents = agentsData?.agents ?? [];
   const [input, setInput] = useState('');
   const [ordered, setOrdered] = useState(false);
-  const [selectedAgentId, setSelectedAgentId] = useState<string | number | undefined>(undefined);
 
   const resolvedAgentId = selectedAgentId ?? agents[0]?.id;
   const canOrder = !isPending && resolvedAgentId != null;
@@ -325,7 +328,7 @@ function ServiceDetailSheet({
                 onChange={e => {
                   const val = e.target.value;
                   const num = Number(val);
-                  setSelectedAgentId(Number.isFinite(num) && val !== '' ? num : val);
+                  onAgentChange(Number.isFinite(num) && val !== '' ? num : val);
                 }}
                 style={{
                   width: '100%', boxSizing: 'border-box',
@@ -396,9 +399,11 @@ function ServiceDetailSheet({
 
 function RatingSheet({
   order,
+  agentId,
   onClose,
 }: {
   order: MarketplaceOrder;
+  agentId: string | number;
   onClose: () => void;
 }) {
   const t = useTheme();
@@ -409,7 +414,7 @@ function RatingSheet({
 
   function handleRate() {
     if (stars === 0 || isPending) return;
-    rateOrder({ orderId: order.id, rating: stars, comment: comment.trim() || undefined }, {
+    rateOrder({ orderId: order.id, agentId, rating: stars, comment: comment.trim() || undefined }, {
       onSuccess: () => setDone(true),
     });
   }
@@ -571,9 +576,11 @@ function OrderTimeline({ status }: { status: MarketplaceOrderStatus }) {
 function OrderCard({
   order,
   direction,
+  agentId,
 }: {
   order: MarketplaceOrder;
   direction: 'outgoing' | 'incoming';
+  agentId: string | number;
 }) {
   const t = useTheme();
   const { mutate: doAction, isPending } = useOrderAction();
@@ -582,7 +589,7 @@ function OrderCard({
 
   function action(a: 'accept' | 'reject' | 'deliver' | 'confirm') {
     if (isPending) return;
-    doAction({ orderId: order.id, action: a });
+    doAction({ orderId: order.id, action: a, agentId });
   }
 
   const completedStatuses = ['delivered', 'confirmed', 'rated'];
@@ -699,7 +706,7 @@ function OrderCard({
       </div>
 
       <AnimatePresence>
-        {ratingOpen && <RatingSheet order={order} onClose={() => setRatingOpen(false)} />}
+        {ratingOpen && <RatingSheet order={order} agentId={agentId} onClose={() => setRatingOpen(false)} />}
       </AnimatePresence>
     </>
   );
@@ -717,7 +724,7 @@ function btnStyle(bg: string, color: string, disabled: boolean): React.CSSProper
 
 // ── Browse tab ────────────────────────────────────────────────────────────────
 
-function BrowseTab({ onSelectService }: { onSelectService: (s: MarketplaceService) => void }) {
+function BrowseTab({ agentId, onSelectService }: { agentId: string | number | undefined; onSelectService: (s: MarketplaceService) => void }) {
   const t = useTheme();
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -732,7 +739,7 @@ function BrowseTab({ onSelectService }: { onSelectService: (s: MarketplaceServic
 
   useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current); }, []);
 
-  const { data: services = [], isLoading, isError } = useMarketplaceServices(debouncedSearch || undefined);
+  const { data: services = [], isLoading, isError } = useMarketplaceServices(agentId, debouncedSearch || undefined);
 
   const categories = ['all', ...Array.from(new Set(services.map(s => s.category).filter(Boolean) as string[]))];
 
@@ -846,10 +853,10 @@ function OrderSkeleton() {
   );
 }
 
-function OrdersTab() {
+function OrdersTab({ agentId }: { agentId: string | number | undefined }) {
   const t = useTheme();
-  const { data: myOrders = [], isLoading: myLoading, isError: myError } = useMyOrders();
-  const { data: incomingOrders = [], isLoading: incomingLoading, isError: incomingError } = useIncomingOrders();
+  const { data: myOrders = [], isLoading: myLoading, isError: myError } = useMyOrders(agentId);
+  const { data: incomingOrders = [], isLoading: incomingLoading, isError: incomingError } = useIncomingOrders(agentId);
   const isLoading = myLoading || incomingLoading;
   const isError = myError || incomingError;
 
@@ -877,6 +884,16 @@ function OrdersTab() {
     );
   }
 
+  if (!agentId) {
+    return (
+      <div style={{ textAlign: 'center', paddingTop: 32 }}>
+        <p style={{ fontSize: 13, color: t.faint, fontWeight: 300, lineHeight: 1.65 }}>
+          No agent selected.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
       {myOrders.length > 0 && (
@@ -884,7 +901,7 @@ function OrdersTab() {
           <p style={{ ...MONO, fontSize: 9, color: t.faint, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 12 }}>
             Outgoing · {myOrders.length}
           </p>
-          {myOrders.map(o => <OrderCard key={o.id} order={o} direction="outgoing" />)}
+          {myOrders.map(o => <OrderCard key={o.id} order={o} direction="outgoing" agentId={agentId} />)}
         </>
       )}
 
@@ -893,7 +910,7 @@ function OrdersTab() {
           <p style={{ ...MONO, fontSize: 9, color: t.faint, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 12 }}>
             Incoming · {incomingOrders.length}
           </p>
-          {incomingOrders.map(o => <OrderCard key={o.id} order={o} direction="incoming" />)}
+          {incomingOrders.map(o => <OrderCard key={o.id} order={o} direction="incoming" agentId={agentId} />)}
         </div>
       )}
     </div>
@@ -908,6 +925,10 @@ export function MarketplaceView() {
   const t = useTheme();
   const [tab, setTab] = useState<MarketplaceTab>('browse');
   const [selectedService, setSelectedService] = useState<MarketplaceService | null>(null);
+  const { data: agentsData } = useAgents();
+  const firstAgentId = agentsData?.agents?.[0]?.id;
+  const [selectedAgentId, setSelectedAgentId] = useState<string | number | undefined>(undefined);
+  const activeAgentId = selectedAgentId ?? firstAgentId;
 
   const tabBtn = (id: MarketplaceTab, label: string): React.CSSProperties => ({
     background: tab === id ? t.text : 'none',
@@ -938,14 +959,19 @@ export function MarketplaceView() {
             exit={{ opacity: 0, y: -4 }}
             transition={{ duration: 0.18 }}
           >
-            {tab === 'browse' ? <BrowseTab onSelectService={setSelectedService} /> : <OrdersTab />}
+            {tab === 'browse' ? <BrowseTab agentId={activeAgentId} onSelectService={setSelectedService} /> : <OrdersTab agentId={activeAgentId} />}
           </motion.div>
         </AnimatePresence>
       </div>
 
       <AnimatePresence>
         {selectedService && (
-          <ServiceDetailSheet service={selectedService} onClose={() => setSelectedService(null)} />
+          <ServiceDetailSheet
+            service={selectedService}
+            selectedAgentId={activeAgentId}
+            onAgentChange={setSelectedAgentId}
+            onClose={() => setSelectedService(null)}
+          />
         )}
       </AnimatePresence>
     </div>

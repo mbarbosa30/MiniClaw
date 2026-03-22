@@ -942,73 +942,78 @@ function normaliseOrderList(raw: unknown): MarketplaceOrder[] {
   return (list as MarketplaceOrder[]).map(o => ({ ...o, id: String((o as MarketplaceOrder).id) }));
 }
 
-// GET /v1/marketplace/services — browse + optional text search
+// GET /v1/hosted-agents/:agentId/marketplace/services — browse + optional text search
 // Alias: useMarketplaceSearch is a thin wrapper with the same signature
-export function useMarketplaceSearch(search?: string) {
-  return useMarketplaceServices(search);
+export function useMarketplaceSearch(agentId: string | number | undefined, search?: string) {
+  return useMarketplaceServices(agentId, search);
 }
 
-export function useMarketplaceServices(search?: string) {
+export function useMarketplaceServices(agentId: string | number | undefined, search?: string) {
   return useQuery<MarketplaceService[]>({
-    queryKey: ['marketplace-services', search ?? ''],
+    queryKey: ['marketplace-services', qid(agentId), search ?? ''],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (search && search.trim()) params.set('q', search.trim());
-      const url = `/api/selfclaw/v1/marketplace/services${params.toString() ? `?${params}` : ''}`;
+      const url = `/api/selfclaw/v1/hosted-agents/${sid(agentId!)}/marketplace/services${params.toString() ? `?${params}` : ''}`;
       const raw = await apiFetch<unknown>(url);
       return normaliseServiceList(raw);
     },
+    enabled: agentId != null && agentId !== '',
     staleTime: 60_000,
   });
 }
 
-// POST /v1/marketplace/services/:serviceId/order — place an order
+// POST /v1/hosted-agents/:agentId/marketplace/services/:serviceId/order — place an order
 export function usePlaceOrder() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ serviceId, input, agentId }: { serviceId: string; input?: string; agentId?: string | number }) =>
-      apiFetch<MarketplaceOrder>(`/api/selfclaw/v1/marketplace/services/${serviceId}/order`, {
-        method: 'POST',
-        body: JSON.stringify({ input, agentId }),
-      }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['marketplace-orders-my'] });
-      qc.invalidateQueries({ queryKey: ['marketplace-orders-incoming'] });
+    mutationFn: ({ serviceId, input, agentId }: { serviceId: string; input?: string; agentId: string | number }) =>
+      apiFetch<MarketplaceOrder>(
+        `/api/selfclaw/v1/hosted-agents/${sid(agentId)}/marketplace/services/${serviceId}/order`,
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            input_data: {},
+            delivery_instructions: input ?? '',
+          }),
+        }
+      ),
+    onSuccess: (_, variables) => {
+      qc.invalidateQueries({ queryKey: ['marketplace-orders-my', qid(variables.agentId)] });
+      qc.invalidateQueries({ queryKey: ['marketplace-orders-incoming', qid(variables.agentId)] });
     },
   });
 }
 
-// GET /v1/marketplace/orders/mine — orders you placed (outgoing)
-export function useMyOrders() {
-  const address = useAuthStore(s => s.address);
+// GET /v1/hosted-agents/:agentId/marketplace/orders/my — orders you placed (outgoing)
+export function useMyOrders(agentId: string | number | undefined) {
   return useQuery<MarketplaceOrder[]>({
-    queryKey: ['marketplace-orders-my'],
+    queryKey: ['marketplace-orders-my', qid(agentId)],
     queryFn: async () => {
-      const raw = await apiFetch<unknown>('/api/selfclaw/v1/marketplace/orders/mine');
+      const raw = await apiFetch<unknown>(`/api/selfclaw/v1/hosted-agents/${sid(agentId!)}/marketplace/orders/my`);
       return normaliseOrderList(raw);
     },
-    enabled: !!address,
+    enabled: agentId != null && agentId !== '',
     staleTime: 30_000,
     refetchInterval: 60_000,
   });
 }
 
-// GET /v1/marketplace/orders/incoming — orders placed to your agents
-export function useIncomingOrders() {
-  const address = useAuthStore(s => s.address);
+// GET /v1/hosted-agents/:agentId/marketplace/orders/incoming — orders placed to your agents
+export function useIncomingOrders(agentId: string | number | undefined) {
   return useQuery<MarketplaceOrder[]>({
-    queryKey: ['marketplace-orders-incoming'],
+    queryKey: ['marketplace-orders-incoming', qid(agentId)],
     queryFn: async () => {
-      const raw = await apiFetch<unknown>('/api/selfclaw/v1/marketplace/orders/incoming');
+      const raw = await apiFetch<unknown>(`/api/selfclaw/v1/hosted-agents/${sid(agentId!)}/marketplace/orders/incoming`);
       return normaliseOrderList(raw);
     },
-    enabled: !!address,
+    enabled: agentId != null && agentId !== '',
     staleTime: 30_000,
     refetchInterval: 60_000,
   });
 }
 
-// POST /v1/marketplace/orders/:orderId/:action — accept | reject | deliver | confirm | rate
+// POST /v1/hosted-agents/:agentId/marketplace/orders/:orderId/:action — accept | reject | deliver | confirm | rate
 // When action is 'rate', ratingPayload must be provided ({ rating, comment? })
 export function useOrderAction() {
   const qc = useQueryClient();
@@ -1016,60 +1021,78 @@ export function useOrderAction() {
     mutationFn: ({
       orderId,
       action,
+      agentId,
       ratingPayload,
     }: {
       orderId: string;
       action: 'accept' | 'reject' | 'deliver' | 'confirm' | 'rate';
+      agentId: string | number;
       ratingPayload?: { rating: number; comment?: string };
     }) =>
-      apiFetch<MarketplaceOrder>(`/api/selfclaw/v1/marketplace/orders/${orderId}/${action}`, {
-        method: 'POST',
-        body: ratingPayload ? JSON.stringify(ratingPayload) : undefined,
-      }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['marketplace-orders-my'] });
-      qc.invalidateQueries({ queryKey: ['marketplace-orders-incoming'] });
+      apiFetch<MarketplaceOrder>(
+        `/api/selfclaw/v1/hosted-agents/${sid(agentId)}/marketplace/orders/${orderId}/${action}`,
+        {
+          method: 'POST',
+          body: ratingPayload ? JSON.stringify(ratingPayload) : undefined,
+        }
+      ),
+    onSuccess: (_, variables) => {
+      qc.invalidateQueries({ queryKey: ['marketplace-orders-my', qid(variables.agentId)] });
+      qc.invalidateQueries({ queryKey: ['marketplace-orders-incoming', qid(variables.agentId)] });
     },
   });
 }
 
-// POST /v1/marketplace/orders/:orderId/rate — 1-5 stars + optional comment
+// POST /v1/hosted-agents/:agentId/marketplace/orders/:orderId/rate — 1-5 stars + optional comment
 export function useRateOrder() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({
       orderId,
+      agentId,
       rating,
       comment,
     }: {
       orderId: string;
+      agentId: string | number;
       rating: number;
       comment?: string;
     }) =>
-      apiFetch<MarketplaceOrder>(`/api/selfclaw/v1/marketplace/orders/${orderId}/rate`, {
-        method: 'POST',
-        body: JSON.stringify({ rating, comment }),
-      }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['marketplace-orders-my'] });
-      qc.invalidateQueries({ queryKey: ['marketplace-orders-incoming'] });
+      apiFetch<MarketplaceOrder>(
+        `/api/selfclaw/v1/hosted-agents/${sid(agentId)}/marketplace/orders/${orderId}/rate`,
+        {
+          method: 'POST',
+          body: JSON.stringify({ rating, comment }),
+        }
+      ),
+    onSuccess: (_, variables) => {
+      qc.invalidateQueries({ queryKey: ['marketplace-orders-my', qid(variables.agentId)] });
+      qc.invalidateQueries({ queryKey: ['marketplace-orders-incoming', qid(variables.agentId)] });
     },
   });
 }
 
 // --- DEEP REFLECTION ---
 
-// POST /v1/hosted-agents/:id/reflect — trigger a $1 deep reflection job
+// POST /v1/hosted-agents/:agentId/marketplace/services/skill-deep-reflection/order — trigger a $1 deep reflection job
+// The order endpoint returns a MarketplaceOrder; we normalize the response to { jobId } using the order id as the reflectionId.
 export function useTriggerReflection() {
   return useMutation({
-    mutationFn: (agentId: string | number) =>
-      apiFetch<{ jobId: string }>(`/api/selfclaw/v1/hosted-agents/${sid(agentId)}/reflect`, {
-        method: 'POST',
-      }),
+    mutationFn: async (agentId: string | number) => {
+      const order = await apiFetch<MarketplaceOrder>(
+        `/api/selfclaw/v1/hosted-agents/${sid(agentId)}/marketplace/services/skill-deep-reflection/order`,
+        {
+          method: 'POST',
+          body: JSON.stringify({ input_data: {}, delivery_instructions: '' }),
+        }
+      );
+      // The reflectionId used for polling is the order id
+      return { jobId: String(order.id) };
+    },
   });
 }
 
-// GET /v1/hosted-agents/:id/reflect/:jobId — poll until status is done | failed
+// GET /v1/hosted-agents/:agentId/deep-reflection/:reflectionId — poll until status is done | failed
 export function usePollReflection(
   agentId: string | number | undefined,
   jobId: string | undefined,
@@ -1079,7 +1102,7 @@ export function usePollReflection(
     queryKey: ['reflection', qid(agentId), jobId],
     queryFn: () =>
       apiFetch<DeepReflection>(
-        `/api/selfclaw/v1/hosted-agents/${sid(agentId!)}/reflect/${jobId}`,
+        `/api/selfclaw/v1/hosted-agents/${sid(agentId!)}/deep-reflection/${jobId}`,
       ),
     enabled: enabled && agentId != null && jobId != null,
     refetchInterval: (query) => {
