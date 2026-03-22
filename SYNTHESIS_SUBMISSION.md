@@ -1,11 +1,14 @@
 # Synthesis Hackathon — MiniClaw Submission Receipt
 
 **Submitted:** March 22, 2026  
-**Status:** PUBLISHED  
+**Status:** PUBLISHED (`publish` — canonical API enum value)  
 **Project UUID:** `86689582a4e24c8689f79f235d79218b`  
 **Project Slug:** `miniclaw-973f`  
 **Team:** Zeno (UUID: `58537b81122a40f7b6405d3a740c9abf`)  
 **Repo:** https://github.com/mbarbosa30/MiniClaw  
+
+> **API enum note:** The Synthesis API returns `custodyType: "self_custody"` (underscore, not hyphen)
+> and `status: "publish"` (not "published"). Both match the expected states for eligibility and publication.
 
 ---
 
