@@ -275,6 +275,11 @@ export interface ChatMessage {
   createdAt?: string;
 }
 
+export interface AgentTaskResult {
+  summary?: string;
+  data?: Record<string, unknown>;
+}
+
 export interface AgentTask {
   id: string;
   hostedAgentId?: string;
@@ -287,7 +292,9 @@ export interface AgentTask {
   riskLevel?: 'low' | 'medium' | 'high' | string;
   category?: string;
   payload?: Record<string, unknown>;
+  result?: AgentTaskResult;
   createdAt?: string;
+  completedAt?: string;
   scheduledFor?: string;
 }
 

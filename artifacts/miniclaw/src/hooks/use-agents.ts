@@ -450,6 +450,20 @@ export function useTasks(agentId: string | number | undefined, status: 'pending'
   });
 }
 
+export function useCompletedTasks(agentId: string | number | undefined) {
+  return useQuery<AgentTask[]>({
+    queryKey: ['tasks', qid(agentId), 'completed'],
+    queryFn: async () => {
+      const raw = await apiFetch<AgentTask[] | { tasks: AgentTask[] }>(
+        `/api/selfclaw/v1/hosted-agents/${sid(agentId!)}/tasks?status=completed`
+      );
+      return Array.isArray(raw) ? raw : (raw?.tasks ?? []);
+    },
+    enabled: agentId != null && agentId !== '',
+    staleTime: 60_000,
+  });
+}
+
 // Per API docs: POST /:id/tasks/:taskId/approve or /reject
 export function useResolveTask() {
   const qc = useQueryClient();
