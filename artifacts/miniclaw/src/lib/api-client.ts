@@ -34,9 +34,13 @@ export const apiEvents = {
 };
 
 let _walletAddress: string | null = null;
+// Preserved even after clearance — lets ConnectView show exactly what was sent
+let _lastSentWalletAddress: string | null = null;
 export function setWalletAddress(addr: string | null) {
   _walletAddress = addr;
+  if (addr !== null) _lastSentWalletAddress = addr.trim().toLowerCase();
 }
+export function getLastSentWalletAddress() { return _lastSentWalletAddress; }
 
 function buildHeaders(extra?: HeadersInit, body?: BodyInit | null): Headers {
   const headers = new Headers(extra);

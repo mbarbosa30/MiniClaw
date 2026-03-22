@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { Bot, Loader2, RefreshCw, Zap } from 'lucide-react';
 import { useAuthStore, useRouter } from '@/lib/store';
 import { useTheme } from '@/lib/theme';
-import { setWalletAddress } from '@/lib/api-client';
+import { setWalletAddress, getLastSentWalletAddress } from '@/lib/api-client';
 
 const TIMEOUT_MS = import.meta.env.DEV ? 5000 : 8000;
 
@@ -176,9 +176,14 @@ export function ConnectView() {
               {resolved.text}
             </p>
             {/* Raw API error — tells us exactly what selfclaw.ai returned */}
-            <p style={{ fontSize: 10, color: t.faint, fontFamily: 'ui-monospace, Menlo, monospace', marginTop: 2, lineHeight: 1.6, maxWidth: 260, wordBreak: 'break-all' }}>
-              raw: {authError ?? 'none'} | {ethDebug}
-            </p>
+            {(() => {
+              const sent = getLastSentWalletAddress();
+              return (
+                <p style={{ fontSize: 10, color: t.faint, fontFamily: 'ui-monospace, Menlo, monospace', marginTop: 2, lineHeight: 1.6, maxWidth: 280, wordBreak: 'break-all', whiteSpace: 'pre-wrap' }}>
+                  {`err: ${authError ?? 'none'}\nsent(${sent ? sent.length : 0}): ${sent ?? 'null'}\n${ethDebug}`}
+                </p>
+              );
+            })()}
             <button
               style={{
                 marginTop: 10,
