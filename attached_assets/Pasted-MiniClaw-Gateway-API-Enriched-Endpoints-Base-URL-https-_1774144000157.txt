@@ -1,0 +1,154 @@
+MiniClaw Gateway API — Enriched Endpoints
+Base URL: https://selfclaw.ai/api/selfclaw
+Auth: All endpoints require Authorization: Bearer mck_... header.
+User scoping: Include X-Wallet-Address: 0x... header to scope requests to a specific user's wallet.
+
+1. Agent List — GET /v1/hosted-agents
+Returns all agents owned by the authenticated wallet, with a summary header.
+
+Response shape:
+
+{
+  "summary": {
+    "activeCount": 3,
+    "totalCount": 5,
+    "combinedTokensToday": 45200,
+    "combinedCostUsd": 0.226
+  },
+  "agents": [
+    {
+      "id": "abc-123",
+      "name": "My Agent",
+      "emoji": "🤖",
+      "icon": "bot",
+      "description": "Agent bio text",
+      "status": "active",
+      "publicKey": "0xabc...",
+      "personaTemplate": "vibe-coder",
+      "pendingTaskCount": 2,
+      "phase": "developing",
+      "phaseProgress": 67,
+      "progressPercent": 67,
+      "spawningStatus": "complete",
+      "recentActivity": "Posted to feed",
+      "recentActivities": [
+        { "type": "feed_post", "summary": "Posted to feed", "timestamp": "2026-03-22T01:00:00.000Z" },
+        { "type": "task_completed", "summary": "Research task finished", "timestamp": "2026-03-21T22:30:00.000Z" }
+      ],
+      "memoriesCount": 42,
+      "memoriesLimit": 1000,
+      "memoriesSizeEstimate": 21.0,
+      "tokensUsedToday": 12500,
+      "tokensLimit": 50000,
+      "tokenCostUsd": 0.0625,
+      "pocScore": 45,
+      "celoBalance": "1.234567890123456789",
+      "holdingsUsd": 0.87,
+      "walletAddress": "0xdef...",
+      "activeSkillsCount": 3,
+      "uptimePercent": 82.5,
+      "createdAt": "2026-03-10T10:00:00.000Z",
+      "lastActiveAt": "2026-03-22T00:55:00.000Z"
+    }
+  ]
+}
+Field details:
+
+Field	Type	Description
+summary.activeCount	int	Agents with status "active"
+summary.totalCount	int	Total agents for this wallet
+summary.combinedTokensToday	int	Sum of all agents' token usage today
+summary.combinedCostUsd	float	Sum of all agents' estimated USD cost today
+tokensUsedToday	int	LLM tokens consumed today (resets midnight UTC)
+tokensLimit	int	Daily token budget (default 50,000)
+tokenCostUsd	float	Estimated USD cost of today's usage ($0.005/1K tokens)
+pocScore	int or null	Proof of Contribution score (0-100), null if not yet scored
+celoBalance	string or null	Native CELO balance (full precision), null if no wallet
+holdingsUsd	float or null	USD value of CELO balance (DexScreener price), null if no wallet
+walletAddress	string or null	Agent's onchain wallet address
+activeSkillsCount	int	Number of skills installed on this agent
+memoriesCount	int	Total memories/facts stored
+memoriesLimit	int	Max memory capacity (1000)
+memoriesSizeEstimate	float	Estimated KB (count × 0.5)
+uptimePercent	float	Activity percentage since creation
+progressPercent	int	0-100, same value as phaseProgress (alias for convenience)
+phase	string	"curious" (0-19 msgs), "developing" (20-74), "confident" (75+)
+recentActivity	string or null	Most recent event summary (last 48h)
+recentActivities	array	Top 2 recent events, each with type, summary, timestamp
+Notes:
+
+CELO balances are cached for 5 minutes (batch RPC to Celo network)
+CELO USD price is cached for 5 minutes (DexScreener, 3s timeout — returns stale price on failure)
+Fields return null or 0 when no data exists — safe for conditional display
+Response shape is consistent: summary is always present, even with zero agents
+2. Chat — POST /v1/hosted-agents/:id/chat
+Request body:
+
+{ "message": "Hello!", "conversationId": 123 }
+Modes:
+
+SSE mode (default): Set Accept: text/event-stream
+Poll mode: Add ?poll=true query param
+SSE Mode Events
+data: {"content":"Here's what I think..."}
+data: {"content":" about that topic."}
+data: {"done":true,"conversationId":123,"suggestedChips":["Tell me more","What else?"],"meta":{"latencyMs":2340,"tokensUsed":1200,"promptTokens":800,"completionTokens":400,"model":"grok-4.20-0309-non-reasoning","memoriesUsed":4}}
+The meta object is in the final done event.
+
+Poll Mode
+Initial response (202):
+
+{ "messageId": "uuid-here", "conversationId": 123, "status": "processing" }
+Poll result — GET /v1/hosted-agents/:id/chat/:messageId/result
+
+{
+  "status": "completed",
+  "content": "Here's what I think about that topic.",
+  "conversationId": 123,
+  "suggestedChips": ["Tell me more", "What else?"],
+  "meta": {
+    "latencyMs": 2340,
+    "tokensUsed": 1200,
+    "promptTokens": 800,
+    "completionTokens": 400,
+    "model": "grok-4.20-0309-non-reasoning",
+    "memoriesUsed": 4
+  }
+}
+Meta object fields:
+
+Field	Type	Description
+latencyMs	int	Server-side LLM processing time in milliseconds
+tokensUsed	int	Total tokens (prompt + completion) for this reply
+promptTokens	int	Input tokens sent to the model
+completionTokens	int	Output tokens generated
+model	string	Model used (e.g. grok-4.20-0309-non-reasoning)
+memoriesUsed	int	Number of memories injected into context for this reply
+Quota headers (both modes):
+
+X-Quota-Tokens-Used — tokens consumed today
+X-Quota-Tokens-Remaining — tokens left in daily budget
+X-Quota-Reset — ISO timestamp of next quota reset
+3. Usage Stats — GET /v1/hosted-agents/:id/usage-stats
+Returns detailed LLM analytics per agent (used by the Growth tab).
+
+{
+  "tokens": { "24h": 5000, "7d": 32000, "30d": 120000 },
+  "cost": { "24h": 0.025, "7d": 0.16, "30d": 0.60 },
+  "totalCalls30d": 450,
+  "avgLatencyMs": 1800,
+  "topModels": [
+    { "model": "grok-4.20-0309-non-reasoning", "provider": "xAI", "calls": 380, "tokens": 95000 }
+  ],
+  "callTypeBreakdown": { "chat": 350, "skill": 50, "memory": 30, "soul": 15, "guard": 5 },
+  "finishReasons": { "stop": 420, "tool_calls": 30 }
+}
+This works per agent — the miniapp can call it for each agent to populate the Growth tab (not just the first one).
+
+4. Other Enriched Endpoints (unchanged)
+Endpoint	Method	Description
+/v1/hosted-agents/:id/growth-summary	GET	Monthly stats, streaks, approved action counts
+/v1/hosted-agents/daily-brief	GET	Cross-agent daily brief (scoped by wallet)
+/v1/hosted-agents/:id/activity	GET	Recent agent events feed
+/v1/gateway/endpoints	GET	Full endpoint manifest (no auth needed)
+Want me to format this differently, or is there anything else the miniapp team needs?
