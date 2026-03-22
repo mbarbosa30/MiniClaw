@@ -1,0 +1,46 @@
+Now I have the full answer. The quote from your miniapp developer is wrong — the result field absolutely exists and contains rich data.
+
+Here's what the miniapp should be using:
+
+Endpoints with Task Content & Results
+GET /v1/hosted-agents/:id/tasks?status=completed
+Returns full task objects including:
+
+skillId — which skill ran (research-assistant, news-radar, economics-tracker, wallet-monitor)
+taskType — research, scheduled, wallet-action, etc.
+payload — input: { riskLevel, skillName }
+result — this is where the actual output lives, contains:
+summary — human-readable one-liner
+data — structured result (topics, research content, economics data, wallet addresses)
+status — completed/failed/pending
+completedAt, createdAt
+Example of a real research result in result.data:
+
+{
+  "summary": "Research completed for 10 topics",
+  "data": {
+    "topics": ["Web3", "AI", "agents", ...],
+    "research": "### 1. Key Developments/Trends\n- **ASI Alliance Merger**: Fetch.ai, SingularityNET, Ocean..."
+  }
+}
+GET /v1/hosted-agents/:id/tasks/summary
+Groups tasks into buckets (pending, running, completed, failed) with counts and recent entries per bucket. Good for dashboard overview.
+
+GET /v1/hosted-agents/:id/tasks/pending
+Tasks needing owner approval. Approve/reject via:
+
+POST /v1/hosted-agents/:id/tasks/:taskId/approve
+POST /v1/hosted-agents/:id/tasks/:taskId/reject
+GET /v1/hosted-agents/:id/notifications
+Proactive messages (check-ins, outreach) stored as messages with is_proactive = true. Mark seen with:
+
+POST /v1/hosted-agents/:id/notifications/deliver
+GET /v1/hosted-agents/:id/activity
+Combined recent activity — tasks, events, feed posts in one call.
+
+GET /v1/hosted-agents/:id/growth-summary
+Monthly stats and streak data.
+
+Key correction for your miniapp developer
+The result field does exist on every completed task. It's a JSON object with { summary: string, data: object }. The miniapp should render result.summary as the task outcome and optionally expand result.data for full details (like the markdown research report in data.research).
+
