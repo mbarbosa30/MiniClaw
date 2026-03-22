@@ -58,7 +58,21 @@ export function ConnectView() {
   // let users click it before wagmi auto-connected, resulting in a missing
   // wallet address and a 401 on the first API call.
   const [timedOut, setTimedOut] = useState(false);
-  const [ethDebug] = useState<EthDebug>(getEthDebug);
+  const [ethDebug, setEthDebug] = useState<EthDebug>(getEthDebug);
+
+  // Re-read provider info when MiniPay injects asynchronously
+  useEffect(() => {
+    const refresh = () => setEthDebug(getEthDebug());
+    window.addEventListener('ethereum#initialized', refresh, { once: true });
+    // Also poll briefly in case the event already fired
+    const t1 = setTimeout(refresh, 200);
+    const t2 = setTimeout(refresh, 1000);
+    return () => {
+      window.removeEventListener('ethereum#initialized', refresh);
+      clearTimeout(t1);
+      clearTimeout(t2);
+    };
+  }, []);
   const authError = useAuthStore(s => s.authError);
   const setAuthenticated = useAuthStore(s => s.setAuthenticated);
   const resetRoute = useRouter(s => s.reset);
