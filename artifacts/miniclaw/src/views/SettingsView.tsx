@@ -423,6 +423,7 @@ export function SettingsView() {
   const activityAlerts = useAppStore((s) => s.activityAlerts);
   const toggleActivityAlerts = useAppStore((s) => s.toggleActivityAlerts);
   const logout = useLogout();
+  const pop = useRouter((s) => s.pop);
 
   return (
     <div
@@ -434,17 +435,35 @@ export function SettingsView() {
         transition: 'background 0.3s ease',
       }}
     >
-      <p style={{
-        fontSize: 22,
-        fontWeight: 200,
-        letterSpacing: '-0.03em',
-        color: t.text,
-        paddingTop: 28,
-        paddingBottom: 4,
-        lineHeight: 1,
-      }}>
-        Settings
-      </p>
+      <div style={{ display: 'flex', alignItems: 'center', paddingTop: 28, paddingBottom: 4, gap: 10 }}>
+        <button
+          onClick={pop}
+          style={{
+            background: 'none',
+            border: 'none',
+            padding: 0,
+            cursor: 'pointer',
+            color: t.label,
+            fontSize: 18,
+            lineHeight: 1,
+            display: 'flex',
+            alignItems: 'center',
+          }}
+          aria-label="Back"
+        >
+          ←
+        </button>
+        <p style={{
+          fontSize: 22,
+          fontWeight: 200,
+          letterSpacing: '-0.03em',
+          color: t.text,
+          lineHeight: 1,
+          margin: 0,
+        }}>
+          Settings
+        </p>
+      </div>
 
       {/* ── PROFILE ── */}
       <ProfileSection />

@@ -100,7 +100,7 @@ function MainLayout() {
         {view === 'marketplace' && <MarketplaceView />}
         {view === 'settings' && <SettingsView />}
       </div>
-      {view !== 'settings' && <AppNav />}
+      <AppNav />
     </div>
   );
 }
