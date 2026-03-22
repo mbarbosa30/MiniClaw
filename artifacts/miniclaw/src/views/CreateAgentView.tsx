@@ -815,7 +815,7 @@ function SpawningScreen({
       </div>
 
       {/* Indeterminate scanning bar — always moving while processing */}
-      <div style={{ position: 'relative', height: 2, flexShrink: 0, background: t.divider, overflow: 'hidden' }}>
+      <div style={{ position: 'relative', height: 1, flexShrink: 0, background: t.divider, overflow: 'hidden' }}>
         <AnimatePresence>
           {!isReady && !isFailed && (
             <motion.div
@@ -823,8 +823,8 @@ function SpawningScreen({
               initial={{ x: '-110%' }}
               animate={{ x: '110%' }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut', repeatType: 'loop' }}
-              style={{ position: 'absolute', top: 0, left: 0, width: '55%', height: '100%', background: personaColor, opacity: 0.7, borderRadius: 1 }}
+              transition={{ duration: 1.6, repeat: Infinity, ease: 'linear', repeatType: 'loop' }}
+              style={{ position: 'absolute', top: 0, left: 0, width: '55%', height: '100%', background: personaColor, opacity: 0.6, borderRadius: 1 }}
             />
           )}
         </AnimatePresence>
@@ -845,7 +845,7 @@ function SpawningScreen({
             >
               {isActive ? (
                 <motion.div
-                  animate={{ opacity: [1, 0.3, 1] }}
+                  animate={{ opacity: [1, 0.35, 1] }}
                   transition={{ duration: 1.1, repeat: Infinity, ease: 'easeInOut' }}
                   style={{ width: 7, height: 7, borderRadius: '50%', flexShrink: 0, background: personaColor }}
                 />
