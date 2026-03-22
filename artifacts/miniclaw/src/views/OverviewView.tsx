@@ -280,7 +280,7 @@ function AgentCard({ agent, i }: { agent: Agent; i: number }) {
           label="Tokens"
           value={agent.tokensUsedToday.toLocaleString()}
           sub={agent.tokenCostUsd != null ? `${fmtCost(agent.tokenCostUsd)} today` : undefined}
-          bar={Math.min(agent.tokensUsedToday / (agent.tokensLimit ?? 50_000), 1)}
+          bar={Math.min(agent.tokensUsedToday / (agent.tokensLimit ?? 100_000), 1)}
         />
       )}
       {agent.economicsEarnedToday != null && agent.economicsEarnedToday > 0 && (
