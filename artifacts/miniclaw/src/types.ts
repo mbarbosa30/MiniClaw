@@ -25,7 +25,7 @@ export interface AgentListSummary {
 }
 
 // Runtime status from the API — more granular than status (active/paused/error)
-export type AgentRuntimeStatus = 'thinking' | 'running' | 'waiting' | 'idle' | string;
+export type AgentRuntimeStatus = 'thinking' | 'working' | 'reflecting' | 'observing' | 'composing' | 'resting' | 'sleeping' | 'idle' | 'running' | 'waiting' | string;
 
 // Model info returned in agent detail, awareness, and settings GET responses
 export interface AvailableModel {

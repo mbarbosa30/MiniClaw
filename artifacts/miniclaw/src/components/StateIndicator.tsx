@@ -1,33 +1,59 @@
 import { motion } from 'framer-motion';
 import type { Agent } from '@/types';
 
-export type VisualState = 'running' | 'thinking' | 'waiting' | 'pending' | 'idle';
+export type VisualState =
+  | 'thinking'
+  | 'working'
+  | 'reflecting'
+  | 'observing'
+  | 'composing'
+  | 'resting'
+  | 'sleeping'
+  | 'running'
+  | 'waiting'
+  | 'pending'
+  | 'idle';
 
 export const STATE_COLOR: Record<VisualState, string> = {
-  running: '#22c55e',
-  thinking: '#818cf8',
-  waiting: '#f59e0b',
-  pending: '#94a3b8',
-  idle: '#333',
+  thinking:   '#818cf8',
+  working:    '#22c55e',
+  reflecting: '#fbbf24',
+  observing:  '#06b6d4',
+  composing:  '#a78bfa',
+  resting:    '#64748b',
+  sleeping:   '#334155',
+  running:    '#22c55e',
+  waiting:    '#f59e0b',
+  pending:    '#94a3b8',
+  idle:       '#333',
 };
 
 export const STATE_LABEL: Record<VisualState, string> = {
-  running: 'running',
-  thinking: 'thinking',
-  waiting: 'waiting',
-  pending: 'active',
-  idle: 'paused',
+  thinking:   'Thinking...',
+  working:    'Working on a task',
+  reflecting: 'Deep in thought',
+  observing:  'Scanning the horizon',
+  composing:  'Composing a message',
+  resting:    'Resting',
+  sleeping:   'Sleeping',
+  running:    'Working on a task',
+  waiting:    'Waiting',
+  pending:    'active',
+  idle:       'Standing by',
 };
 
 export function agentVisualState(agent: Agent): VisualState {
-  // runtimeStatus takes priority when set
   const rs = agent.runtimeStatus;
-  if (rs === 'thinking') return 'thinking';
-  if (rs === 'running') return 'running';
-  if (rs === 'waiting') return 'waiting';
-  // Fall back to lifecycle status: active agents are 'pending' (alive but quiet)
+  if (rs === 'thinking')   return 'thinking';
+  if (rs === 'working')    return 'working';
+  if (rs === 'reflecting') return 'reflecting';
+  if (rs === 'observing')  return 'observing';
+  if (rs === 'composing')  return 'composing';
+  if (rs === 'resting')    return 'resting';
+  if (rs === 'sleeping')   return 'sleeping';
+  if (rs === 'running')    return 'running';
+  if (rs === 'waiting')    return 'waiting';
   if (agent.status === 'active') return 'pending';
-  // paused, error, or unknown → idle (fully dim)
   return 'idle';
 }
 
@@ -61,20 +87,25 @@ function RunningBars({ color }: { color: string }) {
   );
 }
 
-function WaitingDot({ color }: { color: string }) {
+function WaitingDot({ color, slow }: { color: string; slow?: boolean }) {
   return (
     <motion.span
       style={{ display: 'block', width: 5, height: 5, borderRadius: '50%', background: color }}
       animate={{ opacity: [1, 0.15, 1] }}
-      transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
+      transition={{ duration: slow ? 3.5 : 1.8, repeat: Infinity, ease: 'easeInOut' }}
     />
   );
 }
 
 export function StateIndicator({ state }: { state: VisualState }) {
   const color = STATE_COLOR[state];
-  if (state === 'thinking') return <ThinkingDots color={color} />;
-  if (state === 'running') return <RunningBars color={color} />;
-  if (state === 'waiting') return <WaitingDot color={color} />;
+  if (state === 'thinking' || state === 'composing')
+    return <ThinkingDots color={color} />;
+  if (state === 'working' || state === 'running' || state === 'observing')
+    return <RunningBars color={color} />;
+  if (state === 'reflecting' || state === 'waiting')
+    return <WaitingDot color={color} />;
+  if (state === 'resting')
+    return <WaitingDot color={color} slow />;
   return <span style={{ display: 'block', width: 5, height: 5, borderRadius: '50%', background: color }} />;
 }
