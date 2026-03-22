@@ -18,7 +18,7 @@ scripts/                      # One-off utility scripts
 ## Getting started
 
 ```bash
-git clone https://github.com/your-org/miniclaw.git
+git clone https://github.com/YOUR-USERNAME/miniclaw.git
 cd miniclaw
 pnpm install
 ```
@@ -54,4 +54,4 @@ pnpm --filter @workspace/selfclaw-landing run dev
 
 ## Questions?
 
-Open a [Discussion](https://github.com/your-org/miniclaw/discussions) or file an issue using one of the templates.
+Open a Discussion or file an issue using one of the templates.

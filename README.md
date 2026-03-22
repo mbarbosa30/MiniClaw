@@ -110,7 +110,7 @@ miniclaw/
 ### Setup
 
 ```bash
-git clone https://github.com/your-org/miniclaw.git
+git clone https://github.com/YOUR-USERNAME/miniclaw.git
 cd miniclaw
 pnpm install
 ```
