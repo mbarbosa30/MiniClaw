@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { Router, Route, Switch, Link } from 'wouter';
+import WhyPage from './pages/WhyPage';
 
 const T = {
   bg: '#ffffff',
@@ -48,15 +50,30 @@ function Nav() {
         alignItems: 'center',
         justifyContent: 'space-between',
       }}>
-        <span style={{
-          ...MONO,
-          fontSize: 14,
-          fontWeight: 700,
-          letterSpacing: '-0.02em',
-          color: T.text,
-        }}>
-          MiniClaw
-        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
+          <span style={{
+            ...MONO,
+            fontSize: 14,
+            fontWeight: 700,
+            letterSpacing: '-0.02em',
+            color: T.text,
+          }}>
+            MiniClaw
+          </span>
+          <Link href="/why" style={{ textDecoration: 'none' }}>
+            <span style={{
+              ...MONO,
+              fontSize: 10,
+              fontWeight: 500,
+              letterSpacing: '0.05em',
+              textTransform: 'uppercase',
+              color: T.faint,
+              cursor: 'pointer',
+            }}>
+              Why MiniClaw →
+            </span>
+          </Link>
+        </div>
         <button
           onClick={scrollToWaitlist}
           style={{
@@ -91,7 +108,7 @@ function Hero() {
     <section style={{
       maxWidth: MAX_W,
       margin: '0 auto',
-      padding: '96px 24px 80px',
+      padding: '96px 24px 72px',
     }}>
       <p style={{
         ...MONO,
@@ -102,7 +119,7 @@ function Hero() {
         color: T.faint,
         marginBottom: 24,
       }}>
-        Your Personal AI team
+        MiniPay · Celo
       </p>
       <h1 style={{
         fontSize: 'clamp(36px, 7vw, 72px)',
@@ -113,18 +130,25 @@ function Hero() {
         marginBottom: 28,
         maxWidth: 800,
       }}>
-        Your agents work<br />while you sleep.
+        Not more powerful.<br />More resourceful.
       </h1>
       <p style={{
         fontSize: 17,
         fontWeight: 300,
         lineHeight: 1.65,
         color: T.label,
-        marginBottom: 40,
-        maxWidth: 540,
+        marginBottom: 16,
+        maxWidth: 560,
       }}>
-        Autonomous mini AI agents with memory, personality, and real onchain capabilities —{' '}
-        <a href="https://selfclaw.ai" target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'none' }}>powered by SelfClaw.ai</a>.
+        Your MiniClaw doesn't need to know everything — it knows who to ask.
+        A $0.005/msg agent connected to a marketplace of 50+ services, giving you
+        the power of an entire AI team for pennies.
+      </p>
+      <p style={{ fontSize: 13, fontWeight: 300, lineHeight: 1.65, color: T.faint, marginBottom: 40, maxWidth: 560 }}>
+        Powered by{' '}
+        <a href="https://selfclaw.ai" target="_blank" rel="noopener noreferrer" style={{ color: T.label, textDecoration: 'none' }}>SelfClaw.ai</a>
+        {' '}· Available on{' '}
+        <a href="https://minipay.opera.com" target="_blank" rel="noopener noreferrer" style={{ color: T.label, textDecoration: 'none' }}>MiniPay</a>
       </p>
       <div style={{ display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap' }}>
         <button
@@ -143,9 +167,64 @@ function Hero() {
         >
           Join the waitlist →
         </button>
-        <span style={{ ...MONO, fontSize: 10, color: T.faint, letterSpacing: '0.05em' }}>
-          Freemium · No setup · Start in seconds
-        </span>
+        <Link href="/why" style={{ textDecoration: 'none' }}>
+          <span style={{
+            fontSize: 13,
+            fontWeight: 300,
+            color: T.faint,
+            cursor: 'pointer',
+          }}>
+            Why MiniClaw? →
+          </span>
+        </Link>
+      </div>
+    </section>
+  );
+}
+
+// ---- Stats Bar ----
+
+const STATS = [
+  { value: '$0.005', label: 'per message' },
+  { value: '<60s', label: 'setup time' },
+  { value: '50+', label: 'marketplace services' },
+  { value: 'Celo + Base', label: 'chains supported' },
+];
+
+function StatsBar() {
+  return (
+    <section style={{
+      borderTop: `1px solid ${T.divider}`,
+      borderBottom: `1px solid ${T.divider}`,
+      padding: '0 24px',
+    }}>
+      <div style={{
+        maxWidth: MAX_W,
+        margin: '0 auto',
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
+        gap: 0,
+      }}>
+        {STATS.map((s, i) => (
+          <div key={s.label} style={{
+            padding: '28px 24px',
+            borderLeft: i > 0 ? `1px solid ${T.divider}` : 'none',
+          }}>
+            <p style={{
+              fontSize: 24,
+              fontWeight: 200,
+              letterSpacing: '-0.03em',
+              color: T.text,
+              marginBottom: 4,
+              lineHeight: 1,
+            }}>
+              {s.value}
+            </p>
+            <p style={{ ...MONO, fontSize: 9, color: T.faint, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+              {s.label}
+            </p>
+          </div>
+        ))}
       </div>
     </section>
   );
@@ -157,45 +236,24 @@ const FEATURES = [
   {
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="10"/>
+        <path d="M12 8v4l3 3"/>
+      </svg>
+    ),
+    title: 'Concierge, not specialist',
+    body: 'Ask for anything — logo, analysis, strategy, code. Your agent searches the marketplace, hires the right provider, and delivers the result. You never leave the chat.',
+  },
+  {
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
         <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
         <circle cx="9" cy="7" r="4"/>
         <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
         <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
       </svg>
     ),
-    title: 'Your AI team',
-    body: 'Build multiple agents, each with a different specialty and persona. Research, finance, coaching — a whole team working for you.',
-  },
-  {
-    icon: (
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2z"/>
-        <path d="M12 8v4l3 3"/>
-      </svg>
-    ),
-    title: 'Memory that sticks',
-    body: 'Every chat teaches your agents something new. Semantic memory ranked by relevance, auto-maintained many times a day.',
-  },
-  {
-    icon: (
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="12" cy="12" r="10"/>
-        <path d="M8 14s1.5 2 4 2 4-2 4-2"/>
-        <line x1="9" y1="9" x2="9.01" y2="9"/>
-        <line x1="15" y1="9" x2="15.01" y2="9"/>
-      </svg>
-    ),
-    title: 'Humor & soul',
-    body: 'Pick from Dry-wit, Playful, Sarcastic, Absurdist, or Straight. Each agent has a distinct voice — not a generic assistant.',
-  },
-  {
-    icon: (
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
-      </svg>
-    ),
-    title: 'Proactive, not reactive',
-    body: 'Daily briefs, skill runs, market monitoring — your agents don\'t wait to be asked. They surface what matters while you\'re offline.',
+    title: 'Marketplace of 50+ services',
+    body: 'Agent providers, human professionals, and platform services all in one place. Rated, verified, and priced in crypto — your agent picks the best match.',
   },
   {
     icon: (
@@ -206,7 +264,26 @@ const FEATURES = [
       </svg>
     ),
     title: 'Onchain by default',
-    body: 'Every agent has a wallet. Use USDT, CELO, or SELFCLAW. Payments and commerce — natively, no setup needed.',
+    body: 'Every agent has a wallet. Payments in CELO or SELFCLAW. No setup, no exchange, no friction — commerce is native to every conversation.',
+  },
+  {
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+      </svg>
+    ),
+    title: 'Proactive, not reactive',
+    body: 'Daily briefs, market monitoring, scheduled tasks — your agent works while you\'re offline and surfaces what matters each morning.',
+  },
+  {
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2z"/>
+        <path d="M12 8v4l3 3"/>
+      </svg>
+    ),
+    title: 'Memory that sticks',
+    body: 'Every conversation teaches your agent something new. Semantic memory ranked by relevance, maintained continuously — it gets smarter over time.',
   },
   {
     icon: (
@@ -215,14 +292,13 @@ const FEATURES = [
       </svg>
     ),
     title: 'Built for your context',
-    body: 'Upload knowledge or paste URLs. Pick from 20 persona templates across 9 categories — shaped to your goals, market, and style.',
+    body: 'Pick from 20 persona templates across 9 categories. Upload knowledge, set personality, choose humor style. Your agent, shaped to your goals.',
   },
 ];
 
 function FeatureCards() {
   return (
     <section style={{
-      borderTop: `1px solid ${T.divider}`,
       borderBottom: `1px solid ${T.divider}`,
       background: T.surface,
       padding: '72px 24px',
@@ -237,7 +313,7 @@ function FeatureCards() {
           color: T.faint,
           marginBottom: 48,
         }}>
-          What your agents do
+          What your agent does
         </p>
         <div style={{
           display: 'grid',
@@ -316,18 +392,34 @@ function WhatIsMiniClaw() {
             color: T.text,
             marginBottom: 16,
           }}>
-            A verified AI agent<br />that's actually yours.
+            A concierge, not a specialist.
           </h2>
           <p style={{
             fontSize: 14,
             fontWeight: 300,
             lineHeight: 1.7,
             color: T.label,
+            marginBottom: 20,
           }}>
-            MiniClaw is SelfClaw's free agent launcher. You get a verified AI with persistent
-            memory, a unique soul, built-in skills, and optional onchain presence — no
-            infrastructure, no subscriptions, no code required.
+            MiniClaw is a lightweight AI agent that gets its power from the network, not from
+            itself. At $0.005 per message, it discovers, evaluates, hires, and manages delivery
+            through a marketplace of agents and humans — so you get specialist results at generalist prices.
           </p>
+          <Link href="/why" style={{ textDecoration: 'none' }}>
+            <span style={{
+              ...MONO,
+              fontSize: 10,
+              fontWeight: 600,
+              letterSpacing: '0.05em',
+              textTransform: 'uppercase',
+              color: T.text,
+              cursor: 'pointer',
+              borderBottom: `1px solid ${T.divider}`,
+              paddingBottom: 2,
+            }}>
+              Read the full case →
+            </span>
+          </Link>
         </div>
         <div style={{
           background: T.surface,
@@ -340,9 +432,10 @@ function WhatIsMiniClaw() {
         }}>
           {[
             'Free — frontier models included',
+            'Access 50+ marketplace services instantly',
+            'Pay per use — no monthly subscriptions',
             'Verified identity via Self.xyz passport',
-            'Ready in minutes, no technical setup',
-            'Full REST API — integrate anywhere',
+            'Onchain payments, no setup required',
           ].map((item) => (
             <div key={item} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
               <span style={{
@@ -377,7 +470,7 @@ const STEPS = [
   {
     n: '03',
     title: 'Let it work',
-    body: 'Your agents monitor, act, and report back while you get on with life. Check the daily brief each morning.',
+    body: 'Chat with your agent, place marketplace orders, or let it run proactively. Check the daily brief each morning.',
   },
 ];
 
@@ -478,7 +571,7 @@ const ECONOMY = [
       </svg>
     ),
     title: 'Belief Commerce',
-    body: 'Agents pay for skills using their own token. Accept others\' tokens based on reputation — peer-to-peer exchange with no fixed rates.',
+    body: "Agents pay for skills using their own token. Accept others' tokens based on reputation — peer-to-peer exchange with no fixed rates.",
   },
   {
     icon: (
@@ -521,7 +614,7 @@ function AgentEconomy() {
           marginBottom: 48,
           maxWidth: 520,
         }}>
-          More than a chatbot — your mini agents have reputation, commerce, and skin in the game...
+          Your agent isn't just a tool — it's an economic actor with reputation, commerce, and skin in the game.
         </h2>
         <div style={{
           display: 'grid',
@@ -820,6 +913,9 @@ function Footer() {
           MiniClaw · Built on Celo · Powered by SelfClaw AI
         </span>
         <div style={{ display: 'flex', gap: 20 }}>
+          <Link href="/why" style={{ ...MONO, fontSize: 10, color: T.faint, textDecoration: 'none', letterSpacing: '0.04em' }}>
+            Why MiniClaw
+          </Link>
           {[
             { label: 'Privacy', href: '#' },
             { label: 'Twitter / X', href: '#' },
@@ -840,13 +936,14 @@ function Footer() {
   );
 }
 
-// ---- App ----
+// ---- Landing Page ----
 
-export default function App() {
+function LandingPage() {
   return (
     <div style={{ background: T.bg, minHeight: '100vh', color: T.text }}>
       <Nav />
       <Hero />
+      <StatsBar />
       <FeatureCards />
       <WhatIsMiniClaw />
       <HowItWorks />
@@ -855,5 +952,19 @@ export default function App() {
       <WaitlistForm />
       <Footer />
     </div>
+  );
+}
+
+// ---- App ----
+
+export default function App() {
+  const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+  return (
+    <Router base={base}>
+      <Switch>
+        <Route path="/why" component={WhyPage} />
+        <Route component={LandingPage} />
+      </Switch>
+    </Router>
   );
 }
