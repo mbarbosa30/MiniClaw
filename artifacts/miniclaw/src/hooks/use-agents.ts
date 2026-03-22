@@ -942,6 +942,11 @@ function normaliseOrderList(raw: unknown): MarketplaceOrder[] {
   return (list as MarketplaceOrder[]).map(o => ({ ...o, id: String((o as MarketplaceOrder).id) }));
 }
 
+function normaliseOrder(raw: unknown): MarketplaceOrder {
+  const o = raw as MarketplaceOrder;
+  return { ...o, id: String(o.id) };
+}
+
 // GET /v1/hosted-agents/:agentId/marketplace/services — browse + optional text search
 // Alias: useMarketplaceSearch is a thin wrapper with the same signature
 export function useMarketplaceSearch(agentId: string | number | undefined, search?: string) {
@@ -1010,6 +1015,22 @@ export function useIncomingOrders(agentId: string | number | undefined) {
     enabled: agentId != null && agentId !== '',
     staleTime: 30_000,
     refetchInterval: 60_000,
+  });
+}
+
+// GET /v1/hosted-agents/:agentId/marketplace/orders/:orderId — single order status (poll every 15s)
+export function useOrderStatus(agentId: string | number | undefined, orderId: string | undefined) {
+  return useQuery<MarketplaceOrder>({
+    queryKey: ['marketplace-order-status', qid(agentId), orderId ?? ''],
+    queryFn: async () => {
+      const raw = await apiFetch<unknown>(
+        `/api/selfclaw/v1/hosted-agents/${sid(agentId!)}/marketplace/orders/${orderId}`
+      );
+      return normaliseOrder(raw);
+    },
+    enabled: agentId != null && agentId !== '' && !!orderId,
+    staleTime: 10_000,
+    refetchInterval: 15_000,
   });
 }
 

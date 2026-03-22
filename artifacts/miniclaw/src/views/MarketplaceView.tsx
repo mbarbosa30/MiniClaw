@@ -14,6 +14,7 @@ import {
   useMyOrders,
   useIncomingOrders,
   useOrderAction,
+  useOrderStatus,
   useRateOrder,
   useAgents,
 } from '@/hooks/use-agents';
@@ -219,18 +220,19 @@ function ServiceDetailSheet({
   selectedAgentId,
   onAgentChange,
   onClose,
+  onOrderPlaced,
 }: {
   service: MarketplaceService;
   selectedAgentId: string | number | undefined;
   onAgentChange: (id: string | number) => void;
   onClose: () => void;
+  onOrderPlaced: (orderId: string) => void;
 }) {
   const t = useTheme();
-  const { mutate: placeOrder, isPending, isSuccess, isError, error } = usePlaceOrder();
+  const { mutate: placeOrder, isPending, isError, error } = usePlaceOrder();
   const { data: agentsData } = useAgents();
   const agents = agentsData?.agents ?? [];
   const [input, setInput] = useState('');
-  const [ordered, setOrdered] = useState(false);
 
   const resolvedAgentId = selectedAgentId ?? agents[0]?.id;
   const canOrder = !isPending && resolvedAgentId != null;
@@ -240,7 +242,9 @@ function ServiceDetailSheet({
     placeOrder(
       { serviceId: service.id, input: input.trim() || undefined, agentId: resolvedAgentId },
       {
-        onSuccess: () => setOrdered(true),
+        onSuccess: (order) => {
+          onOrderPlaced(String(order.id));
+        },
       },
     );
   }
@@ -316,89 +320,75 @@ function ServiceDetailSheet({
           </div>
         )}
 
-        {ordered ? (
-          <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            style={{ background: t.surface, borderRadius: 10, padding: '16px', textAlign: 'center' }}
+        <div>
+          <label style={{ ...MONO, fontSize: 9, color: t.faint, textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 8 }}>
+            Order for
+          </label>
+          <select
+            value={String(resolvedAgentId ?? '')}
+            onChange={e => {
+              const val = e.target.value;
+              const num = Number(val);
+              onAgentChange(Number.isFinite(num) && val !== '' ? num : val);
+            }}
+            style={{
+              width: '100%', boxSizing: 'border-box',
+              background: t.surface, border: 'none', borderRadius: 8,
+              padding: '10px 12px', fontSize: 12, color: t.text,
+              fontFamily: 'inherit', outline: 'none', cursor: 'pointer',
+              appearance: 'none', WebkitAppearance: 'none',
+            }}
           >
-            <p style={{ fontSize: 22, marginBottom: 8 }}>✓</p>
-            <p style={{ fontSize: 13, fontWeight: 300, color: t.text, letterSpacing: '-0.01em' }}>Order placed!</p>
-            <p style={{ fontSize: 11, color: t.faint, fontWeight: 300, marginTop: 4 }}>You can track it in the Orders tab.</p>
-          </motion.div>
-        ) : (
-          <>
-            <div>
-              <label style={{ ...MONO, fontSize: 9, color: t.faint, textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 8 }}>
-                Order for
-              </label>
-              <select
-                value={String(resolvedAgentId ?? '')}
-                onChange={e => {
-                  const val = e.target.value;
-                  const num = Number(val);
-                  onAgentChange(Number.isFinite(num) && val !== '' ? num : val);
-                }}
-                style={{
-                  width: '100%', boxSizing: 'border-box',
-                  background: t.surface, border: 'none', borderRadius: 8,
-                  padding: '10px 12px', fontSize: 12, color: t.text,
-                  fontFamily: 'inherit', outline: 'none', cursor: 'pointer',
-                  appearance: 'none', WebkitAppearance: 'none',
-                }}
-              >
-                {agents.length === 0 && (
-                  <option value="">No agents</option>
-                )}
-                {agents.map(agent => (
-                  <option key={String(agent.id)} value={String(agent.id)}>
-                    {agent.emoji ? `${agent.emoji} ` : ''}{agent.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {service.inputSchema && Object.keys(service.inputSchema).length > 0 && (
-              <div>
-                <label style={{ ...MONO, fontSize: 9, color: t.faint, textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 8 }}>
-                  {Object.keys(service.inputSchema).join(', ')}
-                </label>
-                <textarea
-                  value={input}
-                  onChange={e => setInput(e.target.value)}
-                  placeholder="Describe your requirements…"
-                  rows={3}
-                  style={{
-                    width: '100%', boxSizing: 'border-box',
-                    background: t.surface, border: 'none', borderRadius: 8,
-                    padding: '10px 12px', fontSize: 12, color: t.text,
-                    fontFamily: 'inherit', lineHeight: 1.55, resize: 'none', outline: 'none',
-                  }}
-                />
-              </div>
+            {agents.length === 0 && (
+              <option value="">No agents</option>
             )}
+            {agents.map(agent => (
+              <option key={String(agent.id)} value={String(agent.id)}>
+                {agent.emoji ? `${agent.emoji} ` : ''}{agent.name}
+              </option>
+            ))}
+          </select>
+        </div>
 
-            {isError && (
-              <p style={{ fontSize: 11, color: '#ef4444', fontWeight: 300 }}>
-                {(error as Error)?.message ?? 'Failed to place order.'}
-              </p>
-            )}
-
-            <button
-              onClick={handleOrder}
-              disabled={!canOrder}
+        {service.inputSchema && Object.keys(service.inputSchema).length > 0 && (
+          <div>
+            <label style={{ ...MONO, fontSize: 9, color: t.faint, textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 8 }}>
+              {Object.keys(service.inputSchema).join(', ')}
+            </label>
+            <textarea
+              value={input}
+              onChange={e => setInput(e.target.value)}
+              placeholder="Describe your requirements…"
+              rows={3}
               style={{
-                background: canOrder ? t.text : t.surface,
-                color: canOrder ? t.bg : t.faint,
-                border: 'none', borderRadius: 10, padding: '12px',
-                fontSize: 13, fontFamily: 'inherit', cursor: canOrder ? 'pointer' : 'default',
-                transition: 'background 0.15s, color 0.15s', fontWeight: 400,
+                width: '100%', boxSizing: 'border-box',
+                background: t.surface, border: 'none', borderRadius: 8,
+                padding: '10px 12px', fontSize: 12, color: t.text,
+                fontFamily: 'inherit', lineHeight: 1.55, resize: 'none', outline: 'none',
               }}
-            >
-              {isPending ? 'Placing order…' : `Order — ${fmtPrice(service)}`}
-            </button>
-          </>
+            />
+          </div>
         )}
+
+        {isError && (
+          <p style={{ fontSize: 11, color: '#ef4444', fontWeight: 300 }}>
+            {(error as Error)?.message ?? 'Failed to place order.'}
+          </p>
+        )}
+
+        <button
+          onClick={handleOrder}
+          disabled={!canOrder}
+          style={{
+            background: canOrder ? t.text : t.surface,
+            color: canOrder ? t.bg : t.faint,
+            border: 'none', borderRadius: 10, padding: '12px',
+            fontSize: 13, fontFamily: 'inherit', cursor: canOrder ? 'pointer' : 'default',
+            transition: 'background 0.15s, color 0.15s', fontWeight: 400,
+          }}
+        >
+          {isPending ? 'Placing order…' : `Order — ${fmtPrice(service)}`}
+        </button>
       </motion.div>
     </>
   );
@@ -1032,7 +1022,77 @@ function OrderSkeleton() {
   );
 }
 
-function OrdersTab({ agentId }: { agentId: string | number | undefined }) {
+const TERMINAL_STATUSES: MarketplaceOrderStatus[] = ['delivered', 'confirmed', 'rated', 'rejected', 'failed', 'cancelled' as MarketplaceOrderStatus];
+
+function OrderTracker({ agentId, orderId, onDone }: { agentId: string | number; orderId: string; onDone: () => void }) {
+  const t = useTheme();
+  const { data: order } = useOrderStatus(agentId, orderId);
+  const status = order?.status;
+
+  useEffect(() => {
+    if (status && TERMINAL_STATUSES.includes(status)) {
+      const timer = setTimeout(onDone, 3000);
+      return () => clearTimeout(timer);
+    }
+    return undefined;
+  }, [status, onDone]);
+
+  if (!order) return null;
+
+  const isTerminal = status && TERMINAL_STATUSES.includes(status);
+  const cfg = getStatusConfig(status ?? 'pending');
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -6 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -6 }}
+      transition={{ duration: 0.2 }}
+      style={{
+        display: 'flex', alignItems: 'center', gap: 8,
+        background: t.surface, borderRadius: 10, padding: '10px 14px',
+        marginBottom: 16, border: `1px solid ${cfg.color}30`,
+      }}
+    >
+      {!isTerminal && (
+        <motion.div
+          animate={{ opacity: [1, 0.3, 1] }}
+          transition={{ duration: 1.2, repeat: Infinity }}
+          style={{ width: 6, height: 6, borderRadius: '50%', background: cfg.color, flexShrink: 0 }}
+        />
+      )}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <span style={{ ...MONO, fontSize: 9, color: t.faint, textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+          {isTerminal ? 'Order ' : 'Tracking · '}
+        </span>
+        <span style={{ ...MONO, fontSize: 9, color: cfg.color, textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+          {cfg.label}
+        </span>
+        {order.serviceTitle && (
+          <p style={{ fontSize: 11, color: t.label, fontWeight: 300, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {order.serviceTitle}
+          </p>
+        )}
+      </div>
+      <button
+        onClick={onDone}
+        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, color: t.faint, flexShrink: 0 }}
+      >
+        <X size={12} strokeWidth={1.5} />
+      </button>
+    </motion.div>
+  );
+}
+
+function OrdersTab({
+  agentId,
+  lastPlacedOrderId,
+  onClearTracking,
+}: {
+  agentId: string | number | undefined;
+  lastPlacedOrderId?: string;
+  onClearTracking: () => void;
+}) {
   const t = useTheme();
   const { data: myOrders = [], isLoading: myLoading, isError: myError } = useMyOrders(agentId);
   const { data: incomingOrders = [], isLoading: incomingLoading, isError: incomingError } = useIncomingOrders(agentId);
@@ -1052,8 +1112,9 @@ function OrdersTab({ agentId }: { agentId: string | number | undefined }) {
   }
 
   const hasOrders = myOrders.length > 0 || incomingOrders.length > 0;
+  const showTracker = !!lastPlacedOrderId && !!agentId;
 
-  if (!hasOrders) {
+  if (!hasOrders && !showTracker) {
     return (
       <div style={{ textAlign: 'center', paddingTop: 32 }}>
         <p style={{ fontSize: 13, color: t.faint, fontWeight: 300, lineHeight: 1.65 }}>
@@ -1075,6 +1136,12 @@ function OrdersTab({ agentId }: { agentId: string | number | undefined }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+      <AnimatePresence>
+        {showTracker && (
+          <OrderTracker agentId={agentId} orderId={lastPlacedOrderId!} onDone={onClearTracking} />
+        )}
+      </AnimatePresence>
+
       {myOrders.length > 0 && (
         <>
           <p style={{ ...MONO, fontSize: 9, color: t.faint, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 12 }}>
@@ -1170,6 +1237,13 @@ export function MarketplaceView() {
   const [selectedAgentId, setSelectedAgentId] = useState<string | number | undefined>(undefined);
   const activeAgentId = selectedAgentId ?? firstAgentId;
   const [savedIds, toggleSave] = useSavedServices();
+  const [lastPlacedOrderId, setLastPlacedOrderId] = useState<string | undefined>(undefined);
+
+  const handleOrderPlaced = useCallback((orderId: string) => {
+    setLastPlacedOrderId(orderId);
+    setSelectedService(null);
+    setTab('orders');
+  }, []);
 
   const tabBtn = (id: MarketplaceTab, label: string): React.CSSProperties => ({
     background: tab === id ? t.text : 'none',
@@ -1215,7 +1289,7 @@ export function MarketplaceView() {
             {tab === 'browse' ? (
               <BrowseTab agentId={activeAgentId} onSelectService={setSelectedService} savedIds={savedIds} onToggleSave={toggleSave} />
             ) : tab === 'orders' ? (
-              <OrdersTab agentId={activeAgentId} />
+              <OrdersTab agentId={activeAgentId} lastPlacedOrderId={lastPlacedOrderId} onClearTracking={() => setLastPlacedOrderId(undefined)} />
             ) : (
               <SavedTab agentId={activeAgentId} onSelectService={setSelectedService} savedIds={savedIds} onToggleSave={toggleSave} />
             )}
@@ -1230,6 +1304,7 @@ export function MarketplaceView() {
             selectedAgentId={activeAgentId}
             onAgentChange={setSelectedAgentId}
             onClose={() => setSelectedService(null)}
+            onOrderPlaced={handleOrderPlaced}
           />
         )}
       </AnimatePresence>
