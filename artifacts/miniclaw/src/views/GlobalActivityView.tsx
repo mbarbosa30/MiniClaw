@@ -247,44 +247,52 @@ function FeedRow({
   );
 }
 
+const MARKDOWN_KEYS = new Set(['research', 'markdown', 'report', 'content', 'text', 'body']);
+
 function ResultDataSection({ data }: { data: Record<string, unknown> }) {
   const t = useTheme();
   const entries = Object.entries(data);
   if (entries.length === 0) return null;
 
+  const preStyle: React.CSSProperties = {
+    fontSize: 11,
+    fontFamily: 'ui-monospace, Menlo, monospace',
+    color: t.label,
+    lineHeight: 1.6,
+    whiteSpace: 'pre-wrap',
+    wordBreak: 'break-word',
+    margin: 0,
+    maxHeight: 240,
+    overflowY: 'auto',
+    background: t.bg,
+    borderRadius: 6,
+    padding: '10px 12px',
+    border: `1px solid ${t.divider}`,
+  };
+
   return (
     <div style={{ marginTop: 16 }}>
       {entries.map(([key, value]) => {
-        const isLongText = typeof value === 'string' && value.length > 120;
         const label = key.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase());
+        const isMarkdownKey = MARKDOWN_KEYS.has(key.toLowerCase());
+        const isLongString = typeof value === 'string' && value.length > 120;
+        const isObject = value !== null && typeof value === 'object' && !Array.isArray(value);
 
         return (
           <div key={key} style={{ marginBottom: 14 }}>
             <p style={{ ...MONO, fontSize: 9, color: t.faint, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 5 }}>
               {label}
             </p>
-            {isLongText ? (
-              <pre style={{
-                fontSize: 11,
-                fontFamily: 'ui-monospace, Menlo, monospace',
-                color: t.label,
-                lineHeight: 1.6,
-                whiteSpace: 'pre-wrap',
-                wordBreak: 'break-word',
-                margin: 0,
-                maxHeight: 240,
-                overflowY: 'auto',
-                background: t.bg,
-                borderRadius: 6,
-                padding: '10px 12px',
-                border: `1px solid ${t.divider}`,
-              }}>
-                {value as string}
-              </pre>
+            {(isMarkdownKey || isLongString) && typeof value === 'string' ? (
+              <pre style={preStyle}>{value}</pre>
             ) : Array.isArray(value) ? (
               <p style={{ fontSize: 12, fontWeight: 300, color: t.label, lineHeight: 1.55 }}>
-                {(value as unknown[]).map(v => String(v)).join(', ')}
+                {(value as unknown[]).map(v =>
+                  v !== null && typeof v === 'object' ? JSON.stringify(v) : String(v)
+                ).join(', ')}
               </p>
+            ) : isObject ? (
+              <pre style={preStyle}>{JSON.stringify(value, null, 2)}</pre>
             ) : (
               <p style={{ fontSize: 12, fontWeight: 300, color: t.label, lineHeight: 1.55 }}>
                 {String(value)}
