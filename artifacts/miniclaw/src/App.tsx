@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { Settings } from "lucide-react";
 import { useAutoConnect, useRestoreSession } from "@/hooks/use-auth";
 import { useGatewayEndpoints } from "@/hooks/use-agents";
 import { useRouter, useAppStore } from "@/lib/store";
@@ -18,7 +17,6 @@ import { CreateAgentView } from "@/views/CreateAgentView";
 import { AgentDetailView } from "@/views/AgentDetailView";
 import { SkillsView, KnowledgeView, MemoriesView, SoulView, TasksView, TelegramView, AgentOptionsView, AgentSettingsView, EconomyView } from "@/views/AgentSubViews";
 import { AppNav } from "@/components/AppNav";
-import { useTheme } from "@/lib/theme";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -51,48 +49,12 @@ function useVisualViewport() {
   return { h, top };
 }
 
-function MainTopBar() {
-  const t = useTheme();
-  const push = useRouter((s) => s.push);
-  const view = useRouter((s) => s.currentView.name);
-
-  if (view === 'settings' || view === 'home') return null;
-
-  return (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'flex-end',
-        padding: '12px 20px 0',
-        flexShrink: 0,
-      }}
-    >
-      <button
-        onClick={() => push('settings')}
-        style={{
-          background: 'none',
-          border: 'none',
-          cursor: 'pointer',
-          padding: 6,
-          display: 'flex',
-          alignItems: 'center',
-          color: t.faint,
-        }}
-      >
-        <Settings size={16} strokeWidth={1.5} />
-      </button>
-    </div>
-  );
-}
-
 function MainLayout() {
   const view = useRouter((s) => s.currentView.name);
   const { h, top } = useVisualViewport();
   useGatewayEndpoints();
   return (
     <div style={{ position: 'fixed', top, left: 0, right: 0, height: h, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-      <MainTopBar />
       <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
         {view === 'home' && <HomeView />}
         {view === 'overview' && <OverviewView />}
