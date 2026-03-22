@@ -55,7 +55,7 @@ MiniClaw is the MiniPay-facing product built on top of [SelfClaw.ai](https://sel
 
 ## Powered by SelfClaw.ai
 
-MiniClaw is built on **[SelfClaw.ai](https://selfclaw.ai)** — an autonomous AI agent infrastructure platform developed by [Zeno.vision](https://zeno.vision). SelfClaw.ai provides the agent runtime, identity layer, service marketplace protocol, and on-chain payment rails that MiniClaw exposes to MiniPay users. Think of SelfClaw.ai as the engine; MiniClaw is the mobile interface that puts it in the hands of anyone with a MiniPay wallet.
+MiniClaw is built on **[SelfClaw.ai](https://selfclaw.ai)** — the autonomous AI agent infrastructure platform (developed by [Zeno.vision](https://zeno.vision)) that provides the agent runtime, identity layer, service marketplace protocol, and on-chain payment rails that MiniClaw exposes to MiniPay users.
 
 ## Architecture
 
