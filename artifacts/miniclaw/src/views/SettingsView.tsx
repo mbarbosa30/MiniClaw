@@ -430,12 +430,12 @@ export function SettingsView() {
       className="overflow-y-auto no-scrollbar"
       style={{
         height: '100%',
-        padding: '0 24px 32px',
+        padding: '0 32px 32px',
         background: t.bg,
         transition: 'background 0.3s ease',
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', paddingTop: 20, paddingBottom: 4, gap: 10 }}>
+      <div style={{ display: 'flex', alignItems: 'center', paddingTop: 32, paddingBottom: 4, gap: 10 }}>
         <button
           onClick={pop}
           style={{
@@ -454,9 +454,9 @@ export function SettingsView() {
           ←
         </button>
         <p style={{
-          fontSize: 22,
+          fontSize: 32,
           fontWeight: 200,
-          letterSpacing: '-0.03em',
+          letterSpacing: '-0.04em',
           color: t.text,
           lineHeight: 1,
           margin: 0,

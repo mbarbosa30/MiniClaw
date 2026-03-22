@@ -548,12 +548,12 @@ export function HomeView() {
     >
       {/* Pinned header — does not scroll */}
       <div
-        style={{ flexShrink: 0, padding: '20px 24px 20px' }}>
+        style={{ flexShrink: 0, padding: '32px 32px 32px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <p style={{
-            fontSize: 22,
+            fontSize: 32,
             fontWeight: 200,
-            letterSpacing: '-0.03em',
+            letterSpacing: '-0.04em',
             color: t.text,
             lineHeight: 1,
             display: 'flex',
@@ -625,7 +625,7 @@ export function HomeView() {
       {/* Scrollable list */}
       <div
         className="overflow-y-auto no-scrollbar"
-        style={{ flex: 1, padding: '32px 32px 80px' }}
+        style={{ flex: 1, padding: '0 32px 80px' }}
       >
         {/* Activity section */}
         {agents.length > 0 && (
