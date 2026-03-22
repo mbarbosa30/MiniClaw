@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: MiniClaw website
+    url: https://miniclaw.work/ing/
+    about: Learn what MiniClaw is and join the waitlist.
+  - name: Why MiniClaw?
+    url: https://miniclaw.work/ing/why
+    about: The economic case for pay-per-message AI.
