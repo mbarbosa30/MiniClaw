@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { Check, X, Plus } from 'lucide-react';
+import { Check, X, Plus, Bot } from 'lucide-react';
 import { useTheme } from '@/lib/theme';
 import { useRouter } from '@/lib/store';
 import {
@@ -9,7 +9,11 @@ import {
   useFeed,
   useLikeFeedPost,
 } from '@/hooks/use-agents';
+import { resolveIcon } from '@/lib/agent-icon';
+import { PERSONAS } from '@/lib/personas';
 import type { AgentTask, FeedPost } from '@/types';
+
+const PERSONA_BY_TAGLINE = new Map(PERSONAS.map(p => [p.tagline, p]));
 
 const MONO: React.CSSProperties = {
   fontFamily: 'ui-monospace, Menlo, monospace',
@@ -30,7 +34,26 @@ function fmtRelTime(dateStr?: string): string {
 type TaskWithAgent = AgentTask & {
   agentId: string | number;
   agentName: string;
+  agentEmoji?: string | null;
+  agentIcon?: string | null;
+  agentDescription?: string | null;
 };
+
+function AgentAvatar({ emoji, icon, description, size = 18 }: {
+  emoji?: string | null;
+  icon?: string | null;
+  description?: string | null;
+  size?: number;
+}) {
+  const t = useTheme();
+  const Icon = resolveIcon(icon);
+  if (Icon) return <Icon size={size - 4} strokeWidth={1.5} color={t.faint} style={{ flexShrink: 0 }} />;
+  const resolvedEmoji = emoji ?? PERSONA_BY_TAGLINE.get(description ?? '')?.emoji;
+  if (resolvedEmoji) return <span style={{ fontSize: size - 5, lineHeight: 1, flexShrink: 0 }}>{resolvedEmoji}</span>;
+  const FallbackIcon = resolveIcon(PERSONA_BY_TAGLINE.get(description ?? '')?.icon);
+  if (FallbackIcon) return <FallbackIcon size={size - 4} strokeWidth={1.5} color={t.faint} style={{ flexShrink: 0 }} />;
+  return <Bot size={size - 4} strokeWidth={1.5} color={t.faint} style={{ flexShrink: 0 }} />;
+}
 
 function getTaskTitle(task: AgentTask): string {
   return (
@@ -102,6 +125,8 @@ function TaskRow({
         opacity: variant === 'completed' ? 0.35 : 1,
       }} />
 
+      <AgentAvatar emoji={task.agentEmoji} icon={task.agentIcon} description={task.agentDescription} size={18} />
+
       <div style={{ flex: 1, minWidth: 0 }}>
         <p style={{
           fontSize: 12,
@@ -171,9 +196,12 @@ function FeedRow({
   return (
     <div onClick={onPress} style={{ paddingTop: 13, paddingBottom: 13, cursor: 'pointer' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-        <span style={{ fontSize: 12, fontWeight: 400, letterSpacing: '-0.01em', color: t.text }}>
-          {post.agentName ?? 'Agent'}
-        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+          <AgentAvatar emoji={post.agentEmoji} size={18} />
+          <span style={{ fontSize: 12, fontWeight: 400, letterSpacing: '-0.01em', color: t.text }}>
+            {post.agentName ?? 'Agent'}
+          </span>
+        </div>
         <span style={{ ...MONO, fontSize: 9, color: t.faint }}>
           {fmtRelTime(post.createdAt)}
         </span>
@@ -237,6 +265,9 @@ export function GlobalActivityView() {
       ...task,
       agentId: agent.id,
       agentName: agent.name,
+      agentEmoji: agent.emoji ?? null,
+      agentIcon: agent.icon ?? null,
+      agentDescription: agent.description ?? null,
     });
     (result.data.pending?.items ?? []).forEach((t) => pending.push(attach(t)));
     (result.data.running?.items ?? []).forEach((t) => running.push(attach(t)));
