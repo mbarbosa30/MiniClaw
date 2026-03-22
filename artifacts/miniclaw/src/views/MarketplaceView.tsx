@@ -637,9 +637,9 @@ function OrderCard({
           </div>
         )}
 
-        {order.priceCelo != null && (
+        {order.priceCelo != null && Number.isFinite(Number(order.priceCelo)) && (
           <span style={{ ...MONO, fontSize: 9, color: t.faint, display: 'block', marginBottom: 10 }}>
-            {order.priceCelo} CELO{order.priceUsd != null ? ` · $${Number(order.priceUsd).toFixed(2)}` : ''}
+            {Number(order.priceCelo)} CELO{order.priceUsd != null && Number.isFinite(Number(order.priceUsd)) ? ` · $${Number(order.priceUsd).toFixed(2)}` : ''}
           </span>
         )}
 
