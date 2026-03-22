@@ -961,10 +961,10 @@ export function useMarketplaceServices(search?: string) {
 export function usePlaceOrder() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ serviceId, input }: { serviceId: string; input?: string }) =>
+    mutationFn: ({ serviceId, input, agentId }: { serviceId: string; input?: string; agentId?: string | number }) =>
       apiFetch<MarketplaceOrder>(`/api/selfclaw/v1/marketplace/services/${serviceId}/order`, {
         method: 'POST',
-        body: JSON.stringify({ input }),
+        body: JSON.stringify({ input, agentId }),
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['marketplace-orders-my'] });

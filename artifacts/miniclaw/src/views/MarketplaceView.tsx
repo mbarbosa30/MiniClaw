@@ -15,6 +15,7 @@ import {
   useIncomingOrders,
   useOrderAction,
   useRateOrder,
+  useAgents,
 } from '@/hooks/use-agents';
 import type { MarketplaceService, MarketplaceOrder, MarketplaceOrderStatus } from '@/types';
 
@@ -213,13 +214,19 @@ function ServiceDetailSheet({
 }) {
   const t = useTheme();
   const { mutate: placeOrder, isPending, isSuccess, isError, error } = usePlaceOrder();
+  const { data: agentsData } = useAgents();
+  const agents = agentsData?.agents ?? [];
   const [input, setInput] = useState('');
   const [ordered, setOrdered] = useState(false);
+  const [selectedAgentId, setSelectedAgentId] = useState<string | number | undefined>(undefined);
+
+  const resolvedAgentId = selectedAgentId ?? agents[0]?.id;
+  const canOrder = !isPending && resolvedAgentId != null;
 
   function handleOrder() {
-    if (isPending) return;
+    if (!canOrder) return;
     placeOrder(
-      { serviceId: service.id, input: input.trim() || undefined },
+      { serviceId: service.id, input: input.trim() || undefined, agentId: resolvedAgentId },
       {
         onSuccess: () => setOrdered(true),
       },
@@ -309,6 +316,36 @@ function ServiceDetailSheet({
           </motion.div>
         ) : (
           <>
+            <div>
+              <label style={{ ...MONO, fontSize: 9, color: t.faint, textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 8 }}>
+                Order for
+              </label>
+              <select
+                value={String(resolvedAgentId ?? '')}
+                onChange={e => {
+                  const val = e.target.value;
+                  const num = Number(val);
+                  setSelectedAgentId(Number.isFinite(num) && val !== '' ? num : val);
+                }}
+                style={{
+                  width: '100%', boxSizing: 'border-box',
+                  background: t.surface, border: 'none', borderRadius: 8,
+                  padding: '10px 12px', fontSize: 12, color: t.text,
+                  fontFamily: 'inherit', outline: 'none', cursor: 'pointer',
+                  appearance: 'none', WebkitAppearance: 'none',
+                }}
+              >
+                {agents.length === 0 && (
+                  <option value="">No agents</option>
+                )}
+                {agents.map(agent => (
+                  <option key={String(agent.id)} value={String(agent.id)}>
+                    {agent.emoji ? `${agent.emoji} ` : ''}{agent.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
             {service.inputSchema && Object.keys(service.inputSchema).length > 0 && (
               <div>
                 <label style={{ ...MONO, fontSize: 9, color: t.faint, textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 8 }}>
@@ -337,12 +374,12 @@ function ServiceDetailSheet({
 
             <button
               onClick={handleOrder}
-              disabled={isPending}
+              disabled={!canOrder}
               style={{
-                background: isPending ? t.surface : t.text,
-                color: isPending ? t.faint : t.bg,
+                background: canOrder ? t.text : t.surface,
+                color: canOrder ? t.bg : t.faint,
                 border: 'none', borderRadius: 10, padding: '12px',
-                fontSize: 13, fontFamily: 'inherit', cursor: isPending ? 'default' : 'pointer',
+                fontSize: 13, fontFamily: 'inherit', cursor: canOrder ? 'pointer' : 'default',
                 transition: 'background 0.15s, color 0.15s', fontWeight: 400,
               }}
             >
