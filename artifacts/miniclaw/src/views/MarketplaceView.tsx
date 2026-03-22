@@ -1,6 +1,12 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, X, Star } from 'lucide-react';
+import {
+  Search, X, Star,
+  Bot, FileText, TrendingUp, Globe, Code2, BarChart2,
+  Megaphone, Languages, Image, Music, Zap, ShoppingBag,
+  User,
+  type LucideIcon,
+} from 'lucide-react';
 import { useTheme } from '@/lib/theme';
 import {
   useMarketplaceServices,
@@ -26,13 +32,6 @@ function fmtPrice(service: MarketplaceService): string {
   return 'Free';
 }
 
-function agentInitial(name?: string): string {
-  if (!name) return '?';
-  const trimmed = name.trim();
-  if (!trimmed) return '?';
-  return trimmed[0].toUpperCase();
-}
-
 function fmtRelTime(dateStr?: string): string {
   if (!dateStr) return '';
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -42,6 +41,38 @@ function fmtRelTime(dateStr?: string): string {
   const hrs = Math.floor(mins / 60);
   if (hrs < 24) return `${hrs}h ago`;
   return `${Math.floor(hrs / 24)}d ago`;
+}
+
+const CATEGORY_ICONS: Record<string, LucideIcon> = {
+  research:    Search,
+  writing:     FileText,
+  content:     FileText,
+  trading:     TrendingUp,
+  finance:     TrendingUp,
+  web:         Globe,
+  internet:    Globe,
+  code:        Code2,
+  dev:         Code2,
+  development: Code2,
+  data:        BarChart2,
+  analytics:   BarChart2,
+  marketing:   Megaphone,
+  social:      Megaphone,
+  translation: Languages,
+  language:    Languages,
+  image:       Image,
+  art:         Image,
+  music:       Music,
+  audio:       Music,
+  automation:  Zap,
+  shopping:    ShoppingBag,
+  commerce:    ShoppingBag,
+};
+
+function categoryIcon(cat?: string): LucideIcon {
+  if (!cat) return Bot;
+  const key = cat.toLowerCase().trim();
+  return CATEGORY_ICONS[key] ?? Bot;
 }
 
 const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
@@ -86,6 +117,7 @@ function ServiceSkeleton() {
 
 function ServiceCard({ service, onTap }: { service: MarketplaceService; onTap: () => void }) {
   const t = useTheme();
+  const Icon = categoryIcon(service.category);
   return (
     <motion.button
       initial={{ opacity: 0, y: 6 }}
@@ -96,70 +128,67 @@ function ServiceCard({ service, onTap }: { service: MarketplaceService; onTap: (
         background: t.surface,
         border: 'none',
         borderRadius: 12,
-        padding: '16px',
+        padding: '14px 16px',
         textAlign: 'left',
         cursor: 'pointer',
         width: '100%',
         display: 'flex',
         flexDirection: 'column',
-        gap: 8,
+        gap: 6,
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
-          {service.agentName && (
-            <span style={{
-              width: 22, height: 22, borderRadius: '50%', background: t.divider,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 10, fontWeight: 500, color: t.label, flexShrink: 0,
-            }}>
-              {agentInitial(service.agentName)}
-            </span>
-          )}
-          <span style={{ fontSize: 13, fontWeight: 400, color: t.text, letterSpacing: '-0.01em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {service.name}
+      {/* Row 1: icon + name + category badge + price */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <span style={{
+          width: 28, height: 28, borderRadius: 8, background: t.divider,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+        }}>
+          <Icon size={14} strokeWidth={1.5} color={t.label} />
+        </span>
+        <span style={{ fontSize: 13, fontWeight: 400, color: t.text, letterSpacing: '-0.01em', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {service.name}
+        </span>
+        {service.category && (
+          <span style={{ ...MONO, fontSize: 8, color: t.faint, background: t.bg, border: `1px solid ${t.divider}`, borderRadius: 4, padding: '2px 5px', textTransform: 'uppercase', letterSpacing: '0.05em', flexShrink: 0 }}>
+            {service.category}
           </span>
-        </div>
+        )}
         <span style={{ ...MONO, fontSize: 11, color: t.text, fontWeight: 400, flexShrink: 0 }}>
           {fmtPrice(service)}
         </span>
       </div>
 
+      {/* Row 2: agent name */}
       {service.agentName && (
-        <span style={{ ...MONO, fontSize: 9, color: t.faint, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+        <span style={{ ...MONO, fontSize: 9, color: t.faint, textTransform: 'uppercase', letterSpacing: '0.06em', paddingLeft: 36 }}>
           by {service.agentName}
         </span>
       )}
 
+      {/* Row 3: description */}
       {service.description && (
-        <p style={{ fontSize: 11, fontWeight: 300, color: t.label, lineHeight: 1.55, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+        <p style={{ fontSize: 11, fontWeight: 300, color: t.label, lineHeight: 1.5, paddingLeft: 36, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', margin: 0 }}>
           {service.description}
         </p>
       )}
 
-      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-        {service.category && (
-          <span style={{ ...MONO, fontSize: 8, color: t.faint, background: t.divider, borderRadius: 4, padding: '2px 6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            {service.category}
-          </span>
-        )}
-        {(service.tags ?? []).slice(0, 3).map(tag => (
-          <span key={tag} style={{ ...MONO, fontSize: 8, color: t.faint, background: t.divider, borderRadius: 4, padding: '2px 6px', letterSpacing: '0.04em' }}>
-            {tag}
-          </span>
-        ))}
-        {service.estimatedDelivery && (
-          <span style={{ ...MONO, fontSize: 8, color: t.faint, letterSpacing: '0.04em' }}>
-            {service.estimatedDelivery}
-          </span>
-        )}
-        {service.averageRating != null && (
-          <span style={{ ...MONO, fontSize: 8, color: t.faint, letterSpacing: '0.04em', display: 'flex', alignItems: 'center', gap: 2 }}>
-            ★ {(service.averageRating as number).toFixed(1)}
-            {service.ratingCount != null && <span style={{ color: t.faint }}> ({service.ratingCount})</span>}
-          </span>
-        )}
-      </div>
+      {/* Row 4: delivery + rating (no wrapping tags) */}
+      {(service.estimatedDelivery || service.averageRating != null) && (
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center', paddingLeft: 36 }}>
+          {service.estimatedDelivery && (
+            <span style={{ ...MONO, fontSize: 8, color: t.faint, letterSpacing: '0.04em' }}>
+              {service.estimatedDelivery}
+            </span>
+          )}
+          {service.averageRating != null && (
+            <span style={{ ...MONO, fontSize: 8, color: t.faint, letterSpacing: '0.04em', display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Star size={8} strokeWidth={1.5} fill="#f59e0b" color="#f59e0b" />
+              {(service.averageRating as number).toFixed(1)}
+              {service.ratingCount != null && <span> ({service.ratingCount})</span>}
+            </span>
+          )}
+        </div>
+      )}
     </motion.button>
   );
 }
@@ -521,10 +550,14 @@ function OrderCard({
             <p style={{ fontSize: 12, fontWeight: 400, color: t.text, marginBottom: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {order.serviceTitle ?? `Order #${order.id.slice(-6)}`}
             </p>
-            <span style={{ ...MONO, fontSize: 9, color: t.faint, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            <span style={{ ...MONO, fontSize: 9, color: t.faint, textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: 4 }}>
               {direction === 'outgoing'
-                ? order.providerName ? `from ${order.providerEmoji ?? ''} ${order.providerName}` : 'Outgoing'
-                : order.buyerName ? `from ${order.buyerEmoji ?? ''} ${order.buyerName}` : 'Incoming'
+                ? order.providerName
+                  ? <><span style={{ width: 14, height: 14, borderRadius: '50%', background: t.divider, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><User size={8} strokeWidth={1.5} color={t.label} /></span>{`from ${order.providerName}`}</>
+                  : 'Outgoing'
+                : order.buyerName
+                  ? <><span style={{ width: 14, height: 14, borderRadius: '50%', background: t.divider, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><User size={8} strokeWidth={1.5} color={t.label} /></span>{`from ${order.buyerName}`}</>
+                  : 'Incoming'
               }
             </span>
           </div>
@@ -642,6 +675,7 @@ function BrowseTab() {
   const t = useTheme();
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [activeCategory, setActiveCategory] = useState<string>('all');
   const [selectedService, setSelectedService] = useState<MarketplaceService | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -655,8 +689,14 @@ function BrowseTab() {
 
   const { data: services = [], isLoading, isError } = useMarketplaceServices(debouncedSearch || undefined);
 
+  const categories = ['all', ...Array.from(new Set(services.map(s => s.category).filter(Boolean) as string[]))];
+
+  const visible = activeCategory === 'all'
+    ? services
+    : services.filter(s => s.category === activeCategory);
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16, position: 'relative' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, position: 'relative' }}>
       {/* Search bar */}
       <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
         <Search size={14} strokeWidth={1.5} color={t.faint} style={{ position: 'absolute', left: 12, pointerEvents: 'none' }} />
@@ -681,19 +721,54 @@ function BrowseTab() {
         )}
       </div>
 
+      {/* Category filter chips */}
+      {!isLoading && !isError && categories.length > 1 && (
+        <div style={{
+          display: 'flex', gap: 6, overflowX: 'auto',
+          paddingBottom: 2,
+          scrollbarWidth: 'none',
+          msOverflowStyle: 'none',
+        }}>
+          {categories.map(cat => {
+            const active = cat === activeCategory;
+            const Icon = cat === 'all' ? null : categoryIcon(cat);
+            return (
+              <button
+                key={cat}
+                onClick={() => setActiveCategory(cat)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 4,
+                  flexShrink: 0,
+                  background: active ? t.text : t.surface,
+                  color: active ? t.bg : t.label,
+                  border: 'none', borderRadius: 20,
+                  padding: '5px 10px',
+                  fontSize: 11, fontFamily: 'inherit', cursor: 'pointer',
+                  letterSpacing: '0.01em',
+                  transition: 'background 0.15s, color 0.15s',
+                }}
+              >
+                {Icon && <Icon size={11} strokeWidth={1.5} />}
+                {cat === 'all' ? 'All' : cat}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       {isLoading ? (
         <ServiceSkeleton />
       ) : isError ? (
         <p style={{ fontSize: 12, color: t.faint, fontWeight: 300 }}>Unable to load services. Check back soon.</p>
-      ) : services.length === 0 ? (
+      ) : visible.length === 0 ? (
         <div style={{ textAlign: 'center', paddingTop: 32 }}>
           <p style={{ fontSize: 13, color: t.faint, fontWeight: 300 }}>
-            {debouncedSearch ? `No services found for "${debouncedSearch}".` : 'No services listed yet.'}
+            {debouncedSearch ? `No services found for "${debouncedSearch}".` : activeCategory !== 'all' ? `No services in "${activeCategory}".` : 'No services listed yet.'}
           </p>
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {services.map(s => (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {visible.map(s => (
             <ServiceCard key={s.id} service={s} onTap={() => setSelectedService(s)} />
           ))}
         </div>
