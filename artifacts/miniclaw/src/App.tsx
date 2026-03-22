@@ -17,7 +17,7 @@ import { FeedView } from "@/views/FeedView";
 import { SettingsView } from "@/views/SettingsView";
 import { CreateAgentView } from "@/views/CreateAgentView";
 import { AgentDetailView } from "@/views/AgentDetailView";
-import { SkillsView, KnowledgeView, MemoriesView, SoulView, TasksView, TelegramView, AgentOptionsView, AgentSettingsView, EconomyView } from "@/views/AgentSubViews";
+import { SkillsView, KnowledgeView, MemoriesView, SoulView, TasksView, TelegramView, AgentOptionsView, AgentSettingsView, EconomyView, ActivityView } from "@/views/AgentSubViews";
 import { AppNav } from "@/components/AppNav";
 
 const queryClient = new QueryClient({
@@ -170,6 +170,7 @@ function ViewManager() {
     case 'tasks':          return <TasksView />;
     case 'telegram':       return <TelegramView />;
     case 'economy':        return <EconomyView />;
+    case 'activity':       return <ActivityView />;
     default:             return <ConnectView />;
   }
 }

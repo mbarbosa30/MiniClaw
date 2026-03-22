@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { useTheme } from '@/lib/theme';
+import { useRouter } from '@/lib/store';
 import { useAgents, useGrowthSummary, useUsageStats, useTriggerReflection, usePollReflection } from '@/hooks/use-agents';
 import { StateIndicator, agentVisualState, STATE_COLOR, STATE_LABEL } from '@/components/StateIndicator';
 import type { Agent, AgentListSummary, DeepReflection } from '@/types';
@@ -227,6 +228,7 @@ function DeepReflectionWidget({ agentId }: { agentId: string | number }) {
 
 function AgentCard({ agent, i }: { agent: Agent; i: number }) {
   const t = useTheme();
+  const push = useRouter(s => s.push);
   const state = agentVisualState(agent);
   const color = STATE_COLOR[state];
 
@@ -323,6 +325,17 @@ function AgentCard({ agent, i }: { agent: Agent; i: number }) {
               </div>
             );
           })}
+          <button
+            onClick={() => push('activity', { id: String(agent.id) })}
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+              fontFamily: 'ui-monospace, Menlo, monospace', fontSize: 9,
+              letterSpacing: '0.05em', textTransform: 'uppercase', color: t.faint,
+              marginTop: 4,
+            }}
+          >
+            See all →
+          </button>
         </div>
       )}
 

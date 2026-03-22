@@ -20,7 +20,8 @@ export type ViewName =
   | 'soul'
   | 'tasks'
   | 'telegram'
-  | 'economy';
+  | 'economy'
+  | 'activity';
 
 export interface ViewParams {
   id?: string;

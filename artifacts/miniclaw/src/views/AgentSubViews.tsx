@@ -18,13 +18,14 @@ import {
   useEconomy,
   useGiftOwner,
   useCommerceRequest,
+  useActivity,
 } from '@/hooks/use-agents';
 import { apiFetch } from '@/lib/api-client';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Trash2, Link as LinkIcon, FileText, Check, X, Send,
   Zap, BookOpen, Brain, CircleCheck,
-  Wallet, Shield, Coins, Gift, ShoppingCart, Lock,
+  Wallet, Shield, Coins, Gift, ShoppingCart, Lock, ScrollText,
 } from 'lucide-react';
 import type { Agent, HumorStyle, PremiumModel, Memory, TelegramNotificationLevel, AvailableModel } from '@/types';
 import { HUSTLE_MODE_SOUL_APPEND } from '@/lib/personas';
@@ -365,6 +366,101 @@ export function MemoriesView() {
   );
 }
 
+// --- ACTIVITY VIEW ---
+
+function fmtRelTime(dateStr?: string): string {
+  if (!dateStr) return '';
+  const diffMs = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diffMs / 60_000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  return `${Math.floor(hrs / 24)}d ago`;
+}
+
+function fmtActivityType(type: string): string {
+  const map: Record<string, string> = {
+    feed_post: 'Feed post', post: 'Feed post', post_created: 'Feed post',
+    deep_reflection: 'Deep reflection', reflection: 'Deep reflection',
+    proactive_message: 'Proactive message', proactive_outreach: 'Proactive message',
+    memory_extraction: 'Memory', memory: 'Memory',
+    skill_execution: 'Skill', task_completed: 'Task', task_failed: 'Task failed',
+    daily_digest: 'Digest', digest: 'Digest',
+    reminder: 'Reminder', reminder_fired: 'Reminder',
+    identity_registered: 'Identity', wallet_created: 'Wallet', token_deployed: 'Token',
+  };
+  const key = type.toLowerCase().replace(/-/g, '_');
+  return map[key] ?? type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+}
+
+export function ActivityView() {
+  const t = useTheme();
+  const agentId: string = useRouter(s => s.currentView.params?.id ?? '');
+  const { data: items, isLoading } = useActivity(agentId);
+
+  const MONO_STYLE: React.CSSProperties = {
+    fontFamily: 'ui-monospace, Menlo, monospace',
+    letterSpacing: '0.04em',
+  };
+
+  return (
+    <SubScreenLayout title="Activity">
+      {isLoading ? <LoadingState /> : !(items ?? []).length ? (
+        <EmptyState
+          icon={<ScrollText size={22} />}
+          title="No activity yet"
+          description="Your agent's posts, reflections, and messages will appear here."
+        />
+      ) : (
+        <div>
+          {(items ?? []).map((item, i) => {
+            const text = item.content ?? item.summary ?? item.description;
+            const ts = fmtRelTime(item.timestamp ?? item.createdAt);
+            return (
+              <div key={item.id ?? i}>
+                <div style={{ padding: '14px 20px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: text ? 8 : 0 }}>
+                    <span style={{
+                      ...MONO_STYLE,
+                      fontSize: 9,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.06em',
+                      color: t.faint,
+                      background: t.bg,
+                      border: `1px solid ${t.divider}`,
+                      borderRadius: 4,
+                      padding: '2px 5px',
+                    }}>
+                      {fmtActivityType(item.type)}
+                    </span>
+                    {item.skill && (
+                      <span style={{ ...MONO_STYLE, fontSize: 9, color: t.faint }}>
+                        {item.skill}
+                      </span>
+                    )}
+                    {ts && (
+                      <span style={{ ...MONO_STYLE, fontSize: 9, color: t.faint, marginLeft: 'auto' }}>
+                        {ts}
+                      </span>
+                    )}
+                  </div>
+                  {text && (
+                    <p style={{ fontSize: 13, lineHeight: 1.6, color: t.text, margin: 0 }}>
+                      {text}
+                    </p>
+                  )}
+                </div>
+                {i < (items ?? []).length - 1 && <Divider />}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </SubScreenLayout>
+  );
+}
+
 // --- TASK RISK CLASSIFICATION ---
 
 const LOW_RISK_TYPES = new Set([
@@ -694,6 +790,7 @@ export function AgentOptionsView() {
     { id: 'skills',         label: 'Skills',     meta: 'capabilities' },
     { id: 'soul',           label: 'Soul',       meta: 'identity · directives' },
     { id: 'tasks',          label: 'Tasks',      meta: 'pending approvals' },
+    { id: 'activity',       label: 'Activity',   meta: 'posts · reflections · outputs' },
     { id: 'telegram',       label: 'Telegram',   meta: 'bot connection' },
     { id: 'economy',        label: 'Economy',    meta: 'wallet · identity · gifts' },
   ];
