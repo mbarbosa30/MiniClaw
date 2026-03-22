@@ -3,8 +3,11 @@ import { motion } from 'framer-motion';
 import { Bot, Loader2, RefreshCw } from 'lucide-react';
 import { useAuthStore, useRouter } from '@/lib/store';
 import { useTheme } from '@/lib/theme';
+import { setWalletAddress } from '@/lib/api-client';
 
-const TIMEOUT_MS = import.meta.env.DEV ? 0 : 8000;
+// In dev keep a short timeout so the bypass button appears quickly,
+// but still give wagmi a chance to auto-connect (e.g. when testing in MiniPay).
+const TIMEOUT_MS = import.meta.env.DEV ? 5000 : 8000;
 
 function resolveAuthErrorMessage(raw: string): { text: string; canRetry: boolean } {
   if (
@@ -32,12 +35,17 @@ const DEV_WALLET = '0xDEADBEEF00000000000000000000000000000001';
 
 export function ConnectView() {
   const t = useTheme();
-  const [timedOut, setTimedOut] = useState(import.meta.env.DEV);
+  // Always start false — let the timeout effect control when timedOut flips.
+  // Starting true in dev caused the bypass button to appear instantly, which
+  // let users click it before wagmi auto-connected, resulting in a missing
+  // wallet address and a 401 on the first API call.
+  const [timedOut, setTimedOut] = useState(false);
   const authError = useAuthStore(s => s.authError);
   const setAuthenticated = useAuthStore(s => s.setAuthenticated);
   const resetRoute = useRouter(s => s.reset);
 
   const handleDevBypass = () => {
+    setWalletAddress(DEV_WALLET);
     setAuthenticated(DEV_WALLET);
     resetRoute('home');
   };
