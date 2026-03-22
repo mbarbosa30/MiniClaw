@@ -156,10 +156,18 @@ interface AppStore {
   setUserProfile: (profile: UserProfile) => void;
 }
 
+const DARK_MODE_KEY = 'miniclaw-dark-mode';
+function readDarkMode(): boolean {
+  try { return localStorage.getItem(DARK_MODE_KEY) === '1'; } catch { return false; }
+}
+function writeDarkMode(v: boolean) {
+  try { localStorage.setItem(DARK_MODE_KEY, v ? '1' : '0'); } catch { /* noop */ }
+}
+
 export const useAppStore = create<AppStore>((set) => ({
-  darkMode: false,
-  setDarkMode: (v) => set({ darkMode: v }),
-  toggleDarkMode: () => set((s) => ({ darkMode: !s.darkMode })),
+  darkMode: readDarkMode(),
+  setDarkMode: (v) => { writeDarkMode(v); set({ darkMode: v }); },
+  toggleDarkMode: () => set((s) => { const next = !s.darkMode; writeDarkMode(next); return { darkMode: next }; }),
   hasSeenOnboard: readLocalBool('miniclaw-seen-onboard'),
   setHasSeenOnboard: (v) => {
     writeLocalBool('miniclaw-seen-onboard', v);
