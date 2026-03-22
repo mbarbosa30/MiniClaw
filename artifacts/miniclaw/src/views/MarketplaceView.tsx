@@ -1026,7 +1026,7 @@ function OrderSkeleton() {
   );
 }
 
-const TERMINAL_STATUSES: MarketplaceOrderStatus[] = ['delivered', 'confirmed', 'rated', 'rejected', 'failed', 'cancelled' as MarketplaceOrderStatus];
+const TERMINAL_STATUSES: MarketplaceOrderStatus[] = ['delivered', 'confirmed', 'rated', 'rejected', 'failed', 'cancelled'];
 
 function OrderTracker({ agentId, orderId, onDone }: { agentId: string | number; orderId: string; onDone: () => void; }) {
   const t = useTheme();

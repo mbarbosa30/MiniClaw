@@ -943,7 +943,8 @@ function normaliseOrderList(raw: unknown): MarketplaceOrder[] {
 }
 
 function normaliseOrder(raw: unknown): MarketplaceOrder {
-  const o = raw as MarketplaceOrder;
+  const env = raw as Record<string, unknown>;
+  const o = (env.order ?? raw) as MarketplaceOrder;
   return { ...o, id: String(o.id) };
 }
 
