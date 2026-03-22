@@ -294,6 +294,7 @@ export interface TaskSummary {
   pending: TaskSummarySection;
   running: TaskSummarySection;
   recentlyCompleted: TaskSummarySection;
+  scheduled?: TaskSummarySection;
 }
 
 export interface ActivityItem {

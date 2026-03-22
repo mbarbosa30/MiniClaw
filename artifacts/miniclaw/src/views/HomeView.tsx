@@ -140,6 +140,7 @@ function ActivitySection({
 
   const pending: TaskWithAgent[] = [];
   const running: TaskWithAgent[] = [];
+  const scheduled: TaskWithAgent[] = [];
   const completed: TaskWithAgent[] = [];
 
   summaries.forEach((result, i) => {
@@ -153,10 +154,11 @@ function ActivitySection({
     });
     (result.data.pending?.items ?? []).forEach(t => pending.push(attach(t)));
     (result.data.running?.items ?? []).forEach(t => running.push(attach(t)));
+    (result.data.scheduled?.items ?? []).forEach(t => scheduled.push(attach(t)));
     (result.data.recentlyCompleted?.items ?? []).slice(0, 3).forEach(t => completed.push(attach(t)));
   });
 
-  if (!pending.length && !running.length && !completed.length) return null;
+  if (!pending.length && !running.length && !scheduled.length && !completed.length) return null;
 
   const SectionLabel = ({ children }: { children: React.ReactNode }) => (
     <p style={{ ...MONO, color: t.faint, textTransform: 'uppercase' as const, letterSpacing: '0.08em', paddingBottom: 4, marginBottom: 2 }}>
@@ -186,12 +188,24 @@ function ActivitySection({
       )}
 
       {running.length > 0 && (
-        <div style={{ marginBottom: completed.length ? 20 : 0 }}>
+        <div style={{ marginBottom: scheduled.length || completed.length ? 20 : 0 }}>
           <SectionLabel>In progress</SectionLabel>
           {running.map((task, i) => (
             <div key={task.id}>
               <ActivityTaskRow task={task} variant="running" />
               {i < running.length - 1 && rowDivider}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {scheduled.length > 0 && (
+        <div style={{ marginBottom: completed.length ? 20 : 0 }}>
+          <SectionLabel>Scheduled</SectionLabel>
+          {scheduled.map((task, i) => (
+            <div key={task.id}>
+              <ActivityTaskRow task={task} variant="running" />
+              {i < scheduled.length - 1 && rowDivider}
             </div>
           ))}
         </div>
@@ -448,15 +462,15 @@ export function HomeView() {
   const agents = apiAgents.length > 0 ? apiAgents : cachedAgents;
   const showSkeleton = isLoading && agents.length === 0;
 
-  // Only fetch task summaries after the list has loaded, and only for agents the
-  // enriched list says have pending tasks. During initial load (isLoading=true)
-  // we pass an empty array so the home screen makes exactly one network call
-  // (the agent list). Per-agent summary fetches start only after list data arrives.
-  const agentsWithPending = useMemo(
-    () => agents.filter(a => (a.pendingTaskCount ?? a.stats?.pendingTasksCount ?? 0) > 0),
+  // Fetch task summaries for all active agents so the home page shows pending,
+  // running, and scheduled tasks even when no approval is needed. During initial
+  // load (isLoading=true) we pass an empty array so the agent list is the only
+  // network call; per-agent summaries start once list data arrives.
+  const activeAgents = useMemo(
+    () => agents.filter(a => a.status === 'active'),
     [agents],
   );
-  const taskSummaries = useAllTaskSummaries(isLoading ? [] : agentsWithPending.map(a => a.id));
+  const taskSummaries = useAllTaskSummaries(isLoading ? [] : activeAgents.map(a => a.id));
 
   const quotaGradient = useMemo(() => {
     const withQuota = agents.filter(a => (a as Agent & { quota?: { tokensLimit?: number } }).quota?.tokensLimit);
@@ -569,7 +583,7 @@ export function HomeView() {
       >
         {/* Activity section */}
         {agents.length > 0 && (
-          <ActivitySection agents={agentsWithPending} summaries={taskSummaries} />
+          <ActivitySection agents={activeAgents} summaries={taskSummaries} />
         )}
 
         {isError && cachedAgents.length === 0 && (
