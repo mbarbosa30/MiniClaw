@@ -148,6 +148,7 @@ function Hero() {
         <a href="https://selfclaw.ai" target="_blank" rel="noopener noreferrer" style={{ color: T.label, textDecoration: 'none' }}>SelfClaw.ai</a>
         {' '}· Available on{' '}
         <a href="https://minipay.opera.com" target="_blank" rel="noopener noreferrer" style={{ color: T.label, textDecoration: 'none' }}>MiniPay</a>
+        <span style={{ color: T.faint, fontSize: 11, marginLeft: 4 }}>(soon)</span>
       </p>
       <div style={{ display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap' }}>
         <button
