@@ -91,7 +91,7 @@ function WaitingDot({ color, slow }: { color: string; slow?: boolean }) {
   return (
     <motion.span
       style={{ display: 'block', width: 5, height: 5, borderRadius: '50%', background: color }}
-      animate={{ opacity: [1, 0.15, 1] }}
+      animate={{ opacity: slow ? [0.45, 0.1, 0.45] : [1, 0.15, 1] }}
       transition={{ duration: slow ? 3.5 : 1.8, repeat: Infinity, ease: 'easeInOut' }}
     />
   );
