@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, ChevronLeft } from 'lucide-react';
 import { useTemplates, useCreateAgent, useSpawningStatus } from '@/hooks/use-agents';
@@ -921,6 +921,12 @@ export function CreateAgentView() {
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const personaScrollRef = useRef<HTMLDivElement>(null);
+  const [personaScrollTop, setPersonaScrollTop] = useState(0);
+  const handlePersonaScroll = () => {
+    setPersonaScrollTop(personaScrollRef.current?.scrollTop ?? 0);
+  };
+
   useEffect(() => {
     if (selectedPersona) {
       setAgentCustomName('');
@@ -1160,62 +1166,75 @@ export function CreateAgentView() {
         transition={{ duration: 0.28, ease: [0.25, 0.46, 0.45, 0.94] }}
         style={{
           height: '100%',
-          display: 'flex',
-          flexDirection: 'column',
+          overflow: 'hidden',
+          position: 'relative',
           background: t.bg,
           transition: 'background 0.3s ease',
           fontFamily: FONT,
         }}
       >
-        <div style={{ padding: '56px 32px 24px', flexShrink: 0, position: 'relative' }}>
-          {!fromOnboarding && (
-            <button
-              onClick={handleBack}
-              style={{
-                position: 'absolute',
-                top: 20,
-                right: 24,
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                padding: 4,
-                color: t.label,
-                fontSize: 20,
-                lineHeight: 1,
-                fontFamily: FONT,
-              }}
-            >
-              ×
-            </button>
-          )}
-          <motion.p
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4 }}
+        <div
+          ref={personaScrollRef}
+          className="no-scrollbar"
+          onScroll={handlePersonaScroll}
+          style={{ height: '100%', overflowY: 'auto' }}
+        >
+          {/* Header — parallax: moves up at 0.6× scroll speed */}
+          <div
             style={{
-              fontSize: 34,
-              fontWeight: 200,
-              letterSpacing: '-0.04em',
-              color: t.text,
-              lineHeight: 1.1,
-              marginBottom: 10,
+              padding: '56px 32px 24px',
+              position: 'relative',
+              transform: `translateY(${personaScrollTop * 0.4}px)`,
+              willChange: 'transform',
             }}
           >
-            Your AI team<br />starts here.
-          </motion.p>
-          <motion.p
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay: 0.08 }}
-            style={{ fontSize: 13, color: t.label, letterSpacing: '-0.01em', lineHeight: 1.5 }}
-          >
-            Pick a persona. Start earning.
-          </motion.p>
-        </div>
+            {!fromOnboarding && (
+              <button
+                onClick={handleBack}
+                style={{
+                  position: 'absolute',
+                  top: 20,
+                  right: 24,
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: 4,
+                  color: t.label,
+                  fontSize: 20,
+                  lineHeight: 1,
+                  fontFamily: FONT,
+                }}
+              >
+                ×
+              </button>
+            )}
+            <motion.p
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4 }}
+              style={{
+                fontSize: 34,
+                fontWeight: 200,
+                letterSpacing: '-0.04em',
+                color: t.text,
+                lineHeight: 1.1,
+                marginBottom: 10,
+              }}
+            >
+              Your AI team<br />starts here.
+            </motion.p>
+            <motion.p
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: 0.08 }}
+              style={{ fontSize: 13, color: t.label, letterSpacing: '-0.01em', lineHeight: 1.5 }}
+            >
+              Pick a persona. Start earning.
+            </motion.p>
+          </div>
 
-        <div style={{ height: 1, background: t.divider, flexShrink: 0 }} />
+          <div style={{ height: 1, background: t.divider }} />
 
-        <div className="no-scrollbar" style={{ flex: 1, overflowY: 'auto' }}>
           {shuffledPersonas.map((persona, i) => (
             <OnboardingPersonaRow
               key={persona.id}
@@ -1228,13 +1247,13 @@ export function CreateAgentView() {
               textColor={t.text}
             />
           ))}
-          <div style={{ height: 40 }} />
-        </div>
 
-        <div style={{ flexShrink: 0, padding: '12px 32px 32px', borderTop: `1px solid ${t.divider}` }}>
-          <p style={{ ...MONO, fontSize: 9, color: t.faint, textAlign: 'center', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
-            You can switch or add agents anytime
-          </p>
+          {/* Footer — scrolls with content, not pinned */}
+          <div style={{ padding: '20px 32px 40px', borderTop: `1px solid ${t.divider}` }}>
+            <p style={{ ...MONO, fontSize: 9, color: t.faint, textAlign: 'center', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+              You can switch or add agents anytime
+            </p>
+          </div>
         </div>
       </motion.div>
     </AnimatePresence>
