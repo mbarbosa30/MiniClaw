@@ -548,7 +548,7 @@ export function HomeView() {
     >
       {/* Pinned header — does not scroll */}
       <div
-        style={{ flexShrink: 0, padding: '20px 24px 14px' }}>
+        style={{ flexShrink: 0, padding: '20px 24px 20px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <p style={{
             fontSize: 22,
