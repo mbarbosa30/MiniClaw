@@ -120,7 +120,7 @@ function Hero() {
         color: T.faint,
         marginBottom: 24,
       }}>
-        AI for everyone
+        Your AI team
       </p>
       <h1 style={{
         fontSize: 'clamp(36px, 7vw, 72px)',
@@ -141,8 +141,8 @@ function Hero() {
         marginBottom: 16,
         maxWidth: 560,
       }}>
-        A $0.001/msg agent connected to 50+ services gives a street vendor in Nairobi
-        the same AI capabilities as anyone's $200/month enterprise tool.
+        Each agent is a concierge, not a specialist — it reaches into a network of
+        50+ services and fellow agents to get things done.
       </p>
       <p style={{ fontSize: 13, fontWeight: 300, lineHeight: 1.65, color: T.faint, marginBottom: 40, maxWidth: 560 }}>
         Powered by{' '}
@@ -187,7 +187,7 @@ function Hero() {
 
 const STATS = [
   { value: '$0.001', label: 'per message' },
-  { value: '<60s', label: 'setup time' },
+  { value: '30s', label: 'per agent' },
   { value: '50+', label: 'marketplace services' },
   { value: '$0/mo', label: 'subscription cost' },
 ];
@@ -293,7 +293,7 @@ const FEATURES = [
       </svg>
     ),
     title: 'Built for your context',
-    body: '20 persona templates, 9 categories. Upload knowledge, set personality, choose humor style — your agent shaped to your goals.',
+    body: '29 persona templates, 9 categories. Pick the right persona for each role — researcher, trader, coach — and spawn your team.',
   },
 ];
 
@@ -314,7 +314,7 @@ function FeatureCards() {
           color: T.faint,
           marginBottom: 48,
         }}>
-          What your agent does
+          What your agents do
         </p>
         <div style={{
           display: 'grid',
@@ -383,7 +383,7 @@ function WhatIsMiniClaw() {
             color: T.faint,
             marginBottom: 16,
           }}>
-            What is MiniClaw?
+            AI for everyone
           </p>
           <h2 style={{
             fontSize: 28,
@@ -393,7 +393,7 @@ function WhatIsMiniClaw() {
             color: T.text,
             marginBottom: 16,
           }}>
-            A concierge, not a specialist.
+            A launchpad for your AI team.
           </h2>
           <p style={{
             fontSize: 14,
@@ -402,10 +402,10 @@ function WhatIsMiniClaw() {
             color: T.label,
             marginBottom: 20,
           }}>
-            MiniClaw is a lightweight AI agent that gets its power from the network, not from
-            itself. At $0.001 per message, it discovers, evaluates, hires, and manages delivery
-            through a marketplace of agents and humans. A gig worker in Lagos gets the same AI
-            capabilities as anyone running a $200/month enterprise tool. The agent is the great equalizer.
+            Spawn a researcher, a trader, a daily assistant — each one lightweight, each one
+            connected. Not powerful on their own. Connected to the same network of 50+ agents
+            and services as anyone's $200/month enterprise stack. A gig worker in Lagos fields
+            the same AI team capabilities as any Fortune 500 operation.
           </p>
           <Link href="/why" style={{ textDecoration: 'none' }}>
             <span style={{
@@ -434,10 +434,10 @@ function WhatIsMiniClaw() {
         }}>
           {[
             'Free — frontier models included',
-            'Access 50+ marketplace services instantly',
+            'Spawn a full AI team in minutes',
             'Pay per use — no monthly subscriptions',
             'No coding, no API keys, no technical setup',
-            'Your cheap agent reaches the same network as anyone\'s expensive one',
+            'Each agent reaches the same network as anyone\'s expensive stack',
           ].map((item) => (
             <div key={item} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
               <span style={{
@@ -466,8 +466,8 @@ const STEPS = [
   },
   {
     n: '02',
-    title: 'Create your first agent',
-    body: 'Choose a persona template, set personality and humor style. Your agent is live in 60 seconds.',
+    title: 'Spawn your agents',
+    body: 'Choose a persona for each role — researcher, trader, assistant. Each agent is live in 30 seconds.',
   },
   {
     n: '03',
