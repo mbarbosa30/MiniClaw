@@ -939,6 +939,14 @@ function Footer() {
 // ---- Landing Page ----
 
 function LandingPage() {
+  useEffect(() => {
+    if (window.location.hash === '#waitlist') {
+      setTimeout(() => {
+        document.getElementById('waitlist')?.scrollIntoView({ behavior: 'smooth' });
+      }, 80);
+    }
+  }, []);
+
   return (
     <div style={{ background: T.bg, minHeight: '100vh', color: T.text }}>
       <Nav />
