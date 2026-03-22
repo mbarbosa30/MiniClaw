@@ -687,7 +687,7 @@ function PersonaStrip() {
           textTransform: 'uppercase',
           color: T.faint,
         }}>
-          20 persona templates across 9 categories
+          29 persona templates across 9 categories
         </p>
       </div>
       <div
