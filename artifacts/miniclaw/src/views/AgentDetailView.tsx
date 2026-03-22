@@ -1000,7 +1000,7 @@ function ChatTab({
                 const relTime = fmtRelative(m._ts, m.createdAt);
                 const tokStr = (() => {
                   if (m.promptTokens != null && m.completionTokens != null) {
-                    return `${(m.promptTokens + m.completionTokens).toLocaleString()} tok`;
+                    return `p:${m.promptTokens.toLocaleString()} c:${m.completionTokens.toLocaleString()}`;
                   }
                   if (m.tokensUsed != null && m.tokensUsed > 0) {
                     return `${m.tokensUsed.toLocaleString()} tok`;
