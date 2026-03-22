@@ -1,13 +1,13 @@
-import { List, BarChart2, Rss, ShoppingBag } from 'lucide-react';
+import { List, BarChart2, Activity, ShoppingBag } from 'lucide-react';
 import { useTheme } from '@/lib/theme';
 import { useRouter, type ViewName } from '@/lib/store';
 
-type NavTab = 'home' | 'overview' | 'feed' | 'marketplace';
+type NavTab = 'home' | 'overview' | 'activity-global' | 'marketplace';
 
 const TABS: { id: NavTab; Icon: React.ElementType }[] = [
   { id: 'home', Icon: List },
   { id: 'overview', Icon: BarChart2 },
-  { id: 'feed', Icon: Rss },
+  { id: 'activity-global', Icon: Activity },
   { id: 'marketplace', Icon: ShoppingBag },
 ];
 

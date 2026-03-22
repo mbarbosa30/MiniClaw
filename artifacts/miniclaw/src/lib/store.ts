@@ -21,7 +21,8 @@ export type ViewName =
   | 'tasks'
   | 'telegram'
   | 'economy'
-  | 'activity';
+  | 'activity'
+  | 'activity-global';
 
 export interface ViewParams {
   id?: string;

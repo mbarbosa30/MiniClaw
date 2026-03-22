@@ -1,14 +1,14 @@
 import { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, MoreHorizontal, Check, X, Bot, Settings } from 'lucide-react';
+import { Plus, MoreHorizontal, Bot, Settings } from 'lucide-react';
 import { useTheme } from '@/lib/theme';
 import { useRouter, useAppStore } from '@/lib/store';
-import { useAgents, useAllTaskSummaries, useResolveTask } from '@/hooks/use-agents';
+import { useAgents } from '@/hooks/use-agents';
 import { StateIndicator, agentVisualState, STATE_COLOR, STATE_LABEL } from '@/components/StateIndicator';
 import { resolveIcon } from '@/lib/agent-icon';
 import { PERSONAS } from '@/lib/personas';
 import { MAX_AGENTS } from '@/lib/constants';
-import type { Agent, AgentTask } from '@/types';
+import type { Agent } from '@/types';
 
 const PERSONA_BY_TAGLINE = new Map(PERSONAS.map(p => [p.tagline, p]));
 
@@ -40,195 +40,6 @@ function setCachedAgents(agents: Agent[]) {
     // ignore
   }
 }
-
-// --- Activity section helpers ---
-
-type TaskWithAgent = AgentTask & {
-  agentId: string | number;
-  agentName: string;
-  agentColor?: string;
-};
-
-function getTaskTitle(task: AgentTask): string {
-  return (
-    task.title ??
-    (task.payload as any)?.title ??
-    task.description ??
-    (task.payload as any)?.description ??
-    task.action ??
-    'Task'
-  );
-}
-
-function isProactive(task: AgentTask): boolean {
-  return task.skillId === 'proactive-reflection';
-}
-
-// --- Activity section ---
-
-function ActivityTaskRow({
-  task,
-  variant,
-  onApprove,
-  onReject,
-}: {
-  task: TaskWithAgent;
-  variant: 'pending' | 'running' | 'completed';
-  onApprove?: () => void;
-  onReject?: () => void;
-}) {
-  const t = useTheme();
-  const title = getTaskTitle(task);
-  const proactive = isProactive(task);
-
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingTop: 11, paddingBottom: 11 }}>
-      {/* dot */}
-      <div style={{
-        width: 5,
-        height: 5,
-        borderRadius: '50%',
-        flexShrink: 0,
-        background: variant === 'completed' ? t.faint :
-                    variant === 'running'   ? '#f59e0b' : t.text,
-        opacity: variant === 'completed' ? 0.35 : 1,
-      }} />
-
-      {/* content */}
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <p style={{ fontSize: 12, color: variant === 'completed' ? t.label : t.text, lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          <span style={{ fontWeight: 300, color: t.faint }}>{task.agentName}</span>
-          <span style={{ color: t.divider }}> · </span>
-          <span style={{ fontWeight: 400 }}>{title}</span>
-        </p>
-        {proactive && (
-          <span style={{ ...MONO, color: t.faint, fontSize: 8, letterSpacing: '0.06em', textTransform: 'uppercase' as const }}>
-            proactive
-          </span>
-        )}
-      </div>
-
-      {/* approve / reject for pending */}
-      {variant === 'pending' && (
-        <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-          <button
-            onClick={onApprove}
-            style={{ background: 'none', border: `1px solid ${t.divider}`, borderRadius: 6, padding: '4px 6px', cursor: 'pointer', color: t.text, display: 'flex', alignItems: 'center' }}
-          >
-            <Check size={11} strokeWidth={2.5} />
-          </button>
-          <button
-            onClick={onReject}
-            style={{ background: 'none', border: `1px solid ${t.divider}`, borderRadius: 6, padding: '4px 6px', cursor: 'pointer', color: t.faint, display: 'flex', alignItems: 'center' }}
-          >
-            <X size={11} strokeWidth={2.5} />
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function ActivitySection({
-  agents,
-  summaries,
-}: {
-  agents: Agent[];
-  summaries: ReturnType<typeof useAllTaskSummaries>;
-}) {
-  const t = useTheme();
-  const resolve = useResolveTask();
-
-  const pending: TaskWithAgent[] = [];
-  const running: TaskWithAgent[] = [];
-  const scheduled: TaskWithAgent[] = [];
-  const completed: TaskWithAgent[] = [];
-
-  summaries.forEach((result, i) => {
-    const agent = agents[i];
-    if (!result.data || !agent) return;
-    const attach = (task: AgentTask): TaskWithAgent => ({
-      ...task,
-      agentId: agent.id,
-      agentName: agent.name,
-      agentColor: undefined,
-    });
-    (result.data.pending?.items ?? []).forEach(t => pending.push(attach(t)));
-    (result.data.running?.items ?? []).forEach(t => running.push(attach(t)));
-    (result.data.scheduled?.items ?? []).forEach(t => scheduled.push(attach(t)));
-    (result.data.recentlyCompleted?.items ?? []).slice(0, 3).forEach(t => completed.push(attach(t)));
-  });
-
-  if (!pending.length && !running.length && !scheduled.length && !completed.length) return null;
-
-  const SectionLabel = ({ children }: { children: React.ReactNode }) => (
-    <p style={{ ...MONO, color: t.faint, textTransform: 'uppercase' as const, letterSpacing: '0.08em', paddingBottom: 4, marginBottom: 2 }}>
-      {children}
-    </p>
-  );
-
-  const rowDivider = <div style={{ height: 1, background: t.divider, opacity: 0.5 }} />;
-
-  return (
-    <div style={{ marginBottom: 28 }}>
-      {pending.length > 0 && (
-        <div style={{ marginBottom: running.length || scheduled.length || completed.length ? 20 : 0 }}>
-          <SectionLabel>Pending approval</SectionLabel>
-          {pending.map((task, i) => (
-            <div key={task.id}>
-              <ActivityTaskRow
-                task={task}
-                variant="pending"
-                onApprove={() => resolve.mutate({ agentId: task.agentId, taskId: task.id, action: 'approve' })}
-                onReject={() => resolve.mutate({ agentId: task.agentId, taskId: task.id, action: 'reject' })}
-              />
-              {i < pending.length - 1 && rowDivider}
-            </div>
-          ))}
-        </div>
-      )}
-
-      {running.length > 0 && (
-        <div style={{ marginBottom: scheduled.length || completed.length ? 20 : 0 }}>
-          <SectionLabel>In progress</SectionLabel>
-          {running.map((task, i) => (
-            <div key={task.id}>
-              <ActivityTaskRow task={task} variant="running" />
-              {i < running.length - 1 && rowDivider}
-            </div>
-          ))}
-        </div>
-      )}
-
-      {scheduled.length > 0 && (
-        <div style={{ marginBottom: completed.length ? 20 : 0 }}>
-          <SectionLabel>Scheduled</SectionLabel>
-          {scheduled.map((task, i) => (
-            <div key={task.id}>
-              <ActivityTaskRow task={task} variant="running" />
-              {i < scheduled.length - 1 && rowDivider}
-            </div>
-          ))}
-        </div>
-      )}
-
-      {completed.length > 0 && (
-        <div>
-          <SectionLabel>Recent · 48h</SectionLabel>
-          {completed.map((task, i) => (
-            <div key={task.id}>
-              <ActivityTaskRow task={task} variant="completed" />
-              {i < completed.length - 1 && rowDivider}
-            </div>
-          ))}
-        </div>
-      )}
-
-      <div style={{ height: 1, background: t.divider, marginTop: 8 }} />
-    </div>
-  );
-}
-
 
 // --- Time-ago helper ---
 
@@ -483,16 +294,6 @@ export function HomeView() {
     if (agents.length < MAX_AGENTS) setAtLimit(false);
   }, [agents.length]);
 
-  // Fetch task summaries for all active agents so the home page shows pending,
-  // running, and scheduled tasks even when no approval is needed. During initial
-  // load (isLoading=true) we pass an empty array so the agent list is the only
-  // network call; per-agent summaries start once list data arrives.
-  const activeAgents = useMemo(
-    () => agents.filter(a => a.status === 'active'),
-    [agents],
-  );
-  const taskSummaries = useAllTaskSummaries(isLoading ? [] : activeAgents.map(a => a.id));
-
   const quotaGradient = useMemo(() => {
     const withQuota = agents.filter(a => (a as Agent & { quota?: { tokensLimit?: number } }).quota?.tokensLimit);
     if (withQuota.length === 0) return null;
@@ -627,11 +428,6 @@ export function HomeView() {
         className="overflow-y-auto no-scrollbar"
         style={{ flex: 1, padding: '0 32px 80px' }}
       >
-        {/* Activity section */}
-        {agents.length > 0 && (
-          <ActivitySection agents={activeAgents} summaries={taskSummaries} />
-        )}
-
         {isError && cachedAgents.length === 0 && (
           <p style={{ fontSize: 11, color: '#ef4444', letterSpacing: '-0.01em', marginBottom: 16 }}>
             Could not load agents. Check your connection.

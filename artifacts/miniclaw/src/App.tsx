@@ -14,6 +14,7 @@ import { HomeView } from "@/views/HomeView";
 import { OverviewView } from "@/views/OverviewView";
 import { MarketplaceView } from "@/views/MarketplaceView";
 import { FeedView } from "@/views/FeedView";
+import { GlobalActivityView } from "@/views/GlobalActivityView";
 import { SettingsView } from "@/views/SettingsView";
 import { CreateAgentView } from "@/views/CreateAgentView";
 import { AgentDetailView } from "@/views/AgentDetailView";
@@ -30,7 +31,7 @@ const queryClient = new QueryClient({
   },
 });
 
-const MAIN_VIEWS = new Set(['home', 'overview', 'feed', 'marketplace', 'settings']);
+const MAIN_VIEWS = new Set(['home', 'overview', 'feed', 'marketplace', 'settings', 'activity-global']);
 
 // Maps an agent event to a short human-readable toast string.
 // Returns null for events that only warrant cache invalidation (no toast shown).
@@ -140,6 +141,7 @@ function MainLayout() {
         {view === 'home' && <HomeView />}
         {view === 'overview' && <OverviewView />}
         {view === 'feed' && <FeedView />}
+        {view === 'activity-global' && <GlobalActivityView />}
         {view === 'marketplace' && <MarketplaceView />}
         {view === 'settings' && <SettingsView />}
       </div>
