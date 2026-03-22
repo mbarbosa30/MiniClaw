@@ -60,7 +60,7 @@ function Nav() {
           }}>
             MiniClaw
           </span>
-          <Link href="/why" style={{ textDecoration: 'none' }}>
+          <Link href="/why" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center' }}>
             <span style={{
               ...MONO,
               fontSize: 10,
