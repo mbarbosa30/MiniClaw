@@ -33,6 +33,24 @@ function resolveAuthErrorMessage(raw: string): { text: string; canRetry: boolean
 
 const DEV_WALLET = '0xDEADBEEF00000000000000000000000000000001';
 
+type EthDebug = {
+  exists: boolean;
+  selectedAddress: string | null;
+  isMetaMask?: boolean;
+  isMiniPay?: boolean;
+};
+
+function getEthDebug(): EthDebug {
+  const eth = (window as { ethereum?: Record<string, unknown> }).ethereum;
+  if (!eth) return { exists: false, selectedAddress: null };
+  return {
+    exists: true,
+    selectedAddress: typeof eth.selectedAddress === 'string' ? eth.selectedAddress : null,
+    isMetaMask: Boolean(eth.isMetaMask),
+    isMiniPay: Boolean(eth.isMiniPay),
+  };
+}
+
 export function ConnectView() {
   const t = useTheme();
   // Always start false — let the timeout effect control when timedOut flips.
@@ -40,6 +58,7 @@ export function ConnectView() {
   // let users click it before wagmi auto-connected, resulting in a missing
   // wallet address and a 401 on the first API call.
   const [timedOut, setTimedOut] = useState(false);
+  const [ethDebug] = useState<EthDebug>(getEthDebug);
   const authError = useAuthStore(s => s.authError);
   const setAuthenticated = useAuthStore(s => s.setAuthenticated);
   const resetRoute = useRouter(s => s.reset);
@@ -170,6 +189,9 @@ export function ConnectView() {
           <>
             <Loader2 size={18} color={t.faint} style={{ animation: 'spin 1s linear infinite' }} />
             <p style={{ fontSize: 12, color: t.label, fontFamily: 'ui-monospace, Menlo, monospace', letterSpacing: '0.02em' }}>connecting wallet…</p>
+            <p style={{ fontSize: 10, color: t.faint, fontFamily: 'ui-monospace, Menlo, monospace', marginTop: 4, lineHeight: 1.6 }}>
+              eth:{ethDebug.exists ? '✓' : '✗'} · addr:{ethDebug.selectedAddress ? ethDebug.selectedAddress.slice(0,8) + '…' : 'null'} · miniPay:{ethDebug.isMiniPay ? '✓' : '✗'}
+            </p>
             <motion.div
               initial={{ opacity: 0, y: 4 }}
               animate={{ opacity: 1, y: 0 }}

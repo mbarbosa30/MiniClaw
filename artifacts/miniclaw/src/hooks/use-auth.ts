@@ -47,8 +47,10 @@ export function useAutoConnect() {
       return;
     }
 
-    // eth_accounts returns immediately in MiniPay without a permission prompt
-    eth.request?.({ method: 'eth_accounts' })
+    // eth_requestAccounts is the correct call in MiniPay — auto-approved
+    // instantly since the user is already authenticated. eth_accounts would
+    // return [] if the DApp hasn't been granted permission in this session.
+    eth.request?.({ method: 'eth_requestAccounts' })
       .then((accounts) => {
         if (accounts?.[0]) applyAddress(accounts[0]);
       })
