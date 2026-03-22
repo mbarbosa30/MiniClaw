@@ -32,6 +32,11 @@ function fmtRelTime(dateStr?: string): string {
   return `${Math.floor(hrs / 24)}d ago`;
 }
 
+function humanizeId(id?: string): string {
+  if (!id) return '';
+  return id.replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+}
+
 function fmtAbsTime(dateStr?: string): string {
   if (!dateStr) return '';
   const d = new Date(dateStr);
@@ -420,7 +425,7 @@ function TaskDetailSheet({
               <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 16 }}>
                 {fullTask.skillId && (
                   <span style={{ ...MONO, fontSize: 9, color: t.faint, background: t.divider, borderRadius: 4, padding: '2px 6px' }}>
-                    {fullTask.skillId}
+                    {humanizeId(fullTask.skillId)}
                   </span>
                 )}
                 {fullTask.taskType && (
@@ -445,7 +450,7 @@ function TaskDetailSheet({
                 <span style={{ ...MONO, fontSize: 9, color: t.faint }}>
                   {variant === 'completed'
                     ? fmtAbsTime(fullTask.completedAt ?? fullTask.createdAt)
-                    : fmtRelTime(fullTask.createdAt) + ' · running'}
+                    : fmtAbsTime(fullTask.createdAt) + ' · running'}
                 </span>
               </div>
 
