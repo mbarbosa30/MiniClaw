@@ -14,7 +14,24 @@ export class ApiError extends Error {
 
 const PLATFORM_KEY = import.meta.env.VITE_SELFCLAW_KEY as string | undefined;
 
-export const apiEvents = new EventTarget();
+// Plain emitter — avoids `new EventTarget()` which is not constructable in
+// older Android WebViews (MiniPay). Keeps the same addEventListener /
+// removeEventListener / dispatchEvent surface so no other file needs changing.
+type _Listener = (event: { type: string; detail?: Record<string, unknown> }) => void;
+const _emitterMap = new Map<string, Set<_Listener>>();
+export const apiEvents = {
+  addEventListener(type: string, fn: unknown): void {
+    if (typeof fn !== 'function') return;
+    if (!_emitterMap.has(type)) _emitterMap.set(type, new Set());
+    _emitterMap.get(type)!.add(fn as _Listener);
+  },
+  removeEventListener(type: string, fn: unknown): void {
+    if (typeof fn === 'function') _emitterMap.get(type)?.delete(fn as _Listener);
+  },
+  dispatchEvent(evt: { type: string; detail?: Record<string, unknown> }): void {
+    _emitterMap.get(evt.type)?.forEach(fn => fn(evt));
+  },
+};
 
 let _walletAddress: string | null = null;
 export function setWalletAddress(addr: string | null) {
@@ -41,9 +58,7 @@ async function dispatchUnauthorized(response: Response): Promise<void> {
   } catch {
     // fall through — message stays undefined
   }
-  apiEvents.dispatchEvent(
-    new CustomEvent('unauthorized', { detail: { message } }),
-  );
+  apiEvents.dispatchEvent({ type: 'unauthorized', detail: { message } });
 }
 
 // When the gateway returns 503 with { code: "SERVICE_UNAVAILABLE", retryAfterMs: N },
