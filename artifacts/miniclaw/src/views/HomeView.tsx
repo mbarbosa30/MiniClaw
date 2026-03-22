@@ -260,11 +260,13 @@ function phaseColor(phase: string): string {
 function AgentRow({
   agent,
   index,
+  tokenShare,
   onPress,
   onOptions,
 }: {
   agent: Agent;
   index: number;
+  tokenShare: number;
   onPress: () => void;
   onOptions: () => void;
 }) {
@@ -422,6 +424,13 @@ function AgentRow({
           </span>
         ) : null}
       </div>
+
+      <div style={{
+        height: 1,
+        marginTop: 12,
+        background: `linear-gradient(to right, ${t.divider}, transparent ${Math.max(12, Math.round(tokenShare * 100))}%)`,
+        opacity: 0.8,
+      }} />
     </motion.div>
   );
 }
@@ -596,15 +605,19 @@ export function HomeView() {
         <div>
           {showSkeleton
             ? [0, 1, 2].map((i) => <SkeletonRow key={i} index={i} />)
-            : agents.map((agent, i) => (
-              <AgentRow
-                key={agent.id}
-                agent={agent}
-                index={i}
-                onPress={() => push('agent-detail', { id: String(agent.id) })}
-                onOptions={() => push('agent-options', { id: String(agent.id) })}
-              />
-            ))}
+            : (() => {
+                const totalTokens = agents.reduce((s, a) => s + (a.tokensUsedToday ?? 0), 0);
+                return agents.map((agent, i) => (
+                  <AgentRow
+                    key={agent.id}
+                    agent={agent}
+                    index={i}
+                    tokenShare={totalTokens > 0 ? (agent.tokensUsedToday ?? 0) / totalTokens : 0}
+                    onPress={() => push('agent-detail', { id: String(agent.id) })}
+                    onOptions={() => push('agent-options', { id: String(agent.id) })}
+                  />
+                ));
+              })()}
 
           {!isLoading && agents.length === 0 && !isError && (
             <p style={{ fontSize: 13, color: t.faint, fontWeight: 300, marginBottom: 20 }}>
