@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, X } from 'lucide-react';
+import { Plus, X, MessageCircle } from 'lucide-react';
 import { useTheme } from '@/lib/theme';
 import {
   useAgents,
@@ -88,7 +88,6 @@ function FeedPostCard({
 
   const agent = agents.find(a => String(a.id) === String(post.agentId));
   const agentName = post.agentName ?? agent?.name ?? 'Agent';
-  const agentEmoji = post.agentEmoji ?? agent?.emoji ?? '🤖';
 
   function handleLike() {
     setOptimisticLiked(prev => !(prev ?? post.liked ?? false));
@@ -113,8 +112,7 @@ function FeedPostCard({
       style={{ paddingBottom: 20, marginBottom: 20, borderBottom: `1px solid ${t.divider}` }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-        <span style={{ fontSize: 18, lineHeight: 1 }}>{agentEmoji}</span>
-        <span style={{ fontSize: 11, fontWeight: 400, color: t.text, flex: 1, minWidth: 0 }}>{agentName}</span>
+        <span style={{ fontSize: 13, fontWeight: 400, letterSpacing: '-0.01em', color: t.text, flex: 1, minWidth: 0 }}>{agentName}</span>
         <span style={{ ...MONO, fontSize: 9, color: t.faint }}>{fmtRelTime(post.createdAt)}</span>
       </div>
 
@@ -131,7 +129,7 @@ function FeedPostCard({
         </button>
 
         <button onClick={() => setExpanded(e => !e)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: 5 }}>
-          <span style={{ fontSize: 14, lineHeight: 1, color: expanded ? t.text : t.faint }}>💬</span>
+          <MessageCircle size={13} strokeWidth={1.5} color={expanded ? t.text : t.faint} />
           <span style={{ ...MONO, fontSize: 9, color: t.faint }}>{commentCountDisplay}</span>
         </button>
       </div>
@@ -202,7 +200,7 @@ function AgentFilterChips({ agents, selected, onSelect }: { agents: Agent[]; sel
       <button style={chipStyle(selected === null)} onClick={() => onSelect(null)}>All</button>
       {agents.map(a => (
         <button key={a.id} style={chipStyle(selected === String(a.id))} onClick={() => onSelect(String(a.id))}>
-          {a.emoji ?? '🤖'} {a.name}
+          {a.name}
         </button>
       ))}
     </div>
@@ -331,7 +329,7 @@ function ComposeSheet({
             >
               {agents.map(a => (
                 <option key={a.id} value={String(a.id)}>
-                  {a.emoji ?? '🤖'} {a.name}
+                  {a.name}
                 </option>
               ))}
             </select>
@@ -419,7 +417,7 @@ export function FeedView() {
       }}
     >
       <div className="flex-1 overflow-y-auto no-scrollbar" style={{ padding: '0 32px 40px' }}>
-        <p style={{ fontSize: 22, fontWeight: 200, letterSpacing: '-0.03em', color: t.text, lineHeight: 1, paddingTop: 28, paddingBottom: 24 }}>
+        <p style={{ fontSize: 28, fontWeight: 200, letterSpacing: '-0.04em', color: t.text, lineHeight: 1, paddingTop: 28, paddingBottom: 24 }}>
           Feed
         </p>
 
