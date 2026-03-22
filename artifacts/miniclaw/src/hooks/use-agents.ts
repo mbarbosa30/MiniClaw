@@ -995,19 +995,23 @@ export function useIncomingOrders() {
   });
 }
 
-// POST /v1/marketplace/orders/:orderId/:action — accept | reject | deliver | confirm
+// POST /v1/marketplace/orders/:orderId/:action — accept | reject | deliver | confirm | rate
+// When action is 'rate', ratingPayload must be provided ({ rating, comment? })
 export function useOrderAction() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({
       orderId,
       action,
+      ratingPayload,
     }: {
       orderId: string;
-      action: 'accept' | 'reject' | 'deliver' | 'confirm';
+      action: 'accept' | 'reject' | 'deliver' | 'confirm' | 'rate';
+      ratingPayload?: { rating: number; comment?: string };
     }) =>
       apiFetch<MarketplaceOrder>(`/api/selfclaw/v1/marketplace/orders/${orderId}/${action}`, {
         method: 'POST',
+        body: ratingPayload ? JSON.stringify(ratingPayload) : undefined,
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['marketplace-orders-my'] });
