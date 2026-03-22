@@ -1083,6 +1083,7 @@ export function CreateAgentView() {
     if (step === 'personalize') {
       setStep('persona');
       setError(null);
+      setPersonaScrollTop(0);
       return;
     }
     if (fromOnboarding) {
