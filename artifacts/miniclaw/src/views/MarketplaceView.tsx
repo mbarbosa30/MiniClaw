@@ -137,7 +137,7 @@ function ServiceCard({ service, onTap }: { service: MarketplaceService; onTap: (
         gap: 6,
       }}
     >
-      {/* Row 1: icon + name + category badge + price */}
+      {/* Row 1: icon + name only */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <span style={{
           width: 28, height: 28, borderRadius: 8, background: t.divider,
@@ -147,14 +147,6 @@ function ServiceCard({ service, onTap }: { service: MarketplaceService; onTap: (
         </span>
         <span style={{ fontSize: 13, fontWeight: 400, color: t.text, letterSpacing: '-0.01em', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {service.name}
-        </span>
-        {service.category && (
-          <span style={{ ...MONO, fontSize: 8, color: t.faint, background: t.bg, border: `1px solid ${t.divider}`, borderRadius: 4, padding: '2px 5px', textTransform: 'uppercase', letterSpacing: '0.05em', flexShrink: 0 }}>
-            {service.category}
-          </span>
-        )}
-        <span style={{ ...MONO, fontSize: 11, color: t.text, fontWeight: 400, flexShrink: 0 }}>
-          {fmtPrice(service)}
         </span>
       </div>
 
@@ -189,6 +181,23 @@ function ServiceCard({ service, onTap }: { service: MarketplaceService; onTap: (
           )}
         </div>
       )}
+
+      {/* Bottom row: time ago left, category badge + price right */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 2 }}>
+        <span style={{ ...MONO, fontSize: 8, color: t.faint, letterSpacing: '0.04em' }}>
+          {fmtRelTime(service.createdAt)}
+        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          {service.category && (
+            <span style={{ ...MONO, fontSize: 8, color: t.faint, background: t.bg, border: `1px solid ${t.divider}`, borderRadius: 4, padding: '2px 5px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              {service.category}
+            </span>
+          )}
+          <span style={{ ...MONO, fontSize: 11, color: t.text, fontWeight: 400 }}>
+            {fmtPrice(service)}
+          </span>
+        </div>
+      </div>
     </motion.button>
   );
 }
