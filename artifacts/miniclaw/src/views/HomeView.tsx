@@ -7,6 +7,7 @@ import { useAgents, useAllTaskSummaries, useResolveTask } from '@/hooks/use-agen
 import { StateIndicator, agentVisualState, STATE_COLOR, STATE_LABEL } from '@/components/StateIndicator';
 import { resolveIcon } from '@/lib/agent-icon';
 import { PERSONAS } from '@/lib/personas';
+import { MAX_AGENTS } from '@/lib/constants';
 import type { Agent, AgentTask } from '@/types';
 
 const PERSONA_BY_TAGLINE = new Map(PERSONAS.map(p => [p.tagline, p]));
@@ -16,8 +17,6 @@ const MONO: React.CSSProperties = {
   fontSize: 9,
   letterSpacing: '0.04em',
 };
-
-const MAX_AGENTS = 5;
 
 // --- Cached agents from localStorage ---
 const CACHE_KEY = 'miniclaw_agents_cache';
@@ -473,6 +472,11 @@ export function HomeView() {
 
   const agents = apiAgents.length > 0 ? apiAgents : cachedAgents;
   const showSkeleton = isLoading && agents.length === 0;
+
+  // Clear the at-limit message whenever the agent count drops back below the cap
+  useEffect(() => {
+    if (agents.length < MAX_AGENTS) setAtLimit(false);
+  }, [agents.length]);
 
   // Fetch task summaries for all active agents so the home page shows pending,
   // running, and scheduled tasks even when no approval is needed. During initial
