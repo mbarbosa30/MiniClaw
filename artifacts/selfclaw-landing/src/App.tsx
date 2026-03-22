@@ -918,10 +918,10 @@ function Footer() {
             Why MiniClaw
           </Link>
           {[
-            { label: 'Privacy', href: '#' },
-            { label: 'Twitter / X', href: '#' },
-          ].map(({ label, href }) => (
-            <a key={label} href={href} style={{
+            { label: 'Privacy', href: '#', external: false },
+            { label: 'Twitter / X', href: 'https://x.com/selfclaw', external: true },
+          ].map(({ label, href, external }) => (
+            <a key={label} href={href} {...(external ? { target: '_blank', rel: 'noopener noreferrer' } : {})} style={{
               ...MONO,
               fontSize: 10,
               color: T.faint,
