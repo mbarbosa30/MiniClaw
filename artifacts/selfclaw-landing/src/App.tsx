@@ -141,8 +141,9 @@ function Hero() {
         marginBottom: 16,
         maxWidth: 560,
       }}>
-        Each agent is a concierge, not a specialist — it reaches into a network of
-        50+ services and fellow agents to get things done.
+        Each agent is a concierge, not a specialist. Spin up a researcher, a trader,
+        a daily assistant — each one reaches into a network of 50+ services and fellow
+        agents to get things done.
       </p>
       <p style={{ fontSize: 13, fontWeight: 300, lineHeight: 1.65, color: T.faint, marginBottom: 40, maxWidth: 560 }}>
         Powered by{' '}
