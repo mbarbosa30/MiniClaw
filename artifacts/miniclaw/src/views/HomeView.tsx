@@ -215,6 +215,20 @@ function ActivitySection({
 }
 
 
+// --- Time-ago helper ---
+
+function timeAgo(isoTimestamp: string): string {
+  const diff = Math.floor((Date.now() - new Date(isoTimestamp).getTime()) / 1000);
+  if (isNaN(diff) || diff < 5) return 'just now';
+  if (diff < 60) return `${diff}s ago`;
+  const mins = Math.floor(diff / 60);
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  return `${days}d ago`;
+}
+
 // --- Phase pill helpers (mirrors AgentDetailView) ---
 
 const PHASE_COLOR: Record<string, string> = {
@@ -248,7 +262,10 @@ function AgentRow({
   const isSpawning = agent.spawningStatus === 'researching' || agent.spawningStatus === 'training';
   const pendingCount = agent.pendingTaskCount ?? agent.stats?.pendingTasksCount ?? 0;
 
-  const liveActivity = agent.stats?.currentActivity?.trim() || agent.recentActivity?.trim() || null;
+  const latestEvent = agent.recentActivities?.[0];
+  const liveActivity = latestEvent
+    ? `${latestEvent.summary.trim()} · ${timeAgo(latestEvent.timestamp)}`
+    : (agent.stats?.currentActivity?.trim() || agent.recentActivity?.trim() || null);
   const activity =
     liveActivity ??
     (agent.description ? agent.description.slice(0, 52) + (agent.description.length > 52 ? '…' : '') : null);
