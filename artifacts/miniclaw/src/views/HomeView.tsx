@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, MoreHorizontal, TrendingUp, Check, X, Bot } from 'lucide-react';
+import { Plus, MoreHorizontal, Check, X, Bot, Settings } from 'lucide-react';
 import { useTheme } from '@/lib/theme';
 import { useRouter, useAppStore } from '@/lib/store';
 import { useAgents, useAllTaskSummaries, useResolveTask } from '@/hooks/use-agents';
@@ -521,22 +521,18 @@ export function HomeView() {
             }} />
           </p>
           <button
-            onClick={() => push('overview')}
+            onClick={() => push('settings')}
             style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 4,
               background: 'none',
               border: 'none',
               cursor: 'pointer',
+              padding: 6,
+              display: 'flex',
+              alignItems: 'center',
               color: t.faint,
-              padding: 0,
             }}
           >
-            <TrendingUp size={14} strokeWidth={1.5} />
-            <span style={{ fontFamily: 'ui-monospace, Menlo, monospace', fontSize: 11, letterSpacing: '0.04em' }}>
-              Growth
-            </span>
+            <Settings size={16} strokeWidth={1.5} />
           </button>
         </div>
       </div>

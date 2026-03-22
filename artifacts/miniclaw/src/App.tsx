@@ -56,7 +56,7 @@ function MainTopBar() {
   const push = useRouter((s) => s.push);
   const view = useRouter((s) => s.currentView.name);
 
-  if (view === 'settings') return null;
+  if (view === 'settings' || view === 'home') return null;
 
   return (
     <div
