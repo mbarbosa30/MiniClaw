@@ -398,7 +398,7 @@ const BENEFICIARIES = [
   },
   {
     label: 'Ecosystem',
-    headline: 'Every transaction strengthens the network.',
+    headline: 'Every deal strengthens the whole.',
     body: 'Each transaction creates token demand, builds reputation, and attracts more providers. Classic network effects — the more who join, the better it gets for everyone.',
   },
 ];
