@@ -814,7 +814,21 @@ function SpawningScreen({
         </p>
       </div>
 
-      <div style={{ height: 1, background: t.divider, flexShrink: 0 }} />
+      {/* Indeterminate scanning bar — always moving while processing */}
+      <div style={{ position: 'relative', height: 2, flexShrink: 0, background: t.divider, overflow: 'hidden' }}>
+        <AnimatePresence>
+          {!isReady && !isFailed && (
+            <motion.div
+              key="scan"
+              initial={{ x: '-110%' }}
+              animate={{ x: '110%' }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut', repeatType: 'loop' }}
+              style={{ position: 'absolute', top: 0, left: 0, width: '55%', height: '100%', background: personaColor, opacity: 0.7, borderRadius: 1 }}
+            />
+          )}
+        </AnimatePresence>
+      </div>
 
       {/* Progress steps */}
       <div className="no-scrollbar" style={{ flex: 1, overflowY: 'auto', padding: '8px 32px' }}>
@@ -829,14 +843,22 @@ function SpawningScreen({
               transition={{ delay: i * 0.04, duration: 0.25 }}
               style={{ display: 'flex', alignItems: 'center', gap: 12, paddingTop: 14, paddingBottom: 14, borderBottom: i < steps.length - 1 ? `1px solid ${t.divider}` : 'none' }}
             >
-              <div style={{
-                width: 7,
-                height: 7,
-                borderRadius: '50%',
-                flexShrink: 0,
-                background: isDone ? '#22c55e' : isActive ? personaColor : t.divider,
-                transition: 'background 0.4s ease',
-              }} />
+              {isActive ? (
+                <motion.div
+                  animate={{ opacity: [1, 0.3, 1] }}
+                  transition={{ duration: 1.1, repeat: Infinity, ease: 'easeInOut' }}
+                  style={{ width: 7, height: 7, borderRadius: '50%', flexShrink: 0, background: personaColor }}
+                />
+              ) : (
+                <div style={{
+                  width: 7,
+                  height: 7,
+                  borderRadius: '50%',
+                  flexShrink: 0,
+                  background: isDone ? '#22c55e' : t.divider,
+                  transition: 'background 0.4s ease',
+                }} />
+              )}
               <p style={{
                 fontSize: 13,
                 fontWeight: isActive ? 400 : 300,
