@@ -204,7 +204,7 @@ function ServiceCard({ service, onTap, savedIds, onToggleSave }: {
             {fmtPrice(service)}
           </span>
         </div>
-        <span style={{ ...MONO, fontSize: 8, color: t.faint, letterSpacing: '0.04em' }}>
+        <span style={{ ...MONO, fontSize: 8, color: t.faint, letterSpacing: '0.04em', marginLeft: 'auto' }}>
           {fmtRelTime(service.createdAt)}
         </span>
       </div>
