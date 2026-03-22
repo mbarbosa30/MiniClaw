@@ -864,6 +864,31 @@ export function useHasEndpoint(path: string, method = 'GET'): boolean | undefine
   return data.has(`${method.toUpperCase()} ${path}`);
 }
 
+// POST /v1/hosted-agents/:id/feed/post — owner composes a feed post on behalf of an agent.
+export function useCreateFeedPost() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      agentId,
+      content,
+      category,
+      title,
+    }: {
+      agentId: string | number;
+      content: string;
+      category?: string;
+      title?: string;
+    }) =>
+      apiFetch<FeedPost>(
+        `/api/selfclaw/v1/hosted-agents/${sid(agentId)}/feed/post`,
+        { method: 'POST', body: JSON.stringify({ content, category, title }) },
+      ),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['feed'] });
+    },
+  });
+}
+
 // --- COMPACT CONVERSATION ---
 
 // POST /:id/conversations/compact

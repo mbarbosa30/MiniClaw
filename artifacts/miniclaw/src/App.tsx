@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { Settings } from "lucide-react";
 import { useAutoConnect, useRestoreSession } from "@/hooks/use-auth";
 import { useGatewayEndpoints } from "@/hooks/use-agents";
 import { useRouter, useAppStore } from "@/lib/store";
@@ -9,14 +10,15 @@ import { ThemeCtx, LIGHT, DARK } from "@/lib/theme";
 
 import { ConnectView } from "@/views/ConnectView";
 import { HomeView } from "@/views/HomeView";
-import { DashboardView } from "@/views/DashboardView";
-import { GrowthView } from "@/views/GrowthView";
+import { OverviewView } from "@/views/OverviewView";
+import { MarketplaceView } from "@/views/MarketplaceView";
 import { FeedView } from "@/views/FeedView";
 import { SettingsView } from "@/views/SettingsView";
 import { CreateAgentView } from "@/views/CreateAgentView";
 import { AgentDetailView } from "@/views/AgentDetailView";
 import { SkillsView, KnowledgeView, MemoriesView, SoulView, TasksView, TelegramView, AgentOptionsView, AgentSettingsView, EconomyView } from "@/views/AgentSubViews";
 import { AppNav } from "@/components/AppNav";
+import { useTheme } from "@/lib/theme";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -28,7 +30,7 @@ const queryClient = new QueryClient({
   },
 });
 
-const MAIN_VIEWS = new Set(['home', 'dashboard', 'settings', 'growth', 'feed']);
+const MAIN_VIEWS = new Set(['home', 'overview', 'feed', 'marketplace', 'settings']);
 
 function useVisualViewport() {
   const [h, setH] = useState(() => window.visualViewport?.height ?? window.innerHeight);
@@ -49,22 +51,56 @@ function useVisualViewport() {
   return { h, top };
 }
 
+function MainTopBar() {
+  const t = useTheme();
+  const push = useRouter((s) => s.push);
+  const view = useRouter((s) => s.currentView.name);
+
+  if (view === 'settings') return null;
+
+  return (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'flex-end',
+        padding: '12px 20px 0',
+        flexShrink: 0,
+      }}
+    >
+      <button
+        onClick={() => push('settings')}
+        style={{
+          background: 'none',
+          border: 'none',
+          cursor: 'pointer',
+          padding: 6,
+          display: 'flex',
+          alignItems: 'center',
+          color: t.faint,
+        }}
+      >
+        <Settings size={16} strokeWidth={1.5} />
+      </button>
+    </div>
+  );
+}
+
 function MainLayout() {
   const view = useRouter((s) => s.currentView.name);
   const { h, top } = useVisualViewport();
-  // Prefetch gateway manifest after auth — must not run before wallet is connected
-  // or it fires a 401 which the session handler misreads as an auth failure.
   useGatewayEndpoints();
   return (
     <div style={{ position: 'fixed', top, left: 0, right: 0, height: h, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <MainTopBar />
       <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
         {view === 'home' && <HomeView />}
-        {view === 'dashboard' && <DashboardView />}
-        {view === 'settings' && <SettingsView />}
-        {view === 'growth' && <GrowthView />}
+        {view === 'overview' && <OverviewView />}
         {view === 'feed' && <FeedView />}
+        {view === 'marketplace' && <MarketplaceView />}
+        {view === 'settings' && <SettingsView />}
       </div>
-      <AppNav />
+      {view !== 'settings' && <AppNav />}
     </div>
   );
 }

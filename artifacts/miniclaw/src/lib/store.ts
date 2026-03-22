@@ -5,10 +5,12 @@ import { create } from 'zustand';
 export type ViewName =
   | 'connect'
   | 'home'
+  | 'overview'
   | 'dashboard'
   | 'settings'
   | 'growth'
   | 'feed'
+  | 'marketplace'
   | 'create'
   | 'agent-detail'
   | 'agent-options'
