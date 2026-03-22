@@ -318,7 +318,9 @@ function PersonalizeStep({
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
             <div style={{ width: 3, height: 20, background: persona.color, borderRadius: 2, flexShrink: 0 }} />
             <p style={{ fontSize: 20, fontWeight: 200, letterSpacing: '-0.04em', color: t.text, lineHeight: 1.15 }}>
-              Introduce yourself to {agentCustomName.trim() || persona.name.split(' ')[0]}.
+              {agentCustomName.trim()
+                ? `Introduce yourself to ${agentCustomName.trim().split(' ')[0]}.`
+                : 'Introduce yourself.'}
             </p>
           </div>
         </div>
@@ -352,7 +354,7 @@ function PersonalizeStep({
             {/* Your first name */}
             <div>
               <p style={{ ...MONO, fontSize: 11, color: t.faint, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
-                Your first name
+                Your name
               </p>
               <input type="text" value={userName} onChange={e => onChangeName(e.target.value)}
                 placeholder="e.g. Amara" disabled={creating} style={inputStyle} />
@@ -399,7 +401,7 @@ function PersonalizeStep({
             {/* Goal */}
             <div>
               <p style={{ ...MONO, fontSize: 11, color: t.faint, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
-                What are you working on?
+                What are you working on or passionate about?
               </p>
               <input type="text" value={userGoal} onChange={e => onChangeGoal(e.target.value)}
                 placeholder="e.g. TikTok shop, freelancing on Fiverr…" disabled={creating} style={inputStyle} />
