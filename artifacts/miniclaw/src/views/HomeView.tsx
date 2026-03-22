@@ -320,7 +320,7 @@ function AgentRow({
               fontSize: 27,
               fontWeight: 300,
               letterSpacing: '-0.025em',
-              lineHeight: 1,
+              lineHeight: 1.2,
               color: isIdle ? t.faint : t.text,
               minWidth: 0,
               overflow: 'hidden',
