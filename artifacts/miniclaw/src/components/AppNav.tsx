@@ -26,7 +26,7 @@ export function AppNav() {
         borderTop: `1px solid ${t.navBorder}`,
         display: 'flex',
         paddingBottom: 'calc(16px + env(safe-area-inset-bottom, 0px))',
-        paddingTop: 12,
+        paddingTop: 16,
         background: t.bg,
         transition: 'background 0.3s ease, border-color 0.3s ease',
         flexShrink: 0,
@@ -44,7 +44,7 @@ export function AppNav() {
             background: 'none',
             border: 'none',
             cursor: 'pointer',
-            padding: '8px 0',
+            padding: '10px 0',
           }}
         >
           <Icon
