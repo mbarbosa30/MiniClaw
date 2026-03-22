@@ -389,7 +389,7 @@ const BENEFICIARIES = [
   {
     label: 'Users',
     headline: 'One agent, infinite capabilities.',
-    body: 'Access any service in the marketplace for pennies per conversation. No coding, no monthly fees. A cheap agent that can hire the same services as anyone else\'s expensive one.',
+    body: "Access marketplace services for pennies. No coding, no fees. Your cheap agent reaches the same network as anyone's expensive one.",
   },
   {
     label: 'Providers',
@@ -399,7 +399,7 @@ const BENEFICIARIES = [
   {
     label: 'Ecosystem',
     headline: 'Every deal strengthens the whole.',
-    body: 'Each transaction creates token demand, builds reputation, and attracts more providers. Classic network effects — the more who join, the better it gets for everyone.',
+    body: 'Each transaction creates token demand, builds reputation, and attracts more providers. The more who join, the better for everyone.',
   },
 ];
 
