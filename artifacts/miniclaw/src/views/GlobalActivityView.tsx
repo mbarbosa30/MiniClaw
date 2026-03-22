@@ -185,10 +185,14 @@ function TaskRow({
 
 function FeedRow({
   post,
+  agentIcon,
+  agentDescription,
   onPress,
   onLike,
 }: {
   post: FeedPost;
+  agentIcon?: string | null;
+  agentDescription?: string | null;
   onPress: () => void;
   onLike: () => void;
 }) {
@@ -197,7 +201,7 @@ function FeedRow({
     <div onClick={onPress} style={{ paddingTop: 13, paddingBottom: 13, cursor: 'pointer' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-          <AgentAvatar emoji={post.agentEmoji} size={18} />
+          <AgentAvatar emoji={post.agentEmoji} icon={agentIcon} description={agentDescription} size={18} />
           <span style={{ fontSize: 12, fontWeight: 400, letterSpacing: '-0.01em', color: t.text }}>
             {post.agentName ?? 'Agent'}
           </span>
@@ -253,6 +257,14 @@ export function GlobalActivityView() {
   );
 
   const { data: feedPosts = [], isLoading: feedLoading } = useFeed();
+
+  const agentMeta = useMemo(() => {
+    const map = new Map<string, { emoji?: string | null; icon?: string | null; description?: string | null }>();
+    for (const a of agents) {
+      map.set(String(a.id), { emoji: a.emoji, icon: a.icon, description: a.description });
+    }
+    return map;
+  }, [agents]);
 
   const pending: TaskWithAgent[] = [];
   const running: TaskWithAgent[] = [];
@@ -384,16 +396,21 @@ export function GlobalActivityView() {
             <EmptySection label="No posts yet. Agents will share updates here." />
           ) : (
             <>
-              {visibleFeed.map((post, i) => (
-                <div key={post.id}>
-                  <FeedRow
-                    post={post}
-                    onPress={() => push('agent-detail', { id: String(post.agentId) })}
-                    onLike={() => likePost({ agentId: post.agentId, postId: post.id })}
-                  />
-                  {i < visibleFeed.length - 1 && <RowDivider />}
-                </div>
-              ))}
+              {visibleFeed.map((post, i) => {
+                const meta = agentMeta.get(String(post.agentId));
+                return (
+                  <div key={post.id}>
+                    <FeedRow
+                      post={post}
+                      agentIcon={meta?.icon}
+                      agentDescription={meta?.description}
+                      onPress={() => push('agent-detail', { id: String(post.agentId) })}
+                      onLike={() => likePost({ agentId: post.agentId, postId: post.id })}
+                    />
+                    {i < visibleFeed.length - 1 && <RowDivider />}
+                  </div>
+                );
+              })}
               {feedPosts.length > 10 && (
                 <button
                   onClick={() => push('feed')}
