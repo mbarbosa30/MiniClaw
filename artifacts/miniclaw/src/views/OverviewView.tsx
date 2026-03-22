@@ -1,9 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { useTheme } from '@/lib/theme';
-import { useAgents, useGrowthSummary, useUsageStats } from '@/hooks/use-agents';
+import { useAgents, useGrowthSummary, useUsageStats, useTriggerReflection, usePollReflection } from '@/hooks/use-agents';
 import { StateIndicator, agentVisualState, STATE_COLOR, STATE_LABEL } from '@/components/StateIndicator';
-import type { Agent, AgentListSummary } from '@/types';
+import type { Agent, AgentListSummary, DeepReflection } from '@/types';
 import type { GrowthSummary, AgentUsageStats } from '@/types';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -100,6 +100,105 @@ function MetricRow({
         </div>
       </div>
       {bar !== undefined && <MiniBar value={bar} color={barColor ?? t.text} track={t.surface} />}
+    </div>
+  );
+}
+
+// ── DeepReflectionWidget ──────────────────────────────────────────────────────
+
+function DeepReflectionWidget({ agentId }: { agentId: string | number }) {
+  const t = useTheme();
+  const [jobId, setJobId] = useState<string | undefined>(undefined);
+  const [triggered, setTriggered] = useState(false);
+  const [triggerError, setTriggerError] = useState<string | null>(null);
+
+  const { mutate: trigger, isPending: triggering } = useTriggerReflection();
+  const polling = triggered && jobId != null;
+  const { data: reflection } = usePollReflection(agentId, jobId, polling);
+
+  const done = reflection?.status === 'done';
+  const failed = reflection?.status === 'failed';
+  const running = polling && !done && !failed;
+
+  function handleTrigger() {
+    if (triggering || triggered) return;
+    setTriggerError(null);
+    trigger(agentId, {
+      onSuccess: (res) => {
+        setJobId(res.jobId);
+        setTriggered(true);
+      },
+      onError: (err) => {
+        setTriggerError((err as Error)?.message ?? 'Failed to start reflection.');
+      },
+    });
+  }
+
+  return (
+    <div style={{ marginBottom: 14 }}>
+      {!triggered && !triggering && (
+        <button
+          onClick={handleTrigger}
+          style={{
+            background: 'none', border: `1px solid ${t.divider}`, borderRadius: 8,
+            padding: '6px 12px', fontSize: 10, fontFamily: 'ui-monospace, Menlo, monospace',
+            color: t.faint, cursor: 'pointer', letterSpacing: '0.04em',
+            transition: 'border-color 0.15s, color 0.15s',
+          }}
+        >
+          Deep Reflection · $1
+        </button>
+      )}
+
+      {triggering && (
+        <span style={{ fontFamily: 'ui-monospace, Menlo, monospace', fontSize: 9, color: t.faint, letterSpacing: '0.05em' }}>
+          Starting reflection…
+        </span>
+      )}
+
+      {running && (
+        <motion.span
+          animate={{ opacity: [0.4, 1, 0.4] }}
+          transition={{ duration: 1.8, repeat: Infinity }}
+          style={{ fontFamily: 'ui-monospace, Menlo, monospace', fontSize: 9, color: t.faint, letterSpacing: '0.05em', display: 'block' }}
+        >
+          Reflecting… ●
+        </motion.span>
+      )}
+
+      {triggerError && (
+        <p style={{ fontSize: 10, color: '#ef4444', fontFamily: 'inherit', fontWeight: 300 }}>{triggerError}</p>
+      )}
+
+      {failed && (
+        <p style={{ fontSize: 10, color: '#ef4444', fontFamily: 'ui-monospace, Menlo, monospace', letterSpacing: '0.04em' }}>Reflection failed.</p>
+      )}
+
+      {done && reflection && (
+        <motion.div
+          initial={{ opacity: 0, y: 4 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+          style={{ background: t.surface, borderRadius: 8, padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 6 }}
+        >
+          {reflection.clarityScore != null && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontFamily: 'ui-monospace, Menlo, monospace', fontSize: 8, color: t.faint, letterSpacing: '0.07em', textTransform: 'uppercase' }}>
+                Clarity
+              </span>
+              <span style={{ fontFamily: 'ui-monospace, Menlo, monospace', fontSize: 13, color: t.text, letterSpacing: '-0.01em', fontWeight: 400 }}>
+                {reflection.clarityScore}
+                <span style={{ fontSize: 9, color: t.faint }}>/100</span>
+              </span>
+            </div>
+          )}
+          {reflection.summary && (
+            <p style={{ fontSize: 11, fontWeight: 300, color: t.label, lineHeight: 1.6, margin: 0 }}>
+              {reflection.summary}
+            </p>
+          )}
+        </motion.div>
+      )}
     </div>
   );
 }
@@ -206,6 +305,8 @@ function AgentCard({ agent, i }: { agent: Agent; i: number }) {
           })}
         </div>
       )}
+
+      <DeepReflectionWidget agentId={agent.id} />
 
       <div style={{ height: 1, background: t.divider, marginTop: 4 }} />
     </motion.div>

@@ -532,3 +532,65 @@ export interface CommerceRequestResult {
   createdAt?: string;
   paymentLink?: string;
 }
+
+// --- Marketplace ---
+
+export interface MarketplaceService {
+  id: string;
+  title: string;
+  description?: string;
+  category?: string;
+  tags?: string[];
+  providerName?: string;
+  providerEmoji?: string;
+  providerAgentId?: string | number;
+  priceCelo?: number;
+  priceUsd?: number;
+  estimatedDeliveryTime?: string;
+  inputRequirements?: string;
+  rating?: number;
+  reviewCount?: number;
+  createdAt?: string;
+}
+
+export type MarketplaceOrderStatus =
+  | 'pending'
+  | 'accepted'
+  | 'in-progress'
+  | 'delivered'
+  | 'confirmed'
+  | 'rated'
+  | 'rejected'
+  | string;
+
+export interface MarketplaceOrder {
+  id: string;
+  serviceId: string;
+  serviceTitle?: string;
+  providerName?: string;
+  providerEmoji?: string;
+  providerAgentId?: string | number;
+  buyerName?: string;
+  buyerEmoji?: string;
+  buyerAgentId?: string | number;
+  status: MarketplaceOrderStatus;
+  input?: string;
+  output?: string;
+  priceCelo?: number;
+  priceUsd?: number;
+  rating?: number;
+  ratingComment?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+// --- Deep Reflection ---
+
+export interface DeepReflection {
+  jobId: string;
+  agentId: string | number;
+  status: 'pending' | 'running' | 'done' | 'failed' | string;
+  clarityScore?: number | null;
+  summary?: string | null;
+  createdAt?: string;
+}
