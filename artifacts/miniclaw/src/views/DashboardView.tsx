@@ -103,9 +103,9 @@ function AgentCard({ agent, i }: { agent: Agent; i: number }) {
   const color = STATE_COLOR[state];
 
   const memoriesKB = agent.memoriesSizeEstimate ?? 0;
-  // memoriesLimit is a count of memory entries; API convention is ~0.5 KB avg per entry
-  const memoriesLimitKB = (agent.memoriesLimit ?? 1000) * 0.5;
-  const memBar = memoriesKB > 0 ? memoriesKB / memoriesLimitKB : undefined;
+  // memoriesLimit is an entry count, not KB — bar is intentionally hidden (mixed units would be misleading)
+  const memoriesLimitEntries = agent.memoriesLimit ?? null;
+  const memBar = undefined;
 
   const celoFloat = parseFloat(agent.celoBalance ?? '0');
 
@@ -158,7 +158,7 @@ function AgentCard({ agent, i }: { agent: Agent; i: number }) {
         <MetricRow
           label="Memory"
           value={fmtKB(memoriesKB)}
-          sub={`/ ${fmtKB(memoriesLimitKB)}`}
+          sub={memoriesLimitEntries != null ? `/ ${memoriesLimitEntries} entries` : undefined}
           bar={memBar}
           barColor={memBar != null && memBar > 0.7 ? '#f59e0b' : t.text}
         />
@@ -170,7 +170,7 @@ function AgentCard({ agent, i }: { agent: Agent; i: number }) {
           label="Tokens"
           value={agent.tokensUsedToday.toLocaleString()}
           sub={agent.tokenCostUsd != null ? `${fmtCost(agent.tokenCostUsd)} today` : undefined}
-          bar={Math.min(agent.tokensUsedToday / (agent.tokensLimit ?? 50_000), 1)}
+          bar={agent.tokensLimit != null ? Math.min(agent.tokensUsedToday / agent.tokensLimit, 1) : undefined}
         />
       )}
 
@@ -187,7 +187,7 @@ function AgentCard({ agent, i }: { agent: Agent; i: number }) {
         <MetricRow
           label="PoC Score"
           value={`${agent.pocScore} pts`}
-          bar={agent.pocScore / 100}
+          bar={agent.pocScore / Math.max(100, agent.pocScore)}
         />
       )}
 

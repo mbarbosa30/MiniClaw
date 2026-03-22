@@ -1,6 +1,7 @@
 import { useQuery, useQueries, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiFetch, ApiError } from '@/lib/api-client';
 import { useAuthStore } from '@/lib/store';
+import { agentVisualState } from '@/components/StateIndicator';
 import type {
   Agent,
   AgentStats,
@@ -113,7 +114,10 @@ export function useAgents() {
       // Tolerate both shapes; extract summary when present.
       const raw = await apiFetch<{ agents: RawAgent[]; summary?: AgentListSummary } | RawAgent[]>('/api/selfclaw/v1/hosted-agents');
       const computeFallbackSummary = (agents: Agent[]): AgentListSummary => ({
-        activeCount: agents.filter(a => a.status === 'active').length,
+        activeCount: agents.filter(a => {
+          const vs = agentVisualState(a);
+          return vs !== 'idle' && vs !== 'sleeping';
+        }).length,
         totalCount: agents.length,
         combinedTokensToday: agents.reduce((sum, a) => sum + (a.tokensUsedToday ?? 0), 0),
         combinedCostUsd: agents.reduce((sum, a) => sum + (a.tokenCostUsd ?? 0), 0),
