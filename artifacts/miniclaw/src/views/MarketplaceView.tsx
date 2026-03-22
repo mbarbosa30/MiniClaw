@@ -594,7 +594,7 @@ function OrderCard({
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 10 }}>
           <div style={{ flex: 1, minWidth: 0 }}>
             <p style={{ fontSize: 12, fontWeight: 400, color: t.text, marginBottom: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {order.serviceTitle ?? `Order #${order.id.slice(-6)}`}
+              {order.serviceTitle ?? `Order #${String(order.id).slice(-6)}`}
             </p>
             <span style={{ ...MONO, fontSize: 9, color: t.faint, textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: 4 }}>
               {direction === 'outgoing'
@@ -639,7 +639,7 @@ function OrderCard({
 
         {order.priceCelo != null && (
           <span style={{ ...MONO, fontSize: 9, color: t.faint, display: 'block', marginBottom: 10 }}>
-            {order.priceCelo} CELO{order.priceUsd != null ? ` · $${order.priceUsd.toFixed(2)}` : ''}
+            {order.priceCelo} CELO{order.priceUsd != null ? ` · $${Number(order.priceUsd).toFixed(2)}` : ''}
           </span>
         )}
 
