@@ -103,6 +103,7 @@ function AgentCard({ agent, i }: { agent: Agent; i: number }) {
   const color = STATE_COLOR[state];
 
   const memoriesKB = agent.memoriesSizeEstimate ?? 0;
+  // memoriesLimit is a count of memory entries; API convention is ~0.5 KB avg per entry
   const memoriesLimitKB = (agent.memoriesLimit ?? 1000) * 0.5;
   const memBar = memoriesKB > 0 ? memoriesKB / memoriesLimitKB : undefined;
 
