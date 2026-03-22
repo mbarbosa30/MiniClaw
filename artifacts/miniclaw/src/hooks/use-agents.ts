@@ -1,5 +1,6 @@
 import { useQuery, useQueries, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiFetch, ApiError } from '@/lib/api-client';
+import { useAuthStore } from '@/lib/store';
 import type {
   Agent,
   AgentStats,
@@ -974,12 +975,14 @@ export function usePlaceOrder() {
 
 // GET /v1/marketplace/orders/mine — orders you placed (outgoing)
 export function useMyOrders() {
+  const address = useAuthStore(s => s.address);
   return useQuery<MarketplaceOrder[]>({
     queryKey: ['marketplace-orders-my'],
     queryFn: async () => {
       const raw = await apiFetch<unknown>('/api/selfclaw/v1/marketplace/orders/mine');
       return normaliseOrderList(raw);
     },
+    enabled: !!address,
     staleTime: 30_000,
     refetchInterval: 60_000,
   });
@@ -987,12 +990,14 @@ export function useMyOrders() {
 
 // GET /v1/marketplace/orders/incoming — orders placed to your agents
 export function useIncomingOrders() {
+  const address = useAuthStore(s => s.address);
   return useQuery<MarketplaceOrder[]>({
     queryKey: ['marketplace-orders-incoming'],
     queryFn: async () => {
       const raw = await apiFetch<unknown>('/api/selfclaw/v1/marketplace/orders/incoming');
       return normaliseOrderList(raw);
     },
+    enabled: !!address,
     staleTime: 30_000,
     refetchInterval: 60_000,
   });

@@ -802,11 +802,22 @@ function OrderSkeleton() {
 
 function OrdersTab() {
   const t = useTheme();
-  const { data: myOrders = [], isLoading: myLoading } = useMyOrders();
-  const { data: incomingOrders = [], isLoading: incomingLoading } = useIncomingOrders();
+  const { data: myOrders = [], isLoading: myLoading, isError: myError } = useMyOrders();
+  const { data: incomingOrders = [], isLoading: incomingLoading, isError: incomingError } = useIncomingOrders();
   const isLoading = myLoading || incomingLoading;
+  const isError = myError || incomingError;
 
   if (isLoading) return <OrderSkeleton />;
+
+  if (isError) {
+    return (
+      <div style={{ textAlign: 'center', paddingTop: 32 }}>
+        <p style={{ fontSize: 13, color: t.faint, fontWeight: 300, lineHeight: 1.65 }}>
+          Couldn't load orders. Please try again.
+        </p>
+      </div>
+    );
+  }
 
   const hasOrders = myOrders.length > 0 || incomingOrders.length > 0;
 
