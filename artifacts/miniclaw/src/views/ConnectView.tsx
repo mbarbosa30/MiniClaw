@@ -3,9 +3,9 @@ import { motion } from 'framer-motion';
 import { Bot, Loader2, RefreshCw, Zap } from 'lucide-react';
 import { useAuthStore, useRouter } from '@/lib/store';
 import { useTheme } from '@/lib/theme';
-import { setWalletAddress, getLastSentWalletAddress } from '@/lib/api-client';
+import { setWalletAddress } from '@/lib/api-client';
 
-const TIMEOUT_MS = import.meta.env.DEV ? 5000 : 8000;
+const TIMEOUT_MS = import.meta.env.DEV ? 5000 : 10000;
 
 function resolveAuthErrorMessage(raw: string): { text: string; canRetry: boolean } {
   if (
@@ -13,7 +13,7 @@ function resolveAuthErrorMessage(raw: string): { text: string; canRetry: boolean
     raw === 'X-Wallet-Address is not a valid EVM address'
   ) {
     return {
-      text: "MiniPay didn't provide a valid wallet address.\nTry restarting MiniPay.",
+      text: "MiniPay didn't share your wallet address.\nTry restarting MiniPay.",
       canRetry: true,
     };
   }
@@ -38,18 +38,9 @@ type EthProvider = {
   request?: (args: { method: string; params?: unknown[] }) => Promise<string[]>;
 };
 
-function getEthDebug() {
-  const eth = (window as { ethereum?: EthProvider }).ethereum;
-  if (!eth) return 'eth:✗';
-  const addr = eth.selectedAddress;
-  const tag = eth.isMiniPay ? 'miniPay' : eth.isMetaMask ? 'metaMask' : 'wallet';
-  return `eth:✓ ${tag} addr:${addr ? addr.slice(0, 8) + '…' : 'null'}`;
-}
-
 export function ConnectView() {
   const t = useTheme();
   const [timedOut, setTimedOut] = useState(false);
-  const [ethDebug, setEthDebug] = useState(getEthDebug);
   const [connectLog, setConnectLog] = useState<string | null>(null);
   const [connecting, setConnecting] = useState(false);
 
@@ -57,50 +48,32 @@ export function ConnectView() {
   const setAuthenticated = useAuthStore(s => s.setAuthenticated);
   const resetRoute = useRouter(s => s.reset);
 
-  // Keep debug line fresh as MiniPay may inject provider asynchronously
-  useEffect(() => {
-    const refresh = () => setEthDebug(getEthDebug());
-    window.addEventListener('ethereum#initialized', refresh, { once: true });
-    const t1 = setTimeout(refresh, 300);
-    const t2 = setTimeout(refresh, 1500);
-    return () => {
-      window.removeEventListener('ethereum#initialized', refresh);
-      clearTimeout(t1);
-      clearTimeout(t2);
-    };
-  }, []);
-
-  // Timeout to show manual connect / bypass options
   useEffect(() => {
     if (authError) return;
     const timer = setTimeout(() => setTimedOut(true), TIMEOUT_MS);
     return () => clearTimeout(timer);
   }, [authError]);
 
-  // Manual connect — called by the "tap to connect" button.
-  // Runs eth_requestAccounts directly and shows the result on screen.
   const handleManualConnect = useCallback(async () => {
     setConnecting(true);
     setConnectLog(null);
     const eth = (window as { ethereum?: EthProvider }).ethereum;
     if (!eth) {
-      setConnectLog('no wallet: window.ethereum is undefined');
+      setConnectLog('No wallet found. Open this app inside MiniPay.');
       setConnecting(false);
       return;
     }
     try {
-      setConnectLog('calling eth_requestAccounts…');
       const accounts = await eth.request?.({ method: 'eth_requestAccounts', params: [] });
       if (accounts?.[0]) {
-        setConnectLog(`got address: ${accounts[0]}`);
         setWalletAddress(accounts[0]);
         setAuthenticated(accounts[0]);
         resetRoute('home');
       } else {
-        setConnectLog('eth_requestAccounts returned empty array');
+        setConnectLog('Wallet returned no address. Try restarting MiniPay.');
       }
     } catch (err) {
-      setConnectLog(`error: ${err instanceof Error ? err.message : String(err)}`);
+      setConnectLog(err instanceof Error ? err.message : 'Connection failed.');
     }
     setConnecting(false);
   }, [setAuthenticated, resetRoute]);
@@ -172,21 +145,13 @@ export function ConnectView() {
       >
         {resolved ? (
           <>
-            <p style={{ fontSize: 12, color: t.label, lineHeight: 1.7, whiteSpace: 'pre-line', fontFamily: 'ui-monospace, Menlo, monospace', letterSpacing: '0.01em' }}>
+            <p style={{ fontSize: 13, color: t.label, lineHeight: 1.7, whiteSpace: 'pre-line' }}>
               {resolved.text}
             </p>
-            {/* Raw API error — tells us exactly what selfclaw.ai returned */}
-            {(() => {
-              const sent = getLastSentWalletAddress();
-              return (
-                <p style={{ fontSize: 10, color: t.faint, fontFamily: 'ui-monospace, Menlo, monospace', marginTop: 2, lineHeight: 1.6, maxWidth: 280, wordBreak: 'break-all', whiteSpace: 'pre-wrap' }}>
-                  {`err: ${authError ?? 'none'}\nsent(${sent ? sent.length : 0}): ${sent ?? 'null'}\n${ethDebug}`}
-                </p>
-              );
-            })()}
+
             <button
               style={{
-                marginTop: 10,
+                marginTop: 6,
                 padding: '10px 24px',
                 borderRadius: 10,
                 fontSize: 13,
@@ -204,22 +169,25 @@ export function ConnectView() {
               disabled={connecting}
             >
               <Zap size={14} />
-              {connecting ? 'connecting…' : 'tap to connect wallet'}
+              {connecting ? 'connecting…' : 'try again'}
             </button>
+
             {connectLog && (
-              <p style={{ fontSize: 10, color: t.label, fontFamily: 'ui-monospace, Menlo, monospace', marginTop: 6, maxWidth: 260, wordBreak: 'break-all', lineHeight: 1.6 }}>
+              <p style={{ fontSize: 11, color: t.faint, marginTop: 4, maxWidth: 240, lineHeight: 1.5 }}>
                 {connectLog}
               </p>
             )}
+
             {resolved.canRetry && (
               <button
-                style={{ marginTop: 6, display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 600, color: t.text, background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'ui-monospace, Menlo, monospace', letterSpacing: '0.05em', textTransform: 'uppercase' }}
+                style={{ marginTop: 4, display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 600, color: t.faint, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
                 onClick={() => window.location.reload()}
               >
-                <RefreshCw size={12} />
-                retry
+                <RefreshCw size={11} />
+                reload
               </button>
             )}
+
             {import.meta.env.DEV && (
               <button
                 style={{ marginTop: 8, padding: '8px 20px', borderRadius: 8, fontSize: 11, fontWeight: 600, color: t.bg, background: t.text, border: 'none', cursor: 'pointer', fontFamily: 'ui-monospace, Menlo, monospace', letterSpacing: '0.05em', textTransform: 'uppercase' }}
@@ -233,9 +201,7 @@ export function ConnectView() {
           <>
             <Loader2 size={18} color={t.faint} style={{ animation: 'spin 1s linear infinite' }} />
             <p style={{ fontSize: 12, color: t.label, fontFamily: 'ui-monospace, Menlo, monospace', letterSpacing: '0.02em' }}>connecting wallet…</p>
-            <p style={{ fontSize: 10, color: t.faint, fontFamily: 'ui-monospace, Menlo, monospace', marginTop: 2, lineHeight: 1.6 }}>
-              {ethDebug}
-            </p>
+
             <motion.div
               initial={{ opacity: 0, y: 4 }}
               animate={{ opacity: 1, y: 0 }}
@@ -252,17 +218,13 @@ export function ConnectView() {
           </>
         ) : (
           <>
-            <p style={{ fontSize: 12, color: t.label, lineHeight: 1.7, fontFamily: 'ui-monospace, Menlo, monospace', letterSpacing: '0.01em' }}>
-              couldn't connect automatically.
-            </p>
-            <p style={{ fontSize: 10, color: t.faint, fontFamily: 'ui-monospace, Menlo, monospace', marginTop: 2, lineHeight: 1.6 }}>
-              {ethDebug}
+            <p style={{ fontSize: 13, color: t.label, lineHeight: 1.6 }}>
+              Couldn't connect automatically.
             </p>
 
-            {/* Manual connect button — always visible after timeout */}
             <button
               style={{
-                marginTop: 12,
+                marginTop: 6,
                 padding: '10px 24px',
                 borderRadius: 10,
                 fontSize: 13,
@@ -280,20 +242,20 @@ export function ConnectView() {
               disabled={connecting}
             >
               <Zap size={14} />
-              {connecting ? 'connecting…' : 'tap to connect wallet'}
+              {connecting ? 'connecting…' : 'connect wallet'}
             </button>
 
             {connectLog && (
-              <p style={{ fontSize: 10, color: t.label, fontFamily: 'ui-monospace, Menlo, monospace', marginTop: 8, maxWidth: 260, wordBreak: 'break-all', lineHeight: 1.6 }}>
+              <p style={{ fontSize: 11, color: t.faint, marginTop: 4, maxWidth: 240, lineHeight: 1.5 }}>
                 {connectLog}
               </p>
             )}
 
             <button
-              style={{ marginTop: 8, display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 600, color: t.text, background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'ui-monospace, Menlo, monospace', letterSpacing: '0.05em', textTransform: 'uppercase' }}
+              style={{ marginTop: 6, display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 600, color: t.faint, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
               onClick={() => window.location.reload()}
             >
-              <RefreshCw size={12} />
+              <RefreshCw size={11} />
               reload
             </button>
 
