@@ -266,6 +266,8 @@ export function GlobalActivityView() {
     return map;
   }, [agents]);
 
+  const taskSummariesLoading = summaries.some((r) => r.isLoading);
+
   const pending: TaskWithAgent[] = [];
   const running: TaskWithAgent[] = [];
   const completed: TaskWithAgent[] = [];
@@ -314,12 +316,14 @@ export function GlobalActivityView() {
         {/* Section 1: Needs attention */}
         <div style={{ marginBottom: 32 }}>
           <SectionLabel>Needs attention</SectionLabel>
-          {pending.length === 0 ? (
+          {taskSummariesLoading && pending.length === 0 ? (
+            <EmptySection label="Loading…" />
+          ) : pending.length === 0 ? (
             <EmptySection label="Nothing waiting for your approval." />
           ) : (
             <>
               {pending.map((task, i) => (
-                <div key={task.id}>
+                <div key={`${task.agentId}:${task.id}`}>
                   <TaskRow
                     task={task}
                     variant="pending"
@@ -337,12 +341,14 @@ export function GlobalActivityView() {
         {/* Section 2: In progress / recent */}
         <div style={{ marginBottom: 32 }}>
           <SectionLabel>In progress · recent</SectionLabel>
-          {running.length === 0 && completed.length === 0 ? (
+          {taskSummariesLoading && running.length === 0 && completed.length === 0 ? (
+            <EmptySection label="Loading…" />
+          ) : running.length === 0 && completed.length === 0 ? (
             <EmptySection label="No recent agent activity." />
           ) : (
             <>
               {running.map((task, i) => (
-                <div key={task.id}>
+                <div key={`${task.agentId}:${task.id}`}>
                   <TaskRow
                     task={task}
                     variant="running"
@@ -352,7 +358,7 @@ export function GlobalActivityView() {
                 </div>
               ))}
               {completed.map((task, i) => (
-                <div key={task.id}>
+                <div key={`${task.agentId}:${task.id}`}>
                   <TaskRow
                     task={task}
                     variant="completed"
