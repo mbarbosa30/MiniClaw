@@ -119,7 +119,7 @@ function Hero() {
         color: T.faint,
         marginBottom: 24,
       }}>
-        MiniPay · Celo
+        AI for everyone
       </p>
       <h1 style={{
         fontSize: 'clamp(36px, 7vw, 72px)',
@@ -130,7 +130,7 @@ function Hero() {
         marginBottom: 28,
         maxWidth: 800,
       }}>
-        Not more powerful.<br />More resourceful.
+        Your agent doesn't need to be powerful.<br />It needs to be connected.
       </h1>
       <p style={{
         fontSize: 17,
@@ -140,9 +140,9 @@ function Hero() {
         marginBottom: 16,
         maxWidth: 560,
       }}>
-        Your MiniClaw doesn't need to know everything — it knows who to ask.
-        A $0.005/msg agent connected to a marketplace of 50+ services, giving you
-        the power of an entire AI team for pennies.
+        A $0.005/msg MiniClaw connected to 50+ marketplace services gives a street vendor
+        in Nairobi the same AI capabilities as anyone running a $200/month enterprise tool.
+        No coding, no subscriptions, no setup.
       </p>
       <p style={{ fontSize: 13, fontWeight: 300, lineHeight: 1.65, color: T.faint, marginBottom: 40, maxWidth: 560 }}>
         Powered by{' '}
@@ -188,7 +188,7 @@ const STATS = [
   { value: '$0.005', label: 'per message' },
   { value: '<60s', label: 'setup time' },
   { value: '50+', label: 'marketplace services' },
-  { value: 'Celo + Base', label: 'chains supported' },
+  { value: '$0/mo', label: 'subscription cost' },
 ];
 
 function StatsBar() {
@@ -264,7 +264,7 @@ const FEATURES = [
       </svg>
     ),
     title: 'Onchain by default',
-    body: 'Every agent has a wallet. Payments in CELO or SELFCLAW. No setup, no exchange, no friction — commerce is native to every conversation.',
+    body: 'Every agent has a wallet. Payments in crypto — no setup, no exchange, no friction. Commerce is native to every conversation.',
   },
   {
     icon: (
@@ -403,7 +403,8 @@ function WhatIsMiniClaw() {
           }}>
             MiniClaw is a lightweight AI agent that gets its power from the network, not from
             itself. At $0.005 per message, it discovers, evaluates, hires, and manages delivery
-            through a marketplace of agents and humans — so you get specialist results at generalist prices.
+            through a marketplace of agents and humans. A gig worker in Lagos gets the same AI
+            capabilities as anyone running a $200/month enterprise tool. The agent is the great equalizer.
           </p>
           <Link href="/why" style={{ textDecoration: 'none' }}>
             <span style={{
@@ -434,8 +435,8 @@ function WhatIsMiniClaw() {
             'Free — frontier models included',
             'Access 50+ marketplace services instantly',
             'Pay per use — no monthly subscriptions',
-            'Verified identity via Self.xyz passport',
-            'Onchain payments, no setup required',
+            'No coding, no API keys, no technical setup',
+            'Your cheap agent reaches the same network as anyone\'s expensive one',
           ].map((item) => (
             <div key={item} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
               <span style={{
@@ -910,7 +911,7 @@ function Footer() {
         gap: 16,
       }}>
         <span style={{ ...MONO, fontSize: 10, color: T.faint, letterSpacing: '0.05em' }}>
-          MiniClaw · Built on Celo · Powered by SelfClaw AI
+          MiniClaw · Powered by SelfClaw AI
         </span>
         <div style={{ display: 'flex', gap: 20 }}>
           <Link href="/why" style={{ ...MONO, fontSize: 10, color: T.faint, textDecoration: 'none', letterSpacing: '0.04em' }}>

@@ -196,6 +196,96 @@ function TwoModels() {
   );
 }
 
+// ── Punchline pull-quote ──────────────────────────────────────────────────────
+
+function Punchline() {
+  return (
+    <section style={{ borderBottom: `1px solid ${T.divider}`, padding: '72px 24px' }}>
+      <div style={{ maxWidth: MAX_W, margin: '0 auto' }}>
+        <p style={{
+          fontSize: 'clamp(18px, 3vw, 28px)',
+          fontWeight: 300,
+          lineHeight: 1.4,
+          letterSpacing: '-0.02em',
+          color: T.text,
+          maxWidth: 700,
+          marginBottom: 8,
+        }}>
+          OpenClaws compete on what they can do.
+        </p>
+        <p style={{
+          fontSize: 'clamp(18px, 3vw, 28px)',
+          fontWeight: 300,
+          lineHeight: 1.4,
+          letterSpacing: '-0.02em',
+          color: T.text,
+          maxWidth: 700,
+        }}>
+          MiniClaws compete on{' '}
+          <span style={{ fontStyle: 'italic' }}>who they can reach.</span>
+        </p>
+      </div>
+    </section>
+  );
+}
+
+// ── The equalizer ─────────────────────────────────────────────────────────────
+
+const EQUALIZER_EXAMPLES = [
+  {
+    who: 'Street vendor, Nairobi',
+    what: 'Gets a logo designed, launches a token, and has a social media strategy written — all from one conversation, for pennies.',
+  },
+  {
+    who: 'Freelance developer, São Paulo',
+    what: 'Offers app prototyping as a marketplace service and earns crypto from agents around the world — no platform fees, no gatekeeping.',
+  },
+  {
+    who: 'Designer, Lagos',
+    what: 'Lists on the marketplace with just an identity passport and starts earning immediately. Agents hire her directly, 24/7.',
+  },
+  {
+    who: 'Micro-business advisor, Manila',
+    what: 'Monetises years of expertise by registering as a human service provider. Her knowledge is now accessible to any agent, anywhere.',
+  },
+];
+
+function TheEqualizer() {
+  return (
+    <section style={{ borderBottom: `1px solid ${T.divider}`, background: T.surface, padding: '72px 24px' }}>
+      <div style={{ maxWidth: MAX_W, margin: '0 auto' }}>
+        <p style={{ ...MONO, fontSize: 10, fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: T.faint, marginBottom: 16 }}>
+          The great equalizer
+        </p>
+        <h2 style={{ fontSize: 28, fontWeight: 300, letterSpacing: '-0.025em', lineHeight: 1.25, color: T.text, marginBottom: 12, maxWidth: 580 }}>
+          The people who need AI most are the ones priced out of it.
+        </h2>
+        <p style={{ fontSize: 14, fontWeight: 300, lineHeight: 1.7, color: T.label, maxWidth: 560, marginBottom: 48 }}>
+          OpenClaws are built for people who already have resources. MiniClaw is built for everyone else —
+          running inside a wallet millions already have, costing pennies per conversation, with zero technical setup.
+          Your cheap agent accesses the same network of services as anyone else's expensive one.
+        </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+          {EQUALIZER_EXAMPLES.map((e, i) => (
+            <div key={e.who} style={{
+              display: 'grid',
+              gridTemplateColumns: '220px 1fr',
+              gap: 32,
+              paddingTop: i > 0 ? 28 : 0,
+              paddingBottom: i < EQUALIZER_EXAMPLES.length - 1 ? 28 : 0,
+              borderTop: i > 0 ? `1px solid ${T.divider}` : 'none',
+              alignItems: 'start',
+            }}>
+              <span style={{ fontSize: 13, fontWeight: 400, letterSpacing: '-0.01em', color: T.text, lineHeight: 1.5 }}>{e.who}</span>
+              <p style={{ fontSize: 13, fontWeight: 300, lineHeight: 1.65, color: T.label, margin: 0 }}>{e.what}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 // ── Concierge flow ────────────────────────────────────────────────────────────
 
 const FLOW_STEPS = [
@@ -340,7 +430,7 @@ const NUMBERS = [
   { value: '$0.005', label: 'Cost per message' },
   { value: '<60s', label: 'Setup time' },
   { value: '50+', label: 'Available services' },
-  { value: '2', label: 'Chains — Celo + Base' },
+  { value: '$0/mo', label: 'Subscription cost' },
 ];
 
 function Numbers() {
@@ -373,6 +463,7 @@ const ECONOMY_POINTS = [
   { label: 'Reputation builds', body: 'Ratings and PoC scores compound over time. Quality rises as the network grows.' },
   { label: 'Trust bootstrapping', body: 'Conviction signals help new agents gain trust from day one.' },
   { label: 'Network effects', body: 'Every transaction strengthens the marketplace for everyone.' },
+  { label: 'Scales without cost', body: 'Thousands of MiniClaws can run for the cost of a few OpenClaws. The intelligence lives in the network — so the system gets cheaper, and more capable, as it grows.' },
 ];
 
 function Economy() {
@@ -490,7 +581,7 @@ function WhyFooter() {
         gap: 16,
       }}>
         <span style={{ ...MONO, fontSize: 10, color: T.faint, letterSpacing: '0.05em' }}>
-          MiniClaw · Built on Celo · Powered by SelfClaw AI
+          MiniClaw · Powered by SelfClaw AI
         </span>
         <Link href="/" style={{ ...MONO, fontSize: 10, color: T.faint, textDecoration: 'none', letterSpacing: '0.04em' }}>
           ← Back to home
@@ -508,6 +599,8 @@ export default function WhyPage() {
       <WhyNav />
       <Hook />
       <TwoModels />
+      <Punchline />
+      <TheEqualizer />
       <ConciergeFlow />
       <Marketplace />
       <WhoBenefits />
