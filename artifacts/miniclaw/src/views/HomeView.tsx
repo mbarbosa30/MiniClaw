@@ -171,7 +171,7 @@ function ActivitySection({
   return (
     <div style={{ marginBottom: 28 }}>
       {pending.length > 0 && (
-        <div style={{ marginBottom: running.length || completed.length ? 20 : 0 }}>
+        <div style={{ marginBottom: running.length || scheduled.length || completed.length ? 20 : 0 }}>
           <SectionLabel>Pending approval</SectionLabel>
           {pending.map((task, i) => (
             <div key={task.id}>
