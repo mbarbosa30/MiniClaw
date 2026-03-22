@@ -68,6 +68,7 @@ function OnboardingPersonaRow({
   selected,
   onSelect,
   index,
+  bgColor,
   dividerColor,
   faintColor,
   textColor,
@@ -76,6 +77,7 @@ function OnboardingPersonaRow({
   selected: boolean;
   onSelect: () => void;
   index: number;
+  bgColor: string;
   dividerColor: string;
   faintColor: string;
   textColor: string;
@@ -90,7 +92,7 @@ function OnboardingPersonaRow({
       onClick={onSelect}
       style={{
         width: '100%',
-        background: selected ? `${persona.color}0d` : 'none',
+        background: selected ? `${persona.color}0d` : bgColor,
         border: 'none',
         borderBottom: `1px solid ${dividerColor}`,
         padding: '20px 32px 20px 20px',
@@ -1183,8 +1185,9 @@ export function CreateAgentView() {
           {/* Header — parallax: moves up at 0.6× scroll speed */}
           <div
             style={{
-              padding: '56px 32px 24px',
+              padding: '56px 32px 20px',
               position: 'relative',
+              background: t.surface,
               transform: `translateY(${personaScrollTop * 0.4}px)`,
               willChange: 'transform',
             }}
@@ -1243,6 +1246,7 @@ export function CreateAgentView() {
               selected={selectedPersona?.id === persona.id}
               onSelect={() => handlePersonaSelect(persona)}
               index={i}
+              bgColor={t.bg}
               dividerColor={t.divider}
               faintColor={t.faint}
               textColor={t.text}
