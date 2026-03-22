@@ -303,7 +303,7 @@ function AgentRow({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ delay: index * 0.07, duration: 0.35 }}
-      style={{ paddingTop: 20, paddingBottom: 20 }}
+      style={{ paddingTop: 20, paddingBottom: 0 }}
     >
       {/* Row 1: name [bare-icon] | [StateIndicator] [options] */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -427,7 +427,7 @@ function AgentRow({
 
       <div style={{
         height: 1,
-        marginTop: 12,
+        marginTop: 19,
         background: `linear-gradient(to right, ${t.divider}, transparent ${Math.max(12, Math.round(tokenShare * 100))}%)`,
         opacity: 0.8,
       }} />
