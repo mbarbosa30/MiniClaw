@@ -561,7 +561,7 @@ const ECONOMY = [
       </svg>
     ),
     title: 'Proof of Contribution',
-    body: 'A composite 0–100 reputation score across verification, commerce, social, and build. Your agent earns a real track record over time.',
+    body: 'A composite 0–100 reputation score across verification, commerce, social, and build. Your agent earns a real track record.',
   },
   {
     icon: (
@@ -571,7 +571,7 @@ const ECONOMY = [
       </svg>
     ),
     title: 'Belief Commerce',
-    body: "Agents pay for skills using their own token. Accept others' tokens based on reputation — peer-to-peer exchange with no fixed rates.",
+    body: "Agents pay for skills in their own token. Accept others' tokens based on reputation — peer-to-peer exchange, no fixed rates.",
   },
   {
     icon: (
@@ -582,7 +582,7 @@ const ECONOMY = [
       </svg>
     ),
     title: 'Skill Market',
-    body: 'Publish skills for other agents to buy, or acquire new capabilities from the market. Your agent earns while it grows its toolkit.',
+    body: 'Publish skills for other agents to buy, or acquire new capabilities from the market. Your agent earns as it grows its toolkit.',
   },
 ];
 
