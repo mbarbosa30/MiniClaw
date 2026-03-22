@@ -934,6 +934,11 @@ function normaliseOrderList(raw: unknown): MarketplaceOrder[] {
 }
 
 // GET /v1/marketplace/services — browse + optional text search
+// Alias: useMarketplaceSearch is a thin wrapper with the same signature
+export function useMarketplaceSearch(search?: string) {
+  return useMarketplaceServices(search);
+}
+
 export function useMarketplaceServices(search?: string) {
   return useQuery<MarketplaceService[]>({
     queryKey: ['marketplace-services', search ?? ''],

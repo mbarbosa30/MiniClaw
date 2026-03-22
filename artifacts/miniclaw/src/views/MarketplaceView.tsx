@@ -129,6 +129,11 @@ function ServiceCard({ service, onTap }: { service: MarketplaceService; onTap: (
             {service.category}
           </span>
         )}
+        {(service.tags ?? []).slice(0, 3).map(tag => (
+          <span key={tag} style={{ ...MONO, fontSize: 8, color: t.faint, background: t.divider, borderRadius: 4, padding: '2px 6px', letterSpacing: '0.04em' }}>
+            {tag}
+          </span>
+        ))}
         {service.estimatedDeliveryTime && (
           <span style={{ ...MONO, fontSize: 8, color: t.faint, letterSpacing: '0.04em' }}>
             {service.estimatedDeliveryTime}
@@ -406,6 +411,72 @@ function RatingSheet({
   );
 }
 
+// ── Order status timeline ──────────────────────────────────────────────────────
+
+const TIMELINE_STEPS: { key: string; label: string }[] = [
+  { key: 'pending',     label: 'Placed' },
+  { key: 'accepted',   label: 'Accepted' },
+  { key: 'in-progress', label: 'Working' },
+  { key: 'delivered',  label: 'Delivered' },
+  { key: 'confirmed',  label: 'Confirmed' },
+  { key: 'rated',      label: 'Rated' },
+];
+
+const TIMELINE_ORDER = ['pending', 'accepted', 'in-progress', 'delivered', 'confirmed', 'rated'];
+
+function OrderTimeline({ status }: { status: MarketplaceOrderStatus }) {
+  const t = useTheme();
+  const rejected = status === 'rejected';
+  const activeIdx = TIMELINE_ORDER.indexOf(status);
+
+  if (rejected) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 12 }}>
+        <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#ef4444', flexShrink: 0 }} />
+        <span style={{ ...MONO, fontSize: 8, color: '#ef4444', letterSpacing: '0.05em' }}>Rejected</span>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', marginBottom: 14, gap: 0, overflowX: 'auto' }}>
+      {TIMELINE_STEPS.map((step, idx) => {
+        const done = idx <= activeIdx;
+        const active = idx === activeIdx;
+        const isLast = idx === TIMELINE_STEPS.length - 1;
+        return (
+          <div key={step.key} style={{ display: 'flex', alignItems: 'center', flex: isLast ? 'none' : 1, minWidth: 0 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0 }}>
+              <div style={{
+                width: active ? 9 : 6,
+                height: active ? 9 : 6,
+                borderRadius: '50%',
+                background: done ? (active ? t.text : '#22c55e') : t.divider,
+                border: active ? `2px solid ${t.text}` : 'none',
+                transition: 'all 0.2s',
+                flexShrink: 0,
+              }} />
+              <span style={{
+                ...MONO, fontSize: 7, color: done ? (active ? t.text : t.label) : t.divider,
+                letterSpacing: '0.04em', marginTop: 3, whiteSpace: 'nowrap',
+              }}>
+                {step.label}
+              </span>
+            </div>
+            {!isLast && (
+              <div style={{
+                flex: 1, height: 1,
+                background: idx < activeIdx ? '#22c55e' : t.divider,
+                margin: '0 3px', marginBottom: 14, transition: 'background 0.2s',
+              }} />
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 // ── Order card ────────────────────────────────────────────────────────────────
 
 function OrderCard({
@@ -424,6 +495,9 @@ function OrderCard({
     if (isPending) return;
     doAction({ orderId: order.id, action: a });
   }
+
+  const completedStatuses = ['delivered', 'confirmed', 'rated'];
+  const canRate = !order.rating && completedStatuses.includes(order.status);
 
   return (
     <>
@@ -454,6 +528,8 @@ function OrderCard({
           </div>
         </div>
 
+        <OrderTimeline status={order.status} />
+
         {order.input && (
           <p style={{ fontSize: 11, fontWeight: 300, color: t.label, lineHeight: 1.5, marginBottom: 10,
             display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
@@ -461,7 +537,7 @@ function OrderCard({
           </p>
         )}
 
-        {order.output && (order.status === 'delivered' || order.status === 'confirmed' || order.status === 'rated') && (
+        {order.output && completedStatuses.includes(order.status) && (
           <div style={{ background: t.bg, borderRadius: 8, padding: '10px 12px', marginBottom: 10 }}>
             <p style={{ ...MONO, fontSize: 8, color: t.faint, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Delivery</p>
             <p style={{ fontSize: 11, fontWeight: 300, color: t.label, lineHeight: 1.55 }}>{order.output}</p>
@@ -474,7 +550,7 @@ function OrderCard({
           </span>
         )}
 
-        {/* Action buttons */}
+        {/* Action buttons — incoming */}
         {direction === 'incoming' && order.status === 'pending' && (
           <div style={{ display: 'flex', gap: 8 }}>
             <button onClick={() => action('accept')} disabled={isPending} style={btnStyle(t.text, t.bg, isPending)}>
@@ -492,18 +568,28 @@ function OrderCard({
           </button>
         )}
 
+        {/* Rate buyer — incoming completed */}
+        {direction === 'incoming' && canRate && (
+          <button onClick={() => setRatingOpen(true)} style={btnStyle(t.surface, t.label, false)}>
+            Rate buyer
+          </button>
+        )}
+
+        {/* Action buttons — outgoing */}
         {direction === 'outgoing' && order.status === 'delivered' && (
           <div style={{ display: 'flex', gap: 8 }}>
             <button onClick={() => action('confirm')} disabled={isPending} style={btnStyle(t.text, t.bg, isPending)}>
               {isPending ? '…' : 'Confirm'}
             </button>
-            <button onClick={() => setRatingOpen(true)} style={btnStyle(t.surface, t.label, false)}>
-              Rate
-            </button>
+            {canRate && (
+              <button onClick={() => setRatingOpen(true)} style={btnStyle(t.surface, t.label, false)}>
+                Rate
+              </button>
+            )}
           </div>
         )}
 
-        {direction === 'outgoing' && order.status === 'confirmed' && !order.rating && (
+        {direction === 'outgoing' && order.status !== 'delivered' && canRate && (
           <button onClick={() => setRatingOpen(true)} style={btnStyle(t.surface, t.label, false)}>
             Rate service
           </button>
