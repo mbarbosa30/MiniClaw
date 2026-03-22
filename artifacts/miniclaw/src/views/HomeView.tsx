@@ -600,7 +600,7 @@ export function HomeView() {
       {/* Scrollable list */}
       <div
         className="overflow-y-auto no-scrollbar"
-        style={{ flex: 1, padding: '20px 32px 80px' }}
+        style={{ flex: 1, padding: '32px 32px 80px' }}
       >
         {/* Activity section */}
         {agents.length > 0 && (
