@@ -1,0 +1,12 @@
+{
+  "name": "MiniClaw",
+  "short_name": "MiniClaw",
+  "description": "AI for everyone. Not powerful. Connected.",
+  "start_url": "/ing/",
+  "display": "browser",
+  "theme_color": "#FF3C00",
+  "background_color": "#ffffff",
+  "icons": [
+    { "src": "/ing/apple-touch-icon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}
