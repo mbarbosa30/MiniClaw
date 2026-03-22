@@ -671,12 +671,11 @@ function btnStyle(bg: string, color: string, disabled: boolean): React.CSSProper
 
 // ── Browse tab ────────────────────────────────────────────────────────────────
 
-function BrowseTab() {
+function BrowseTab({ onSelectService }: { onSelectService: (s: MarketplaceService) => void }) {
   const t = useTheme();
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState<string>('all');
-  const [selectedService, setSelectedService] = useState<MarketplaceService | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   function handleSearch(v: string) {
@@ -775,16 +774,10 @@ function BrowseTab() {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {visible.map(s => (
-            <ServiceCard key={s.id} service={s} onTap={() => setSelectedService(s)} />
+            <ServiceCard key={s.id} service={s} onTap={() => onSelectService(s)} />
           ))}
         </div>
       )}
-
-      <AnimatePresence>
-        {selectedService && (
-          <ServiceDetailSheet service={selectedService} onClose={() => setSelectedService(null)} />
-        )}
-      </AnimatePresence>
     </div>
   );
 }
@@ -857,6 +850,7 @@ type MarketplaceTab = 'browse' | 'orders';
 export function MarketplaceView() {
   const t = useTheme();
   const [tab, setTab] = useState<MarketplaceTab>('browse');
+  const [selectedService, setSelectedService] = useState<MarketplaceService | null>(null);
 
   const tabBtn = (id: MarketplaceTab, label: string): React.CSSProperties => ({
     background: tab === id ? t.text : 'none',
@@ -867,8 +861,8 @@ export function MarketplaceView() {
   });
 
   return (
-    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: t.bg, transition: 'background 0.3s ease', minHeight: 0 }}>
-      <div className="flex-1 overflow-y-auto no-scrollbar" style={{ padding: '8px 24px 40px' }}>
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: t.bg, transition: 'background 0.3s ease', minHeight: 0, position: 'relative' }}>
+      <div className="flex-1 overflow-y-auto no-scrollbar" style={{ padding: '8px 24px 40px', overflowX: 'hidden' }}>
         <p style={{ fontSize: 22, fontWeight: 200, letterSpacing: '-0.03em', color: t.text, lineHeight: 1, paddingTop: 20, marginBottom: 20 }}>
           Marketplace
         </p>
@@ -887,10 +881,16 @@ export function MarketplaceView() {
             exit={{ opacity: 0, y: -4 }}
             transition={{ duration: 0.18 }}
           >
-            {tab === 'browse' ? <BrowseTab /> : <OrdersTab />}
+            {tab === 'browse' ? <BrowseTab onSelectService={setSelectedService} /> : <OrdersTab />}
           </motion.div>
         </AnimatePresence>
       </div>
+
+      <AnimatePresence>
+        {selectedService && (
+          <ServiceDetailSheet service={selectedService} onClose={() => setSelectedService(null)} />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
