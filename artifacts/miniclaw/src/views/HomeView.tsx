@@ -17,6 +17,8 @@ const MONO: React.CSSProperties = {
   letterSpacing: '0.04em',
 };
 
+const MAX_AGENTS = 5;
+
 // --- Cached agents from localStorage ---
 const CACHE_KEY = 'miniclaw_agents_cache';
 
@@ -457,6 +459,7 @@ export function HomeView() {
   const { data, isLoading, isError } = useAgents();
 
   const [cachedAgents, setCachedAgentsState] = useState<Agent[]>(() => getCachedAgents() ?? []);
+  const [atLimit, setAtLimit] = useState(false);
 
   const apiAgents = data?.agents ?? [];
 
@@ -630,7 +633,14 @@ export function HomeView() {
             animate={{ opacity: 1 }}
             transition={{ delay: Math.max(agents.length, 1) * 0.07 + 0.05, duration: 0.35 }}
             className="w-full text-left"
-            onClick={() => push('create')}
+            onClick={() => {
+              if (agents.length >= MAX_AGENTS) {
+                setAtLimit(true);
+                return;
+              }
+              setAtLimit(false);
+              push('create');
+            }}
             style={{ paddingTop: 20, paddingBottom: 20, display: 'flex', alignItems: 'center', gap: 10 }}
           >
             <span style={{
@@ -654,6 +664,11 @@ export function HomeView() {
               New agent
             </span>
           </motion.button>
+          {atLimit && (
+            <p style={{ ...MONO, fontSize: 11, color: t.faint, letterSpacing: '-0.01em', marginTop: 0, paddingBottom: 16 }}>
+              You've reached the {MAX_AGENTS}-agent limit.
+            </p>
+          )}
         </div>
       </div>
     </div>
