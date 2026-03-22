@@ -505,6 +505,7 @@ export function AgentDetailView() {
           briefContext={briefContext}
           quota={quota}
           onQuotaUpdate={setQuota}
+          viewportH={viewportH}
         />
       </div>
     </div>
@@ -548,6 +549,7 @@ function ChatTab({
   briefContext,
   quota,
   onQuotaUpdate,
+  viewportH,
 }: {
   agent: Agent;
   agentName: string;
@@ -555,6 +557,7 @@ function ChatTab({
   briefContext?: string;
   quota: QuotaState | null;
   onQuotaUpdate: (q: QuotaState | null) => void;
+  viewportH: number;
 }) {
   const t = useTheme();
   const { data: conversations, refetch: refetchConversations } = useConversations(agent.id);
@@ -578,6 +581,7 @@ function ChatTab({
   const [chips, setChips] = useState<string[]>(agent.suggestedChips ?? []);
   const [compactBanner, setCompactBanner] = useState<{ tokensSaved: number; error?: boolean } | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const compact = useCompactConversation();
 
   useEffect(() => {
@@ -597,6 +601,10 @@ function ChatTab({
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  useEffect(() => {
+    endRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [viewportH]);
 
   useEffect(() => {
     if (newChatTrigger === 0) return;
@@ -701,10 +709,20 @@ function ChatTab({
     ]);
   };
 
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setInput(e.target.value);
+    const ta = e.target;
+    ta.style.height = 'auto';
+    ta.style.height = Math.min(ta.scrollHeight, 120) + 'px';
+  }, []);
+
   const handleSend = useCallback(async (override?: string) => {
     const userMsg = (override ?? input).trim();
     if (!userMsg || isStreaming) return;
-    if (!override) setInput('');
+    if (!override) {
+      setInput('');
+      if (textareaRef.current) textareaRef.current.style.height = 'auto';
+    }
     setHistoryLoaded(true); // lock history gate so in-flight messages are never overwritten
     const now = Date.now();
     setMessages(prev => [
@@ -1131,14 +1149,15 @@ function ChatTab({
       <div style={{ flexShrink: 0, borderTop: `1px solid ${t.divider}`, padding: '12px 16px 20px', boxSizing: 'border-box', width: '100%' }}>
         <div style={{ display: 'flex', alignItems: 'flex-end', gap: 16 }}>
           <textarea
+            ref={textareaRef}
             value={input}
-            onChange={e => setInput(e.target.value)}
+            onChange={handleInputChange}
             onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
+            onFocus={() => endRef.current?.scrollIntoView({ behavior: 'smooth' })}
             placeholder={`Message ${agentName}…`}
             className="no-scrollbar"
             style={{
               flex: 1,
-              maxHeight: 120,
               background: 'transparent',
               resize: 'none',
               outline: 'none',
