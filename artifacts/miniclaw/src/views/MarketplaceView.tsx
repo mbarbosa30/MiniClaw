@@ -28,7 +28,9 @@ function fmtPrice(service: MarketplaceService): string {
 
 function agentInitial(name?: string): string {
   if (!name) return '?';
-  return name.trim()[0].toUpperCase();
+  const trimmed = name.trim();
+  if (!trimmed) return '?';
+  return trimmed[0].toUpperCase();
 }
 
 function fmtRelTime(dateStr?: string): string {
