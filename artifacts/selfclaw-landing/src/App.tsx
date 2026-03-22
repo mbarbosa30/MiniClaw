@@ -618,7 +618,7 @@ function PersonaStrip() {
             borderRadius: 100,
             padding: '8px 14px',
           }}>
-            <span style={{ fontSize: 16 }}>{p.emoji}</span>
+            <span style={{ fontSize: 16, lineHeight: 1, display: 'flex', alignItems: 'center' }}>{p.emoji}</span>
             <span style={{
               fontSize: 12,
               fontWeight: 400,
