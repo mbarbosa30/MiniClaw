@@ -303,7 +303,7 @@ function AgentRow({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ delay: index * 0.07, duration: 0.35 }}
-      style={{ paddingTop: 20, paddingBottom: 20 }}
+      style={{ paddingTop: 20, paddingBottom: 0 }}
     >
       {/* Row 1: name [bare-icon] | [StateIndicator] [options] */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
