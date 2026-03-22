@@ -537,20 +537,31 @@ export interface CommerceRequestResult {
 
 export interface MarketplaceService {
   id: string;
-  title: string;
+  humanId?: string;
+  name: string;
   description?: string;
   category?: string;
   tags?: string[];
-  providerName?: string;
-  providerEmoji?: string;
-  providerAgentId?: string | number;
-  priceCelo?: number;
-  priceUsd?: number;
-  estimatedDeliveryTime?: string;
-  inputRequirements?: string;
-  rating?: number;
-  reviewCount?: number;
+  agentName?: string;
+  agentPublicKey?: string;
+  providerHumanId?: string;
+  price?: string;
+  priceToken?: string;
+  isFree?: boolean;
+  estimatedDelivery?: string;
+  inputSchema?: Record<string, string>;
+  outputSchema?: Record<string, string>;
+  averageRating?: number | null;
+  ratingCount?: number;
+  ratingSum?: number;
+  purchaseCount?: number;
+  active?: boolean;
+  providerType?: string;
+  serviceType?: string;
+  deliveryMethod?: string;
+  autoAccept?: boolean;
   createdAt?: string;
+  updatedAt?: string;
 }
 
 export type MarketplaceOrderStatus =

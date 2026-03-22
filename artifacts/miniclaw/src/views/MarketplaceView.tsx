@@ -20,9 +20,15 @@ const MONO: React.CSSProperties = {
 };
 
 function fmtPrice(service: MarketplaceService): string {
-  if (service.priceCelo != null) return `${service.priceCelo} CELO`;
-  if (service.priceUsd != null) return `$${service.priceUsd.toFixed(2)}`;
+  if (service.isFree) return 'Free';
+  if (service.price && service.priceToken) return `${service.price} ${service.priceToken}`;
+  if (service.price) return service.price;
   return 'Free';
+}
+
+function agentInitial(name?: string): string {
+  if (!name) return '?';
+  return name.trim()[0].toUpperCase();
 }
 
 function fmtRelTime(dateStr?: string): string {
@@ -99,11 +105,17 @@ function ServiceCard({ service, onTap }: { service: MarketplaceService; onTap: (
     >
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
-          {service.providerEmoji && (
-            <span style={{ fontSize: 18, lineHeight: 1, flexShrink: 0 }}>{service.providerEmoji}</span>
+          {service.agentName && (
+            <span style={{
+              width: 22, height: 22, borderRadius: '50%', background: t.divider,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 10, fontWeight: 500, color: t.label, flexShrink: 0,
+            }}>
+              {agentInitial(service.agentName)}
+            </span>
           )}
           <span style={{ fontSize: 13, fontWeight: 400, color: t.text, letterSpacing: '-0.01em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {service.title}
+            {service.name}
           </span>
         </div>
         <span style={{ ...MONO, fontSize: 11, color: t.text, fontWeight: 400, flexShrink: 0 }}>
@@ -111,9 +123,9 @@ function ServiceCard({ service, onTap }: { service: MarketplaceService; onTap: (
         </span>
       </div>
 
-      {service.providerName && (
+      {service.agentName && (
         <span style={{ ...MONO, fontSize: 9, color: t.faint, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-          by {service.providerName}
+          by {service.agentName}
         </span>
       )}
 
@@ -134,15 +146,15 @@ function ServiceCard({ service, onTap }: { service: MarketplaceService; onTap: (
             {tag}
           </span>
         ))}
-        {service.estimatedDeliveryTime && (
+        {service.estimatedDelivery && (
           <span style={{ ...MONO, fontSize: 8, color: t.faint, letterSpacing: '0.04em' }}>
-            {service.estimatedDeliveryTime}
+            {service.estimatedDelivery}
           </span>
         )}
-        {service.rating != null && (
+        {service.averageRating != null && (
           <span style={{ ...MONO, fontSize: 8, color: t.faint, letterSpacing: '0.04em', display: 'flex', alignItems: 'center', gap: 2 }}>
-            ★ {service.rating.toFixed(1)}
-            {service.reviewCount != null && <span style={{ color: t.faint }}> ({service.reviewCount})</span>}
+            ★ {(service.averageRating as number).toFixed(1)}
+            {service.ratingCount != null && <span style={{ color: t.faint }}> ({service.ratingCount})</span>}
           </span>
         )}
       </div>
@@ -209,11 +221,11 @@ function ServiceDetailSheet({
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
           <div style={{ flex: 1, minWidth: 0 }}>
             <p style={{ fontSize: 16, fontWeight: 300, color: t.text, letterSpacing: '-0.015em', lineHeight: 1.3, marginBottom: 4 }}>
-              {service.title}
+              {service.name}
             </p>
-            {service.providerName && (
+            {service.agentName && (
               <span style={{ ...MONO, fontSize: 9, color: t.faint, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                by {service.providerEmoji ? `${service.providerEmoji} ` : ''}{service.providerName}
+                by {service.agentName}
               </span>
             )}
           </div>
@@ -224,8 +236,8 @@ function ServiceDetailSheet({
 
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
           <span style={{ ...MONO, fontSize: 13, color: t.text, fontWeight: 400 }}>{fmtPrice(service)}</span>
-          {service.estimatedDeliveryTime && (
-            <span style={{ ...MONO, fontSize: 10, color: t.faint, alignSelf: 'center' }}>· {service.estimatedDeliveryTime}</span>
+          {service.estimatedDelivery && (
+            <span style={{ ...MONO, fontSize: 10, color: t.faint, alignSelf: 'center' }}>· {service.estimatedDelivery}</span>
           )}
         </div>
 
@@ -257,10 +269,10 @@ function ServiceDetailSheet({
           </motion.div>
         ) : (
           <>
-            {service.inputRequirements && (
+            {service.inputSchema && Object.keys(service.inputSchema).length > 0 && (
               <div>
                 <label style={{ ...MONO, fontSize: 9, color: t.faint, textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 8 }}>
-                  {service.inputRequirements}
+                  {Object.keys(service.inputSchema).join(', ')}
                 </label>
                 <textarea
                   value={input}
