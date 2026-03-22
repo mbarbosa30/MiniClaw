@@ -572,20 +572,45 @@ export function HomeView() {
               transition: 'opacity 0.4s ease',
             }} />
           </p>
-          <button
-            onClick={() => push('settings')}
-            style={{
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              padding: 6,
-              display: 'flex',
-              alignItems: 'center',
-              color: t.faint,
-            }}
-          >
-            <Settings size={16} strokeWidth={1.5} />
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            {agents.length >= 4 && (
+              <button
+                onClick={() => {
+                  if (agents.length >= MAX_AGENTS) {
+                    setAtLimit(true);
+                    return;
+                  }
+                  setAtLimit(false);
+                  push('create');
+                }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: 6,
+                  display: 'flex',
+                  alignItems: 'center',
+                  color: t.faint,
+                }}
+              >
+                <Plus size={16} strokeWidth={1.5} />
+              </button>
+            )}
+            <button
+              onClick={() => push('settings')}
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                padding: 6,
+                display: 'flex',
+                alignItems: 'center',
+                color: t.faint,
+              }}
+            >
+              <Settings size={16} strokeWidth={1.5} />
+            </button>
+          </div>
         </div>
       </div>
       {/* Quota gradient separator — pinned, always visible, full-bleed */}
@@ -637,42 +662,44 @@ export function HomeView() {
             </p>
           )}
 
-          <motion.button
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: Math.max(agents.length, 1) * 0.07 + 0.05, duration: 0.35 }}
-            className="w-full text-left"
-            onClick={() => {
-              if (agents.length >= MAX_AGENTS) {
-                setAtLimit(true);
-                return;
-              }
-              setAtLimit(false);
-              push('create');
-            }}
-            style={{ paddingTop: 20, paddingBottom: 20, display: 'flex', alignItems: 'center', gap: 10 }}
-          >
-            <span style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: 16,
-              height: 16,
-              border: `1px solid ${t.divider}`,
-              borderRadius: '50%',
-            }}>
-              <Plus size={9} color={t.faint} strokeWidth={2} />
-            </span>
-            <span style={{
-              fontSize: 27,
-              fontWeight: 300,
-              letterSpacing: '-0.025em',
-              color: t.faint,
-              lineHeight: 1,
-            }}>
-              New agent
-            </span>
-          </motion.button>
+          {agents.length <= 3 && (
+            <motion.button
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: Math.max(agents.length, 1) * 0.07 + 0.05, duration: 0.35 }}
+              className="w-full text-left"
+              onClick={() => {
+                if (agents.length >= MAX_AGENTS) {
+                  setAtLimit(true);
+                  return;
+                }
+                setAtLimit(false);
+                push('create');
+              }}
+              style={{ paddingTop: 20, paddingBottom: 20, display: 'flex', alignItems: 'center', gap: 10 }}
+            >
+              <span style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: 16,
+                height: 16,
+                border: `1px solid ${t.divider}`,
+                borderRadius: '50%',
+              }}>
+                <Plus size={9} color={t.faint} strokeWidth={2} />
+              </span>
+              <span style={{
+                fontSize: 27,
+                fontWeight: 300,
+                letterSpacing: '-0.025em',
+                color: t.faint,
+                lineHeight: 1,
+              }}>
+                New agent
+              </span>
+            </motion.button>
+          )}
           {atLimit && (
             <p style={{ ...MONO, fontSize: 11, color: t.faint, letterSpacing: '-0.01em', marginTop: 0, paddingBottom: 16 }}>
               You've reached the {MAX_AGENTS}-agent limit.
