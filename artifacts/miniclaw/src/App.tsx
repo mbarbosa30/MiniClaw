@@ -39,7 +39,7 @@ function eventToast(ev: AgentEvent): string | null {
   const n = ev.agentName ?? 'Agent';
   const d = ev.data ?? {};
   switch (ev.event) {
-    case 'task_completed':         return `${n} — ${(d.skill as string) ?? 'task'} done`;
+    case 'task_completed':         return null; // shown as dot badge on Activity icon, not a toast
     case 'task_failed':            return `${n} — task failed`;
     case 'reminder_fired':         return `${n} — ${(d.description as string) ?? 'reminder'}`;
     case 'proactive_message':      return `${n} has a message`;
@@ -64,6 +64,7 @@ function eventToast(ev: AgentEvent): string | null {
 function useEventNotifications() {
   const qc = useQueryClient();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const setHasUnseenCompletions = useAppStore((s) => s.setHasUnseenCompletions);
   const [since, setSince] = useState(() => new Date().toISOString());
   const prevAuthenticated = useRef(isAuthenticated);
 
@@ -93,7 +94,12 @@ function useEventNotifications() {
         qc.invalidateQueries({ queryKey: ['tasks', ev.agentId] });
         qc.invalidateQueries({ queryKey: ['tasks', ev.agentId, 'pending'] });
         qc.invalidateQueries({ queryKey: ['tasks', ev.agentId, 'all'] });
+        qc.invalidateQueries({ queryKey: ['tasks', ev.agentId, 'completed'] });
         qc.invalidateQueries({ queryKey: ['task-summary', ev.agentId] });
+      }
+      // Show dot badge on Activity icon for task completions
+      if (ev.event === 'task_completed') {
+        setHasUnseenCompletions(true);
       }
       // Marketplace order events — target actual query keys used in use-agents.ts
       if (['order_in_progress', 'order_delivered', 'order_completed', 'order_failed'].includes(ev.event)) {

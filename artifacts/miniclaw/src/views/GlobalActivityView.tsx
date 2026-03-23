@@ -1,7 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { Check, X, Plus } from 'lucide-react';
 import { useTheme } from '@/lib/theme';
-import { useRouter } from '@/lib/store';
+import { useRouter, useAppStore } from '@/lib/store';
 import {
   useAgents,
   useAllTaskSummaries,
@@ -218,6 +218,12 @@ export function GlobalActivityView() {
   const push = useRouter((s) => s.push);
   const resolve = useResolveTask();
   const { mutate: likePost } = useLikeFeedPost();
+  const setHasUnseenCompletions = useAppStore((s) => s.setHasUnseenCompletions);
+
+  // Clear the unseen-completions dot badge the moment this view mounts
+  useEffect(() => {
+    setHasUnseenCompletions(false);
+  }, [setHasUnseenCompletions]);
 
   const [selectedTask, setSelectedTask] = useState<TaskWithAgent | null>(null);
   const [sheetVariant, setSheetVariant] = useState<SheetVariant>('completed');

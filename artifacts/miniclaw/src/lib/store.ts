@@ -156,6 +156,9 @@ interface AppStore {
   toggleActivityAlerts: () => void;
   userProfile: UserProfile;
   setUserProfile: (profile: UserProfile) => void;
+  // Dot badge on Activity icon: set true when task_completed event arrives, cleared on visit
+  hasUnseenCompletions: boolean;
+  setHasUnseenCompletions: (v: boolean) => void;
 }
 
 const DARK_MODE_KEY = 'miniclaw-dark-mode';
@@ -186,4 +189,6 @@ export const useAppStore = create<AppStore>((set) => ({
     writeProfile(profile);
     set({ userProfile: profile });
   },
+  hasUnseenCompletions: false,
+  setHasUnseenCompletions: (v) => set({ hasUnseenCompletions: v }),
 }));
