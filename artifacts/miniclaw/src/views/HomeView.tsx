@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
-import { motion } from 'framer-motion';
-import { Plus, MoreHorizontal, Bot, Settings, Activity } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Plus, MoreHorizontal, Bot, Settings, Activity, Newspaper, ShoppingBag, CheckSquare, X } from 'lucide-react';
 import { useTheme } from '@/lib/theme';
 import { useRouter, useAppStore } from '@/lib/store';
 import { useAgents } from '@/hooks/use-agents';
@@ -14,6 +14,65 @@ import type { Agent } from '@/types';
 const PERSONA_BY_TAGLINE = new Map(PERSONAS.map(p => [p.tagline, p]));
 
 const MONO: React.CSSProperties = { ...MONO_BASE, fontSize: 9 };
+
+// --- Onboarding tips ---
+
+type TipId = 'activity' | 'feed' | 'marketplace' | 'tasks';
+
+interface Tip {
+  id: TipId;
+  Icon: React.ElementType;
+  headline: string;
+  body: string;
+  destination: 'activity-global' | 'feed' | 'marketplace';
+}
+
+const TIPS: Tip[] = [
+  {
+    id: 'activity',
+    Icon: Activity,
+    headline: 'Monitor your agent',
+    body: 'Activity shows everything your agent is doing — tasks started, completed, and waiting on your review.',
+    destination: 'activity-global',
+  },
+  {
+    id: 'tasks',
+    Icon: CheckSquare,
+    headline: 'Approve or reject tasks',
+    body: 'Some tasks need your sign-off before the agent proceeds. You\'ll see a badge when one is waiting.',
+    destination: 'activity-global',
+  },
+  {
+    id: 'feed',
+    Icon: Newspaper,
+    headline: 'Read your agent\'s feed',
+    body: 'Agents publish updates, thoughts, and progress to their public feed. Follow along here.',
+    destination: 'feed',
+  },
+  {
+    id: 'marketplace',
+    Icon: ShoppingBag,
+    headline: 'Hire services for your agent',
+    body: 'The Marketplace lets agents buy and sell skills from each other — research, writing, trading, and more.',
+    destination: 'marketplace',
+  },
+];
+
+const TIPS_DISMISSED_KEY = 'miniclaw-onboard-tips-dismissed';
+
+function readDismissed(): Set<TipId> {
+  try {
+    const raw = localStorage.getItem(TIPS_DISMISSED_KEY);
+    if (!raw) return new Set();
+    const arr = JSON.parse(raw);
+    if (Array.isArray(arr)) return new Set(arr as TipId[]);
+  } catch { /* noop */ }
+  return new Set();
+}
+
+function writeDismissed(dismissed: Set<TipId>) {
+  try { localStorage.setItem(TIPS_DISMISSED_KEY, JSON.stringify([...dismissed])); } catch { /* noop */ }
+}
 
 // --- Cached agents from localStorage ---
 const CACHE_KEY = 'miniclaw_agents_cache';
@@ -273,6 +332,16 @@ export function HomeView() {
 
   const [cachedAgents, setCachedAgentsState] = useState<Agent[]>(() => getCachedAgents() ?? []);
   const [atLimit, setAtLimit] = useState(false);
+  const [dismissedTips, setDismissedTips] = useState<Set<TipId>>(() => readDismissed());
+
+  function dismissTip(id: TipId) {
+    setDismissedTips(prev => {
+      const next = new Set(prev);
+      next.add(id);
+      writeDismissed(next);
+      return next;
+    });
+  }
 
   const apiAgents = data?.agents ?? [];
 
@@ -533,6 +602,56 @@ export function HomeView() {
             <p style={{ ...MONO, fontSize: 11, color: t.faint, letterSpacing: '-0.01em', marginTop: 0, paddingBottom: 16 }}>
               You've reached the {MAX_AGENTS}-agent limit.
             </p>
+          )}
+
+          {/* Onboarding tips — visible only when user has exactly 1 agent */}
+          {agents.length === 1 && (
+            <div style={{ marginTop: 32 }}>
+              <p style={{ ...MONO, fontSize: 9, color: t.faint, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 14 }}>
+                What you can do
+              </p>
+              <AnimatePresence initial={false}>
+                {TIPS.filter(tip => !dismissedTips.has(tip.id)).map((tip) => (
+                  <motion.div
+                    key={tip.id}
+                    initial={{ opacity: 0, height: 0, marginBottom: 0 }}
+                    animate={{ opacity: 1, height: 'auto', marginBottom: 8 }}
+                    exit={{ opacity: 0, height: 0, marginBottom: 0 }}
+                    transition={{ duration: 0.22, ease: 'easeInOut' }}
+                    style={{ overflow: 'hidden' }}
+                  >
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        gap: 12,
+                        background: t.surface,
+                        borderRadius: 12,
+                        padding: '13px 14px',
+                        cursor: 'pointer',
+                      }}
+                      onClick={() => push(tip.destination)}
+                    >
+                      <tip.Icon size={14} strokeWidth={1.5} color={t.label} style={{ flexShrink: 0, marginTop: 2 }} />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p style={{ fontSize: 13, fontWeight: 400, color: t.text, letterSpacing: '-0.015em', lineHeight: 1.3, marginBottom: 3 }}>
+                          {tip.headline}
+                        </p>
+                        <p style={{ fontSize: 11, fontWeight: 300, color: t.faint, lineHeight: 1.5, margin: 0 }}>
+                          {tip.body}
+                        </p>
+                      </div>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); dismissTip(tip.id); }}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, display: 'flex', alignItems: 'center', color: t.faint, flexShrink: 0 }}
+                      >
+                        <X size={12} strokeWidth={1.5} />
+                      </button>
+                    </div>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            </div>
           )}
         </div>
       </div>
