@@ -140,12 +140,20 @@ function useVisualViewport() {
   return { h, top };
 }
 
-function MainLayout() {
-  const view = useRouter((s) => s.currentView.name);
+function FullScreenContainer({ children }: { children: React.ReactNode }) {
   const { h, top } = useVisualViewport();
-  useGatewayEndpoints();
   return (
     <div style={{ position: 'fixed', top, left: 0, right: 0, height: h, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      {children}
+    </div>
+  );
+}
+
+function MainLayout() {
+  const view = useRouter((s) => s.currentView.name);
+  useGatewayEndpoints();
+  return (
+    <FullScreenContainer>
       <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
         {view === 'home' && <HomeView />}
         {view === 'overview' && <OverviewView />}
@@ -155,7 +163,7 @@ function MainLayout() {
         {view === 'settings' && <SettingsView />}
       </div>
       <AppNav />
-    </div>
+    </FullScreenContainer>
   );
 }
 
@@ -169,21 +177,23 @@ function ViewManager() {
   if (view === 'connect') return <ConnectView />;
   if (MAIN_VIEWS.has(view)) return <MainLayout />;
 
+  let subView: React.ReactNode;
   switch (view) {
-    case 'create':       return <CreateAgentView />;
-    case 'agent-detail':   return <AgentDetailView />;
-    case 'agent-options':  return <AgentOptionsView />;
-    case 'agent-settings': return <AgentSettingsView />;
-    case 'skills':         return <SkillsView />;
-    case 'knowledge':      return <KnowledgeView />;
-    case 'soul':           return <SoulView />;
-    case 'memories':       return <MemoriesView />;
-    case 'tasks':          return <TasksView />;
-    case 'telegram':       return <TelegramView />;
-    case 'economy':        return <EconomyView />;
-    case 'activity':       return <ActivityView />;
-    default:             return <ConnectView />;
+    case 'create':         subView = <CreateAgentView />; break;
+    case 'agent-detail':   subView = <AgentDetailView />; break;
+    case 'agent-options':  subView = <AgentOptionsView />; break;
+    case 'agent-settings': subView = <AgentSettingsView />; break;
+    case 'skills':         subView = <SkillsView />; break;
+    case 'knowledge':      subView = <KnowledgeView />; break;
+    case 'soul':           subView = <SoulView />; break;
+    case 'memories':       subView = <MemoriesView />; break;
+    case 'tasks':          subView = <TasksView />; break;
+    case 'telegram':       subView = <TelegramView />; break;
+    case 'economy':        subView = <EconomyView />; break;
+    case 'activity':       subView = <ActivityView />; break;
+    default:               subView = <ConnectView />; break;
   }
+  return <FullScreenContainer>{subView}</FullScreenContainer>;
 }
 
 function ThemedApp() {
