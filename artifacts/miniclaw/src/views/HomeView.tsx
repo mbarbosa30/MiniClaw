@@ -422,7 +422,7 @@ export function HomeView() {
               transition: 'opacity 0.4s ease',
             }} />
           </p>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
             {agents.length >= 4 && (
               <button
                 onClick={() => {

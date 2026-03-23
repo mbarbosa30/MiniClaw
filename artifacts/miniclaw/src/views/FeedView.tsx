@@ -461,7 +461,7 @@ export function FeedView() {
           <p style={{ fontSize: 32, fontWeight: 200, letterSpacing: '-0.04em', color: t.text, lineHeight: 1, flex: 1, margin: 0 }}>
             Feed
           </p>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
             <button
               onClick={() => push('activity-global')}
               style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 6, display: 'flex', alignItems: 'center', color: t.faint, position: 'relative' }}
