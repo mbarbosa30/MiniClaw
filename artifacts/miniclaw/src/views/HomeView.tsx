@@ -58,21 +58,6 @@ const TIPS: Tip[] = [
   },
 ];
 
-const TIPS_DISMISSED_KEY = 'miniclaw-onboard-tips-dismissed';
-
-function readDismissed(): Set<TipId> {
-  try {
-    const raw = localStorage.getItem(TIPS_DISMISSED_KEY);
-    if (!raw) return new Set();
-    const arr = JSON.parse(raw);
-    if (Array.isArray(arr)) return new Set(arr as TipId[]);
-  } catch { /* noop */ }
-  return new Set();
-}
-
-function writeDismissed(dismissed: Set<TipId>) {
-  try { localStorage.setItem(TIPS_DISMISSED_KEY, JSON.stringify([...dismissed])); } catch { /* noop */ }
-}
 
 // --- Cached agents from localStorage ---
 const CACHE_KEY = 'miniclaw_agents_cache';
@@ -327,21 +312,11 @@ function SkeletonRow({ index }: { index: number }) {
 export function HomeView() {
   const t = useTheme();
   const push = useRouter((s) => s.push);
-  const { hasSeenOnboard, setHasSeenOnboard, hasUnseenCompletions } = useAppStore();
+  const { hasSeenOnboard, setHasSeenOnboard, hasUnseenCompletions, dismissedTips, dismissTip } = useAppStore();
   const { data, isLoading, isError } = useAgents();
 
   const [cachedAgents, setCachedAgentsState] = useState<Agent[]>(() => getCachedAgents() ?? []);
   const [atLimit, setAtLimit] = useState(false);
-  const [dismissedTips, setDismissedTips] = useState<Set<TipId>>(() => readDismissed());
-
-  function dismissTip(id: TipId) {
-    setDismissedTips(prev => {
-      const next = new Set(prev);
-      next.add(id);
-      writeDismissed(next);
-      return next;
-    });
-  }
 
   const apiAgents = data?.agents ?? [];
 

@@ -206,6 +206,17 @@ function ProfileSection() {
         </div>
 
         <div>
+          <label style={fieldLabelStyle}>Email <span style={{ textTransform: 'none', letterSpacing: 0, fontWeight: 400, opacity: 0.7 }}>(optional)</span></label>
+          <input
+            type="email"
+            value={userProfile.email ?? ''}
+            placeholder="you@example.com"
+            onChange={(e) => handleChange('email', e.target.value)}
+            style={fieldStyle}
+          />
+        </div>
+
+        <div>
           <label style={fieldLabelStyle}>X / Twitter handle <span style={{ textTransform: 'none', letterSpacing: 0, fontWeight: 400, opacity: 0.7 }}>(optional)</span></label>
           <div style={{ position: 'relative' }}>
             <span style={{
@@ -422,8 +433,10 @@ export function SettingsView() {
   const toggleDarkMode = useAppStore((s) => s.toggleDarkMode);
   const activityAlerts = useAppStore((s) => s.activityAlerts);
   const toggleActivityAlerts = useAppStore((s) => s.toggleActivityAlerts);
+  const resetTips = useAppStore((s) => s.resetTips);
   const logout = useLogout();
   const pop = useRouter((s) => s.pop);
+  const push = useRouter((s) => s.push);
 
   return (
     <div
@@ -502,8 +515,15 @@ export function SettingsView() {
         paddingTop: 6,
         paddingBottom: 4,
       }}>
-        Notify when an agent completes a task (Telegram required)
+        Notify when an agent completes a task (email or Telegram)
       </p>
+
+      {/* ── GETTING STARTED ── */}
+      <SectionLabel>Getting started</SectionLabel>
+      <ActionRow
+        label="Show getting started tips"
+        onClick={() => { resetTips(); push('home'); }}
+      />
 
       {/* ── ABOUT ── */}
       <SectionLabel>About</SectionLabel>

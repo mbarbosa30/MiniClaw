@@ -111,6 +111,7 @@ function writeLocalBool(key: string, v: boolean): void {
 
 export interface UserProfile {
   name: string;
+  email: string;
   city: string;
   country: string;
   goal: string;
@@ -124,10 +125,11 @@ const PROFILE_KEY = 'miniclaw-user-profile';
 function readProfile(): UserProfile {
   try {
     const raw = localStorage.getItem(PROFILE_KEY);
-    if (!raw) return { name: '', city: '', country: '', goal: '', xHandle: '', experienceLevel: '', languages: [] };
+    if (!raw) return { name: '', email: '', city: '', country: '', goal: '', xHandle: '', experienceLevel: '', languages: [] };
     const parsed = JSON.parse(raw);
     return {
       name: typeof parsed.name === 'string' ? parsed.name : '',
+      email: typeof parsed.email === 'string' ? parsed.email : '',
       city: typeof parsed.city === 'string' ? parsed.city : '',
       country: typeof parsed.country === 'string' ? parsed.country : '',
       goal: typeof parsed.goal === 'string' ? parsed.goal : '',
@@ -136,7 +138,7 @@ function readProfile(): UserProfile {
       languages: Array.isArray(parsed.languages) ? parsed.languages.filter((l: unknown) => typeof l === 'string') : [],
     };
   } catch {
-    return { name: '', city: '', country: '', goal: '', xHandle: '', experienceLevel: '', languages: [] };
+    return { name: '', email: '', city: '', country: '', goal: '', xHandle: '', experienceLevel: '', languages: [] };
   }
 }
 
@@ -159,6 +161,23 @@ interface AppStore {
   // Dot badge on Activity icon: set true when task_completed event arrives, cleared on visit
   hasUnseenCompletions: boolean;
   setHasUnseenCompletions: (v: boolean) => void;
+  // Onboarding tips dismissed state
+  dismissedTips: Set<string>;
+  dismissTip: (id: string) => void;
+  resetTips: () => void;
+}
+
+const TIPS_DISMISSED_KEY = 'miniclaw-onboard-tips-dismissed';
+function readDismissedTips(): Set<string> {
+  try {
+    const raw = localStorage.getItem(TIPS_DISMISSED_KEY);
+    if (!raw) return new Set();
+    const arr = JSON.parse(raw);
+    return Array.isArray(arr) ? new Set(arr) : new Set();
+  } catch { return new Set(); }
+}
+function writeDismissedTips(s: Set<string>): void {
+  try { localStorage.setItem(TIPS_DISMISSED_KEY, JSON.stringify([...s])); } catch { /* noop */ }
 }
 
 const DARK_MODE_KEY = 'miniclaw-dark-mode';
@@ -191,4 +210,15 @@ export const useAppStore = create<AppStore>((set) => ({
   },
   hasUnseenCompletions: false,
   setHasUnseenCompletions: (v) => set({ hasUnseenCompletions: v }),
+  dismissedTips: readDismissedTips(),
+  dismissTip: (id) => set((s) => {
+    const next = new Set(s.dismissedTips);
+    next.add(id);
+    writeDismissedTips(next);
+    return { dismissedTips: next };
+  }),
+  resetTips: () => {
+    try { localStorage.removeItem(TIPS_DISMISSED_KEY); } catch { /* noop */ }
+    set({ dismissedTips: new Set() });
+  },
 }));
