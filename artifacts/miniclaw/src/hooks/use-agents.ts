@@ -669,6 +669,24 @@ export function useTaskSummary(agentId: string | number | undefined) {
   });
 }
 
+// Parallel completed-task lists for all agents.
+// Used as a fallback when task-summary's recentlyCompleted.items is empty
+// (some backend responses only return count, not items).
+export function useAllCompletedTasks(agentIds: Array<string | number>) {
+  return useQueries({
+    queries: agentIds.map(id => ({
+      queryKey: ['tasks', qid(id), 'completed'],
+      queryFn: async () => {
+        const raw = await apiFetch<AgentTask[] | { tasks: AgentTask[] }>(
+          `/api/selfclaw/v1/hosted-agents/${sid(id)}/tasks?status=completed`
+        );
+        return Array.isArray(raw) ? raw : (raw?.tasks ?? []);
+      },
+      staleTime: 60_000,
+    })),
+  });
+}
+
 // Parallel task summaries for all agents (uses useQueries to avoid hook-in-loop)
 export function useAllTaskSummaries(agentIds: Array<string | number>) {
   return useQueries({

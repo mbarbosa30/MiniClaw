@@ -5,6 +5,7 @@ import { useRouter, useAppStore } from '@/lib/store';
 import {
   useAgents,
   useAllTaskSummaries,
+  useAllCompletedTasks,
   useResolveTask,
   useFeed,
   useLikeFeedPost,
@@ -231,9 +232,11 @@ export function GlobalActivityView() {
   const { data: agentData, isLoading: agentsLoading } = useAgents();
   const agents = agentData?.agents ?? [];
 
-  const summaries = useAllTaskSummaries(
-    agentsLoading ? [] : agents.map((a) => a.id),
-  );
+  const agentIds = agentsLoading ? [] : agents.map((a) => a.id);
+  const summaries = useAllTaskSummaries(agentIds);
+  // Fallback: fetch completed tasks per-agent when recentlyCompleted.items is empty
+  // (some backend responses only return count, not items).
+  const completedFallbacks = useAllCompletedTasks(agentIds);
 
   const { data: feedPosts = [], isLoading: feedLoading } = useFeed();
 
@@ -267,7 +270,20 @@ export function GlobalActivityView() {
     (result.data.pending?.items ?? []).forEach((t) => pending.push(attach(t)));
     (result.data.running?.items ?? []).forEach((t) => running.push(attach(t)));
     (result.data.scheduled?.items ?? []).forEach((t) => running.push(attach(t)));
-    (result.data.recentlyCompleted?.items ?? [])
+
+    // Use recentlyCompleted.items from the summary if populated.
+    // Fall back to useAllCompletedTasks data when items is empty but count > 0 —
+    // some backend responses only return the count field, not the items array.
+    const summaryItems = result.data.recentlyCompleted?.items ?? [];
+    const summaryCount = result.data.recentlyCompleted?.count ?? 0;
+    const itemSource =
+      summaryItems.length > 0
+        ? summaryItems
+        : summaryCount > 0
+        ? (completedFallbacks[i]?.data ?? [])
+        : [];
+
+    itemSource
       .filter((t) => !t.createdAt || new Date(t.createdAt).getTime() >= cutoff48h)
       .slice(0, 5)
       .forEach((t) => completed.push(attach(t)));

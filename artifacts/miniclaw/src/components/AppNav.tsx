@@ -1,6 +1,6 @@
 import { List, BarChart2, Newspaper, ShoppingBag } from 'lucide-react';
 import { useTheme } from '@/lib/theme';
-import { useRouter, type ViewName } from '@/lib/store';
+import { useRouter, useAppStore, type ViewName } from '@/lib/store';
 
 type NavTab = 'home' | 'overview' | 'feed' | 'marketplace';
 
@@ -15,6 +15,7 @@ export function AppNav() {
   const t = useTheme();
   const push = useRouter((s) => s.push);
   const currentView = useRouter((s) => s.currentView.name) as ViewName;
+  const hasUnseenCompletions = useAppStore((s) => s.hasUnseenCompletions);
 
   const activeTab: NavTab | null = TABS.some(tab => tab.id === currentView)
     ? (currentView as NavTab)
@@ -45,6 +46,7 @@ export function AppNav() {
             border: 'none',
             cursor: 'pointer',
             padding: '10px 0',
+            position: 'relative',
           }}
         >
           <Icon
@@ -52,6 +54,21 @@ export function AppNav() {
             strokeWidth={activeTab === id ? 2.25 : 1.5}
             color={activeTab === id ? t.text : t.faint}
           />
+          {/* Dot badge on Home tab when there are unseen task completions */}
+          {id === 'home' && hasUnseenCompletions && (
+            <span
+              style={{
+                position: 'absolute',
+                top: 6,
+                right: 'calc(50% - 14px)',
+                width: 5,
+                height: 5,
+                borderRadius: '50%',
+                background: '#f59e0b',
+                display: 'block',
+              }}
+            />
+          )}
         </button>
       ))}
     </div>
