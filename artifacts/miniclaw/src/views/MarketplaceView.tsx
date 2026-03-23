@@ -987,7 +987,7 @@ function BrowseTab({ agentId, onSelectService, savedIds, onToggleSave }: {
           </p>
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
           {visible.map(s => (
             <ServiceCard key={s.id} service={s} onTap={() => onSelectService(s)} savedIds={savedIds} onToggleSave={onToggleSave} />
           ))}
