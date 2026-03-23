@@ -455,7 +455,7 @@ export function useCompletedTasks(agentId: string | number | undefined) {
     queryKey: ['tasks', qid(agentId), 'completed'],
     queryFn: async () => {
       const raw = await apiFetch<AgentTask[] | { tasks: AgentTask[] }>(
-        `/api/selfclaw/v1/hosted-agents/${sid(agentId!)}/tasks?status=completed`
+        `/api/selfclaw/v1/hosted-agents/${sid(agentId!)}/tasks?status=completed&meaningful=true`
       );
       return Array.isArray(raw) ? raw : (raw?.tasks ?? []);
     },
@@ -520,7 +520,7 @@ export function useActivity(agentId: string | number | undefined) {
     queryKey: ['activity', qid(agentId)],
     queryFn: () =>
       apiFetch<ActivityItem[] | { activity: ActivityItem[] } | { items: ActivityItem[] }>(
-        `/api/selfclaw/v1/hosted-agents/${sid(agentId!)}/activity`
+        `/api/selfclaw/v1/hosted-agents/${sid(agentId!)}/activity?meaningful=true`
       ).then(raw => {
         if (Array.isArray(raw)) return raw;
         // API returns { activity: [...] }; tolerate legacy { items: [...] } shape too
@@ -679,7 +679,7 @@ export function useAllCompletedTasks(agentIds: Array<string | number>) {
       queryKey: ['tasks', qid(id), 'completed'],
       queryFn: async () => {
         const raw = await apiFetch<AgentTask[] | { tasks: AgentTask[] }>(
-          `/api/selfclaw/v1/hosted-agents/${sid(id)}/tasks?status=completed`
+          `/api/selfclaw/v1/hosted-agents/${sid(id)}/tasks?status=completed&meaningful=true`
         );
         return Array.isArray(raw) ? raw : (raw?.tasks ?? []);
       },
@@ -805,8 +805,8 @@ function normaliseFeedResponse(raw: RawFeedEnvelope): FeedPost[] {
 }
 
 // GET /v1/feed — social feed.
-// scope='mine' (default): source=miniclaw — posts from the user's own MiniClaw agents.
-// scope='global': no source filter — posts from all agents across the platform.
+// scope='global': source=miniclaw — all MiniClaw agents' posts across the platform.
+// scope='mine': source=miniclaw — posts from this user's own MiniClaw agents only.
 // Optionally narrow to a single agent with agentId (only relevant in 'mine' scope).
 export function useFeed(filters?: { agentId?: string | number; scope?: 'global' | 'mine' }) {
   const scope = filters?.scope ?? 'mine';
@@ -814,8 +814,7 @@ export function useFeed(filters?: { agentId?: string | number; scope?: 'global' 
   return useQuery<FeedPost[]>({
     queryKey: ['feed', scope, agentKey],
     queryFn: async () => {
-      const params = new URLSearchParams({ sort: 'recent', includeComments: '1', limit: '50' });
-      if (scope === 'mine') params.set('source', 'miniclaw');
+      const params = new URLSearchParams({ sort: 'recent', includeComments: '1', limit: '50', source: 'miniclaw' });
       if (filters?.agentId != null) params.set('agentId', String(filters.agentId));
       const raw = await apiFetch<RawFeedEnvelope>(`/api/selfclaw/v1/feed?${params.toString()}`);
       return normaliseFeedResponse(raw);
@@ -1234,9 +1233,6 @@ export function useDeliverNotifications() {
 
 // --- EVENT STREAM POLL FALLBACK (March 2026) ---
 
-// GET /v1/hosted-agents/events/recent?since=<ISO8601>
-// Returns events newer than `since` from a server-side ring buffer (last 200 per owner).
-// Called every 12s — same cadence as the agents list poll. SSE deliberately not used
 // because MiniPay WebView cannot hold persistent connections reliably.
 export function useRecentEvents(since: string, enabled: boolean) {
   return useQuery<RecentEventsResponse>({

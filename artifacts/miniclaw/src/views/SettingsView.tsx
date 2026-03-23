@@ -1,8 +1,9 @@
+import { useEffect } from 'react';
 import { useTheme } from '@/lib/theme';
 import { useAuthStore, useAppStore, useRouter } from '@/lib/store';
 import type { UserProfile } from '@/lib/store';
 import { useLogout } from '@/hooks/use-auth';
-import { useAgents, useTelegramStatus, useUpdateTelegramSettings } from '@/hooks/use-agents';
+import { useAgents, useTelegramStatus, useUpdateTelegramSettings, useUpdateAgentSettings } from '@/hooks/use-agents';
 import { formatAddress } from '@/lib/utils';
 import type { TelegramNotificationLevel } from '@/types';
 
@@ -437,6 +438,29 @@ export function SettingsView() {
   const logout = useLogout();
   const pop = useRouter((s) => s.pop);
   const push = useRouter((s) => s.push);
+  const { data: agentsData } = useAgents();
+  const updateAgentSettings = useUpdateAgentSettings();
+
+  // Sync email + activityAlerts to the backend whenever either changes.
+  // Debounced 1.5s so fast email keystrokes don't spam the API.
+  // Silently skipped if email is empty or no agents are loaded yet.
+  useEffect(() => {
+    const agents = agentsData?.agents ?? [];
+    if (!userProfile.email || agents.length === 0) return;
+    const timer = setTimeout(() => {
+      agents.forEach(agent => {
+        updateAgentSettings.mutate({
+          id: agent.id,
+          data: {
+            emailDigestEnabled: activityAlerts,
+            emailDigestAddress: userProfile.email,
+          },
+        });
+      });
+    }, 1500);
+    return () => clearTimeout(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activityAlerts, userProfile.email]);
 
   return (
     <div

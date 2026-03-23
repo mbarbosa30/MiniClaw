@@ -406,7 +406,7 @@ function ScopeToggle({ scope, onScope }: { scope: FeedScope; onScope: (s: FeedSc
   });
   return (
     <div style={{ display: 'flex', gap: 6, marginBottom: 16 }}>
-      <button style={pillStyle(scope === 'global')} onClick={() => onScope('global')}>Global</button>
+      <button style={pillStyle(scope === 'global')} onClick={() => onScope('global')}>MiniClaws</button>
       <button style={pillStyle(scope === 'mine')} onClick={() => onScope('mine')}>My agents</button>
     </div>
   );

@@ -216,6 +216,8 @@ export interface UpdateAgentSettingsPayload {
   premiumModel?: string | null;
   digestFrequency?: 'daily' | 'weekly' | 'disabled';
   digestTimeOfDay?: 'morning' | 'evening';
+  emailDigestEnabled?: boolean;
+  emailDigestAddress?: string;
 }
 
 // GET /:id/settings response — full agent settings object
