@@ -268,7 +268,7 @@ function SkeletonRow({ index }: { index: number }) {
 export function HomeView() {
   const t = useTheme();
   const push = useRouter((s) => s.push);
-  const { hasSeenOnboard, setHasSeenOnboard, hasUnseenCompletions, setTotalPendingTasks } = useAppStore();
+  const { hasSeenOnboard, setHasSeenOnboard, hasUnseenCompletions } = useAppStore();
   const { data, isLoading, isError } = useAgents();
 
   const [cachedAgents, setCachedAgentsState] = useState<Agent[]>(() => getCachedAgents() ?? []);
@@ -283,16 +283,6 @@ export function HomeView() {
       setCachedAgents(apiAgents);
     }
   }, [apiAgents]);
-
-  // Sync total pending task count to AppStore (for AppNav badge)
-  const totalPending = useMemo(
-    () => apiAgents.reduce((s, a) => s + (a.pendingTaskCount ?? a.stats?.pendingTasksCount ?? 0), 0),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [data],
-  );
-  useEffect(() => {
-    setTotalPendingTasks(totalPending);
-  }, [totalPending, setTotalPendingTasks]);
 
   const agents = apiAgents.length > 0 ? apiAgents : cachedAgents;
   const showSkeleton = isLoading && agents.length === 0;

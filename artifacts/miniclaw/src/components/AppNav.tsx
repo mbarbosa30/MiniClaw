@@ -1,6 +1,7 @@
 import { List, BarChart2, Activity, Newspaper, ShoppingBag } from 'lucide-react';
 import { useTheme } from '@/lib/theme';
 import { useRouter, useAppStore, type ViewName } from '@/lib/store';
+import { useAgents } from '@/hooks/use-agents';
 
 type NavTab = 'home' | 'overview' | 'activity-global' | 'feed' | 'marketplace';
 
@@ -17,7 +18,10 @@ export function AppNav() {
   const push = useRouter((s) => s.push);
   const currentView = useRouter((s) => s.currentView.name) as ViewName;
   const hasUnseenCompletions = useAppStore((s) => s.hasUnseenCompletions);
-  const totalPendingTasks = useAppStore((s) => s.totalPendingTasks);
+  const { data: agentData } = useAgents();
+  const totalPendingTasks = (agentData?.agents ?? []).reduce(
+    (s, a) => s + (a.pendingTaskCount ?? a.stats?.pendingTasksCount ?? 0), 0,
+  );
   const showActivityBadge = hasUnseenCompletions || totalPendingTasks > 0;
 
   const activeTab: NavTab | null = TABS.some(tab => tab.id === currentView)

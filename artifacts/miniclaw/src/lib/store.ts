@@ -159,9 +159,6 @@ interface AppStore {
   // Dot badge on Activity icon: set true when task_completed event arrives, cleared on visit
   hasUnseenCompletions: boolean;
   setHasUnseenCompletions: (v: boolean) => void;
-  // Total pending task count across all agents (from last agents list fetch)
-  totalPendingTasks: number;
-  setTotalPendingTasks: (n: number) => void;
 }
 
 const DARK_MODE_KEY = 'miniclaw-dark-mode';
@@ -194,6 +191,4 @@ export const useAppStore = create<AppStore>((set) => ({
   },
   hasUnseenCompletions: false,
   setHasUnseenCompletions: (v) => set({ hasUnseenCompletions: v }),
-  totalPendingTasks: 0,
-  setTotalPendingTasks: (n) => set({ totalPendingTasks: n }),
 }));
