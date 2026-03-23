@@ -114,7 +114,7 @@ miniclaw/
 ### Setup
 
 ```bash
-git clone https://github.com/YOUR-USERNAME/miniclaw.git
+git clone https://github.com/mbarbosa30/MiniClaw.git
 cd miniclaw
 pnpm install
 ```
@@ -165,24 +165,6 @@ pnpm --filter @workspace/api-spec run codegen
 See [`.github/CONTRIBUTING.md`](.github/CONTRIBUTING.md) for the full guide.
 
 Quick version: fork → branch → `pnpm install` → make your change → `pnpm run typecheck` → open a PR.
-
-## GitHub Repo Setup Checklist
-
-If you're the repo owner, do these once in the GitHub UI to maximize discoverability:
-
-**Repository description** (Settings → General → Description):
-> A $0.001/msg AI agent for MiniPay — connected to 50+ services, no subscription needed.
-
-**Topics** (on the main repo page, click the gear next to "About"):
-```
-ai-agents  minipay  celo  mobile-first  marketplace  web3  react  typescript  drizzle  mpa
-```
-
-**Social preview image** (Settings → General → Social preview → Upload):
-- Use `artifacts/selfclaw-landing/public/opengraph.jpg` (1280×720, already in the repo)
-
-**Website** (on the About panel):
-- `https://miniclaw.work/ing/`
 
 ## Built by
 
