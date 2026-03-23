@@ -30,6 +30,7 @@ import {
 import type { Agent, HumorStyle, PremiumModel, Memory, TelegramNotificationLevel, AvailableModel } from '@/types';
 import { TaskDetailSheet, type TaskWithAgent, type SheetVariant, getTaskDisplayTitle, humanizeId, fmtAbsTime } from '@/components/TaskDetailSheet';
 import { HUSTLE_MODE_SOUL_APPEND } from '@/lib/personas';
+import { MONO as SHARED_MONO } from '@/lib/styles';
 
 function SubScreenLayout({ title, children }: { title: string; children: React.ReactNode }) {
   const t = useTheme();
@@ -400,10 +401,7 @@ export function ActivityView() {
   const agentId: string = useRouter(s => s.currentView.params?.id ?? '');
   const { data: items, isLoading } = useActivity(agentId);
 
-  const MONO_STYLE: React.CSSProperties = {
-    fontFamily: 'ui-monospace, Menlo, monospace',
-    letterSpacing: '0.04em',
-  };
+  const MONO_STYLE = SHARED_MONO;
 
   return (
     <SubScreenLayout title="Activity">
@@ -499,7 +497,7 @@ export function TasksView() {
   const resolve = useResolveTask();
   const [autoApproved, setAutoApproved] = useState<Set<string>>(new Set());
 
-  const MONO: React.CSSProperties = { fontFamily: 'ui-monospace, Menlo, monospace', letterSpacing: '0.04em' };
+  const MONO = SHARED_MONO;
 
   // Auto-approve low-risk pending tasks
   useEffect(() => {

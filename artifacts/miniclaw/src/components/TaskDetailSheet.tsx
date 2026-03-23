@@ -72,7 +72,7 @@ function ResultDataSection({ data }: { data: Record<string, unknown> }) {
 
         return (
           <div key={key} style={{ marginBottom: 14 }}>
-            <p style={{ ...MONO, fontSize: 9, color: t.faint, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 5 }}>
+            <p style={{ ...MONO, fontSize: 9, color: t.label, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 5 }}>
               {label}
             </p>
             {(isMarkdownKey || isLongString) && typeof value === 'string' ? (
@@ -212,17 +212,17 @@ export function TaskDetailSheet({
             <div style={{ flex: 1, overflowY: 'auto', padding: '16px 24px 48px' }}>
               <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 16 }}>
                 {fullTask.skillId && (
-                  <span style={{ ...MONO, fontSize: 9, color: t.faint, background: t.divider, borderRadius: 4, padding: '2px 6px' }}>
+                  <span style={{ ...MONO, fontSize: 9, color: t.label, background: t.divider, borderRadius: 4, padding: '2px 6px' }}>
                     {humanizeId(fullTask.skillId)}
                   </span>
                 )}
                 {fullTask.taskType && (
-                  <span style={{ ...MONO, fontSize: 9, color: t.faint, background: t.divider, borderRadius: 4, padding: '2px 6px' }}>
+                  <span style={{ ...MONO, fontSize: 9, color: t.label, background: t.divider, borderRadius: 4, padding: '2px 6px' }}>
                     {fullTask.taskType}
                   </span>
                 )}
                 {fullTask.category && (
-                  <span style={{ ...MONO, fontSize: 9, color: t.faint, background: t.divider, borderRadius: 4, padding: '2px 6px' }}>
+                  <span style={{ ...MONO, fontSize: 9, color: t.label, background: t.divider, borderRadius: 4, padding: '2px 6px' }}>
                     {fullTask.category}
                   </span>
                 )}
@@ -254,7 +254,7 @@ export function TaskDetailSheet({
 
                   {fullTask.result?.summary && (
                     <div style={{ marginBottom: 16 }}>
-                      <p style={{ ...MONO, fontSize: 9, color: t.faint, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>
+                      <p style={{ ...MONO, fontSize: 9, color: t.label, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>
                         Outcome
                       </p>
                       <p style={{ fontSize: 14, fontWeight: 300, color: t.text, lineHeight: 1.55, letterSpacing: '-0.01em' }}>
@@ -279,7 +279,7 @@ export function TaskDetailSheet({
                 <div>
                   {fullTask.description && (
                     <div style={{ marginBottom: 14 }}>
-                      <p style={{ ...MONO, fontSize: 9, color: t.faint, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 5 }}>
+                      <p style={{ ...MONO, fontSize: 9, color: t.label, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 5 }}>
                         Description
                       </p>
                       <p style={{ fontSize: 12, fontWeight: 300, color: t.label, lineHeight: 1.55 }}>
@@ -342,7 +342,7 @@ export function TaskDetailSheet({
                 <div>
                   {fullTask.description && (
                     <div style={{ marginBottom: 14 }}>
-                      <p style={{ ...MONO, fontSize: 9, color: t.faint, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 5 }}>
+                      <p style={{ ...MONO, fontSize: 9, color: t.label, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 5 }}>
                         Description
                       </p>
                       <p style={{ fontSize: 12, fontWeight: 300, color: t.label, lineHeight: 1.55 }}>

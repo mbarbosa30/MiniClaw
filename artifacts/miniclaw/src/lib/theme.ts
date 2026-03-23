@@ -25,8 +25,8 @@ export const LIGHT: Theme = {
 export const DARK: Theme = {
   bg: '#0f0f0f',
   text: '#e2e2e2',
-  label: '#909090',
-  faint: '#555555',
+  label: '#888888',
+  faint: '#777777',
   divider: '#222222',
   surface: '#1a1a1a',
   navBorder: '#1e1e1e',
