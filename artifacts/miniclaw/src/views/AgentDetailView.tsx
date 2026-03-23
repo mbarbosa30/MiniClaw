@@ -199,7 +199,7 @@ function AgentHeader({
       paddingRight: 8,
     }}>
       {/* Title row */}
-      <div style={{ height: 52, display: 'flex', alignItems: 'center' }}>
+      <div style={{ height: 64, display: 'flex', alignItems: 'center' }}>
         {/* Left — back button */}
         <div style={{ width: SIDE_W, flexShrink: 0, display: 'flex', alignItems: 'center' }}>
           <button
@@ -212,16 +212,37 @@ function AgentHeader({
           </button>
         </div>
 
-        {/* Center — agent name + state indicator */}
-        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', gap: 8 }}>
+        {/* Center — agent name + state indicator, left-aligned */}
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: 8, paddingLeft: 4, overflow: 'hidden' }}>
           <StateIndicator state={agentVisualState(agent)} />
           <span style={{ fontSize: 15, fontWeight: 300, letterSpacing: '-0.015em', lineHeight: 1, color: t.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {agent.name || 'Agent'}
           </span>
         </div>
 
-        {/* Right — pending count + options */}
-        <div style={{ width: SIDE_W, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}>
+        {/* Right — phase pill + pending count + options */}
+        <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}>
+          {awarenessLabel && (
+            <button
+              onClick={() => setShowAwareness(v => !v)}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', display: 'flex', alignItems: 'center' }}
+            >
+              <span style={{
+                fontFamily: 'ui-monospace, Menlo, monospace',
+                fontSize: 8,
+                color: aColor,
+                letterSpacing: '0.07em',
+                textTransform: 'uppercase',
+                background: `${aColor}1a`,
+                border: `1px solid ${aColor}40`,
+                borderRadius: 3,
+                padding: '2px 5px',
+                lineHeight: 1.4,
+              }}>
+                {awarenessLabel}
+              </span>
+            </button>
+          )}
           {pendingCount > 0 && (
             <button
               onClick={onPending}
@@ -248,7 +269,7 @@ function AgentHeader({
             width: '100%',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'space-between',
+            justifyContent: 'flex-end',
             paddingLeft: 16,
             paddingRight: 16,
             paddingTop: 6,
@@ -258,44 +279,6 @@ function AgentHeader({
             cursor: awarenessLabel ? 'pointer' : 'default',
           }}
         >
-          {/* Left: phase pill + SVG chevron */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-            {awarenessLabel ? (
-              <>
-                <span style={{
-                  fontFamily: 'ui-monospace, Menlo, monospace',
-                  fontSize: 8,
-                  color: aColor,
-                  letterSpacing: '0.07em',
-                  textTransform: 'uppercase' as const,
-                  background: `${aColor}1a`,
-                  border: `1px solid ${aColor}40`,
-                  borderRadius: 3,
-                  padding: '2px 5px',
-                  lineHeight: 1.4,
-                }}>
-                  {awarenessLabel}
-                </span>
-                <svg
-                  width="9" height="9" viewBox="0 0 9 9" fill="none"
-                  stroke={t.faint} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"
-                >
-                  {showAwareness
-                    ? <path d="M1.5 6L4.5 3 7.5 6" />
-                    : <path d="M1.5 3L4.5 6 7.5 3" />}
-                </svg>
-              </>
-            ) : !awarenessData ? (
-              <span style={{
-                display: 'inline-block',
-                width: 64,
-                height: 14,
-                borderRadius: 3,
-                background: t.surface,
-                opacity: 0.5,
-              }} />
-            ) : null}
-          </div>
           {/* Right: compact quota */}
           {hasQuota && (
             <span style={{
@@ -350,13 +333,18 @@ function AgentHeader({
           </div>
         )}
 
-        {/* Phase progress bar — always at bottom of sub-row section */}
-        {awarenessLabel && (
-          <div style={{ height: 2, background: t.surface, overflow: 'hidden' }}>
-            <div style={{ height: '100%', width: `${phasePct}%`, background: aColor, transition: 'width 0.6s ease' }} />
-          </div>
-        )}
       </div>
+
+      {/* Gradient bar at very bottom of header — phase color right → transparent left */}
+      {awarenessLabel && (
+        <div style={{
+          height: 1.5,
+          background: `linear-gradient(to left, ${aColor}, transparent)`,
+          opacity: 0.7,
+          marginLeft: -8,
+          marginRight: -8,
+        }} />
+      )}
     </div>
   );
 }
