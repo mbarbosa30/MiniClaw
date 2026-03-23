@@ -682,7 +682,14 @@ function ChatTab({
   const [messages, setMessages] = useState<LocalMessage[]>(initialMessages);
   const [input, setInput] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
-  const [chips, setChips] = useState<string[]>(agent.suggestedChips ?? []);
+  const [chips] = useState<string[]>([
+    'Surprise me with something useful',
+    'What should I be paying attention to?',
+    'Give me an insight I wouldn\'t find myself',
+    'Help me think through a decision',
+    'What\'s one thing I should do differently?',
+    'What can you do that would genuinely help me today?',
+  ]);
   const [compactBanner, setCompactBanner] = useState<{ tokensSaved: number; error?: boolean } | null>(null);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [tappedIndex, setTappedIndex] = useState<number | null>(null);
@@ -843,7 +850,6 @@ function ChatTab({
             setCachedMessages(agentId, msgs);
             return msgs;
           });
-          setChips(res.data.suggestedChips ?? []);
           return;
         }
       } catch {
@@ -878,7 +884,6 @@ function ChatTab({
       { role: 'assistant' as const, content: '', _ts: undefined },
     ]);
     setIsStreaming(true);
-    setChips([]);
 
     const sendTime = Date.now();
     const quotaUsedBefore = quota?.used;
@@ -970,7 +975,6 @@ function ChatTab({
                   setActiveConversationId(String(evt.conversationId));
                   refetchConversations();
                 }
-                setChips(evt.suggestedChips ?? []);
                 const latencyMs = evt.meta?.latencyMs ?? (Date.now() - sendTime);
                 const tokensUsed = evt.meta?.tokensUsed
                   ?? (usedAfterSSE !== undefined && quotaUsedBefore !== undefined
@@ -1429,8 +1433,8 @@ function ChatTab({
         </div>
       )}
 
-      {/* Quick-reply chips */}
-      {!isStreaming && (
+      {/* Quick-reply chips — only shown on empty chat (no user messages yet) */}
+      {!isStreaming && messages.filter(m => m.role === 'user').length === 0 && (
         <div
           className="no-scrollbar"
           style={{
