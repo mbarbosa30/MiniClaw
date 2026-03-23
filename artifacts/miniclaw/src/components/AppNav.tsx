@@ -1,12 +1,13 @@
-import { List, BarChart2, Newspaper, ShoppingBag } from 'lucide-react';
+import { List, BarChart2, Activity, Newspaper, ShoppingBag } from 'lucide-react';
 import { useTheme } from '@/lib/theme';
 import { useRouter, useAppStore, type ViewName } from '@/lib/store';
 
-type NavTab = 'home' | 'overview' | 'feed' | 'marketplace';
+type NavTab = 'home' | 'overview' | 'activity-global' | 'feed' | 'marketplace';
 
 const TABS: { id: NavTab; Icon: React.ElementType }[] = [
   { id: 'home', Icon: List },
   { id: 'overview', Icon: BarChart2 },
+  { id: 'activity-global', Icon: Activity },
   { id: 'feed', Icon: Newspaper },
   { id: 'marketplace', Icon: ShoppingBag },
 ];
@@ -54,8 +55,8 @@ export function AppNav() {
             strokeWidth={activeTab === id ? 2.25 : 1.5}
             color={activeTab === id ? t.text : t.faint}
           />
-          {/* Dot badge on Home tab when there are unseen task completions */}
-          {id === 'home' && hasUnseenCompletions && (
+          {/* Amber dot badge on Activity tab when there are unseen task completions */}
+          {id === 'activity-global' && hasUnseenCompletions && (
             <span
               style={{
                 position: 'absolute',
