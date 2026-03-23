@@ -7,7 +7,7 @@ import {
   useKnowledge, useAddKnowledge, useDeleteKnowledge,
   useSoul, useUpdateSoul,
   useMemories, useUpdateMemory, useDeleteMemory,
-  useTasks, useResolveTask,
+  useTasks, useResolveTask, useCompletedTasks,
   useTelegramStatus, useUpdateTelegramSettings,
   useAgentSettings, useUpdateAgentSettings,
   useUpdateAgent, useDeleteAgent,
@@ -28,6 +28,7 @@ import {
   Wallet, Shield, Coins, Gift, ShoppingCart, Lock, ScrollText,
 } from 'lucide-react';
 import type { Agent, HumorStyle, PremiumModel, Memory, TelegramNotificationLevel, AvailableModel } from '@/types';
+import { TaskDetailSheet, type TaskWithAgent, type SheetVariant, getTaskDisplayTitle, humanizeId, fmtAbsTime } from '@/components/TaskDetailSheet';
 import { HUSTLE_MODE_SOUL_APPEND } from '@/lib/personas';
 
 function SubScreenLayout({ title, children }: { title: string; children: React.ReactNode }) {
@@ -490,10 +491,15 @@ function isLowRisk(task: import('@/types').AgentTask): boolean {
 export function TasksView() {
   const t = useTheme();
   const agentId: string = useRouter(s => s.currentView.params?.id ?? '');
-  const [tab, setTab] = useState<'pending' | 'all'>('all');
-  const { data: rawTasks, isLoading } = useTasks(agentId, tab);
+  const [tab, setTab] = useState<'pending' | 'all' | 'results'>('all');
+  const [selectedTask, setSelectedTask] = useState<TaskWithAgent | null>(null);
+  const { data: rawTasks, isLoading } = useTasks(agentId, tab === 'results' ? 'all' : tab);
+  const { data: completedTasks = [], isLoading: completedLoading } = useCompletedTasks(agentId);
+  const { data: agent } = useAgent(agentId);
   const resolve = useResolveTask();
   const [autoApproved, setAutoApproved] = useState<Set<string>>(new Set());
+
+  const MONO: React.CSSProperties = { fontFamily: 'ui-monospace, Menlo, monospace', letterSpacing: '0.04em' };
 
   // Auto-approve low-risk pending tasks
   useEffect(() => {
@@ -513,117 +519,198 @@ export function TasksView() {
     ? (rawTasks ?? []).filter(task => !isLowRisk(task) && !autoApproved.has(task.id))
     : rawTasks ?? [];
 
+  function openResultSheet(task: import('@/types').AgentTask) {
+    setSelectedTask({
+      ...task,
+      agentId,
+      agentName: agent?.name ?? 'Agent',
+      agentEmoji: agent?.emoji ?? null,
+      agentIcon: agent?.icon ?? null,
+      agentDescription: agent?.description ?? null,
+    });
+  }
+
   return (
-    <SubScreenLayout title="Tasks">
-      <div style={{ display: 'flex', borderBottom: `1px solid ${t.divider}` }}>
-        {(['pending', 'all'] as const).map(tabId => (
-          <button
-            key={tabId}
-            style={{
-              flex: 1,
-              padding: '12px 0',
-              fontSize: 13,
-              fontWeight: 600,
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              color: tab === tabId ? t.text : t.faint,
-              borderBottom: `2px solid ${tab === tabId ? t.text : 'transparent'}`,
-              marginBottom: -1,
-              letterSpacing: '-0.01em',
-            }}
-            onClick={() => setTab(tabId)}
-          >
-            {tabId === 'pending' ? 'Action Required' : 'All Tasks'}
-          </button>
-        ))}
-      </div>
-
-      {autoApproved.size > 0 && tab === 'pending' && (
-        <div style={{ padding: '8px 20px', background: t.surface, borderBottom: `1px solid ${t.divider}` }}>
-          <p style={{ fontSize: 10, color: t.faint, fontFamily: 'ui-monospace, Menlo, monospace', letterSpacing: '0.04em' }}>
-            {autoApproved.size} low-risk {autoApproved.size === 1 ? 'task' : 'tasks'} auto-approved
-          </p>
+    <>
+      <SubScreenLayout title="Tasks">
+        <div style={{ display: 'flex', borderBottom: `1px solid ${t.divider}` }}>
+          {(['pending', 'all', 'results'] as const).map(tabId => (
+            <button
+              key={tabId}
+              style={{
+                flex: 1,
+                padding: '12px 0',
+                fontSize: 13,
+                fontWeight: 600,
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                color: tab === tabId ? t.text : t.faint,
+                borderBottom: `2px solid ${tab === tabId ? t.text : 'transparent'}`,
+                marginBottom: -1,
+                letterSpacing: '-0.01em',
+              }}
+              onClick={() => setTab(tabId)}
+            >
+              {tabId === 'pending' ? 'Action Required' : tabId === 'all' ? 'All Tasks' : 'Results'}
+            </button>
+          ))}
         </div>
-      )}
 
-      {isLoading ? <LoadingState /> : !tasks.length ? (
-        <EmptyState
-          icon={<CircleCheck size={22} />}
-          title={tab === 'pending' ? 'No action required' : 'No tasks yet'}
-          description={tab === 'pending' ? "All pending tasks have been handled. Nice work." : "Your agent hasn't started any tasks yet."}
-        />
-      ) : (
-        <div>
-          {tasks.map((task, i) => {
-            const needsAction = tab === 'pending' || task.status === 'pending';
-            const taskRisk = task.riskLevel ?? (isLowRisk(task) ? 'low' : 'action');
+        {autoApproved.size > 0 && tab === 'pending' && (
+          <div style={{ padding: '8px 20px', background: t.surface, borderBottom: `1px solid ${t.divider}` }}>
+            <p style={{ fontSize: 10, color: t.faint, fontFamily: 'ui-monospace, Menlo, monospace', letterSpacing: '0.04em' }}>
+              {autoApproved.size} low-risk {autoApproved.size === 1 ? 'task' : 'tasks'} auto-approved
+            </p>
+          </div>
+        )}
 
-            return (
-              <div key={task.id}>
-                <div style={{ padding: '14px 20px' }}>
-                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, marginBottom: 6 }}>
-                    <p style={{ fontSize: 13, fontWeight: 600, flex: 1, lineHeight: 1.4, color: t.text }}>
-                      {task.title ?? (task as any).payload?.title ?? task.description ?? (task as any).payload?.description ?? task.action ?? 'Pending task'}
-                    </p>
-                    <div style={{ display: 'flex', gap: 4, flexShrink: 0, alignItems: 'center' }}>
-                      {task.taskType && (
-                        <span style={{ fontSize: 9, fontWeight: 600, fontFamily: 'ui-monospace, Menlo, monospace', padding: '2px 6px', borderRadius: 999, background: `${t.faint}20`, color: t.faint }}>
-                          {task.taskType}
+        {tab === 'results' ? (
+          completedLoading ? <LoadingState /> : completedTasks.length === 0 ? (
+            <EmptyState
+              icon={<CircleCheck size={22} />}
+              title="No results yet"
+              description="Completed tasks and their outputs will appear here."
+            />
+          ) : (
+            <div>
+              {completedTasks.map((task, i) => {
+                const summary = task.result?.summary;
+                const firstDataText = task.result?.data
+                  ? (Object.values(task.result.data).find(v => typeof v === 'string' && (v as string).length > 40) as string | undefined)
+                  : undefined;
+                return (
+                  <div key={task.id}>
+                    <div
+                      onClick={() => openResultSheet(task)}
+                      style={{ padding: '14px 20px', cursor: 'pointer' }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, marginBottom: 6 }}>
+                        <p style={{ fontSize: 13, fontWeight: 600, flex: 1, lineHeight: 1.4, color: t.text }}>
+                          {getTaskDisplayTitle(task)}
+                        </p>
+                        <span style={{ ...MONO, fontSize: 9, color: t.faint, flexShrink: 0, marginTop: 2 }}>
+                          {fmtAbsTime(task.completedAt ?? task.createdAt)}
+                        </span>
+                      </div>
+                      {task.skillId && (
+                        <span style={{
+                          ...MONO, fontSize: 9, padding: '2px 6px', borderRadius: 4,
+                          background: `${t.faint}20`, color: t.faint, display: 'inline-block', marginBottom: 6,
+                        }}>
+                          {humanizeId(task.skillId)}
                         </span>
                       )}
-                      {task.status && (
-                        <span style={{ fontSize: 10, fontWeight: 600, fontFamily: 'ui-monospace, Menlo, monospace', padding: '2px 8px', borderRadius: 999, border: `1px solid ${t.divider}`, color: t.label }}>
-                          {task.status}
-                        </span>
-                      )}
+                      {summary ? (
+                        <p style={{
+                          fontSize: 12, fontWeight: 300, color: t.label, lineHeight: 1.55,
+                          display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
+                          overflow: 'hidden', wordBreak: 'break-word',
+                        }}>
+                          {summary}
+                        </p>
+                      ) : firstDataText ? (
+                        <p style={{
+                          fontSize: 11, fontWeight: 300, color: t.faint, lineHeight: 1.5,
+                          fontFamily: 'ui-monospace, Menlo, monospace',
+                          display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
+                          overflow: 'hidden', wordBreak: 'break-word',
+                        }}>
+                          {firstDataText.slice(0, 160)}
+                        </p>
+                      ) : null}
                     </div>
+                    {i < completedTasks.length - 1 && <Divider />}
                   </div>
-                  {(() => {
-                    const titleVal = task.title ?? (task as any).payload?.title;
-                    const descVal = task.description ?? (task as any).payload?.description;
-                    return titleVal && descVal ? (
-                      <p style={{ fontSize: 11, color: t.label, lineHeight: 1.5, marginBottom: 12 }}>{descVal}</p>
-                    ) : null;
-                  })()}
-                  {task.taskType === 'reminder' && task.scheduledFor && (
-                    <p style={{ fontSize: 9, fontFamily: 'ui-monospace, Menlo, monospace', color: t.faint, letterSpacing: '0.04em', marginBottom: 8 }}>
-                      {fmtScheduled(task.scheduledFor)}
-                    </p>
-                  )}
-                  {needsAction && !isLowRisk(task) && (
-                    <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
-                      <button
-                        style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '10px 0', borderRadius: 12, background: t.text, color: t.bg, fontSize: 14, fontWeight: 600, border: 'none', cursor: 'pointer', opacity: resolve.isPending ? 0.5 : 1 }}
-                        onClick={() => resolve.mutate({ agentId, taskId: task.id, action: 'approve' })}
-                        disabled={resolve.isPending}
-                      >
-                        <Check size={14} /> Approve
-                      </button>
-                      <button
-                        style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '10px 0', borderRadius: 12, background: t.surface, color: t.label, fontSize: 14, fontWeight: 600, border: `1px solid ${t.divider}`, cursor: 'pointer', opacity: resolve.isPending ? 0.5 : 1 }}
-                        onClick={() => resolve.mutate({ agentId, taskId: task.id, action: 'reject' })}
-                        disabled={resolve.isPending}
-                      >
-                        <X size={14} /> Reject
-                      </button>
+                );
+              })}
+            </div>
+          )
+        ) : (
+          isLoading ? <LoadingState /> : !tasks.length ? (
+            <EmptyState
+              icon={<CircleCheck size={22} />}
+              title={tab === 'pending' ? 'No action required' : 'No tasks yet'}
+              description={tab === 'pending' ? "All pending tasks have been handled. Nice work." : "Your agent hasn't started any tasks yet."}
+            />
+          ) : (
+            <div>
+              {tasks.map((task, i) => {
+                const needsAction = tab === 'pending' || task.status === 'pending';
+
+                return (
+                  <div key={task.id}>
+                    <div style={{ padding: '14px 20px' }}>
+                      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, marginBottom: 6 }}>
+                        <p style={{ fontSize: 13, fontWeight: 600, flex: 1, lineHeight: 1.4, color: t.text }}>
+                          {task.title ?? (task as any).payload?.title ?? task.description ?? (task as any).payload?.description ?? task.action ?? 'Pending task'}
+                        </p>
+                        <div style={{ display: 'flex', gap: 4, flexShrink: 0, alignItems: 'center' }}>
+                          {task.taskType && (
+                            <span style={{ fontSize: 9, fontWeight: 600, fontFamily: 'ui-monospace, Menlo, monospace', padding: '2px 6px', borderRadius: 999, background: `${t.faint}20`, color: t.faint }}>
+                              {task.taskType}
+                            </span>
+                          )}
+                          {task.status && (
+                            <span style={{ fontSize: 10, fontWeight: 600, fontFamily: 'ui-monospace, Menlo, monospace', padding: '2px 8px', borderRadius: 999, border: `1px solid ${t.divider}`, color: t.label }}>
+                              {task.status}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      {(() => {
+                        const titleVal = task.title ?? (task as any).payload?.title;
+                        const descVal = task.description ?? (task as any).payload?.description;
+                        return titleVal && descVal ? (
+                          <p style={{ fontSize: 11, color: t.label, lineHeight: 1.5, marginBottom: 12 }}>{descVal}</p>
+                        ) : null;
+                      })()}
+                      {task.taskType === 'reminder' && task.scheduledFor && (
+                        <p style={{ fontSize: 9, fontFamily: 'ui-monospace, Menlo, monospace', color: t.faint, letterSpacing: '0.04em', marginBottom: 8 }}>
+                          {fmtScheduled(task.scheduledFor)}
+                        </p>
+                      )}
+                      {needsAction && !isLowRisk(task) && (
+                        <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+                          <button
+                            style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '10px 0', borderRadius: 12, background: t.text, color: t.bg, fontSize: 14, fontWeight: 600, border: 'none', cursor: 'pointer', opacity: resolve.isPending ? 0.5 : 1 }}
+                            onClick={() => resolve.mutate({ agentId, taskId: task.id, action: 'approve' })}
+                            disabled={resolve.isPending}
+                          >
+                            <Check size={14} /> Approve
+                          </button>
+                          <button
+                            style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '10px 0', borderRadius: 12, background: t.surface, color: t.label, fontSize: 14, fontWeight: 600, border: `1px solid ${t.divider}`, cursor: 'pointer', opacity: resolve.isPending ? 0.5 : 1 }}
+                            onClick={() => resolve.mutate({ agentId, taskId: task.id, action: 'reject' })}
+                            disabled={resolve.isPending}
+                          >
+                            <X size={14} /> Reject
+                          </button>
+                        </div>
+                      )}
+                      {needsAction && isLowRisk(task) && (
+                        <div style={{ marginTop: 8 }}>
+                          <span style={{ fontSize: 10, color: t.faint, fontFamily: 'ui-monospace, Menlo, monospace', letterSpacing: '0.04em' }}>
+                            low-risk · auto-approved
+                          </span>
+                        </div>
+                      )}
                     </div>
-                  )}
-                  {needsAction && isLowRisk(task) && (
-                    <div style={{ marginTop: 8 }}>
-                      <span style={{ fontSize: 10, color: t.faint, fontFamily: 'ui-monospace, Menlo, monospace', letterSpacing: '0.04em' }}>
-                        low-risk · auto-approved
-                      </span>
-                    </div>
-                  )}
-                </div>
-                {i < tasks.length - 1 && <Divider />}
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </SubScreenLayout>
+                    {i < tasks.length - 1 && <Divider />}
+                  </div>
+                );
+              })}
+            </div>
+          )
+        )}
+      </SubScreenLayout>
+
+      <TaskDetailSheet
+        task={selectedTask}
+        variant="completed"
+        onClose={() => setSelectedTask(null)}
+      />
+    </>
   );
 }
 
