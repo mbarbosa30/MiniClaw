@@ -8,15 +8,12 @@ import { StateIndicator, agentVisualState, STATE_COLOR, STATE_LABEL } from '@/co
 import { resolveIcon } from '@/lib/agent-icon';
 import { PERSONAS } from '@/lib/personas';
 import { MAX_AGENTS } from '@/lib/constants';
+import { MONO as MONO_BASE } from '@/lib/styles';
 import type { Agent } from '@/types';
 
 const PERSONA_BY_TAGLINE = new Map(PERSONAS.map(p => [p.tagline, p]));
 
-const MONO: React.CSSProperties = {
-  fontFamily: 'ui-monospace, Menlo, monospace',
-  fontSize: 9,
-  letterSpacing: '0.04em',
-};
+const MONO: React.CSSProperties = { ...MONO_BASE, fontSize: 9 };
 
 // --- Cached agents from localStorage ---
 const CACHE_KEY = 'miniclaw_agents_cache';
@@ -271,7 +268,7 @@ function SkeletonRow({ index }: { index: number }) {
 export function HomeView() {
   const t = useTheme();
   const push = useRouter((s) => s.push);
-  const { hasSeenOnboard, setHasSeenOnboard, hasUnseenCompletions } = useAppStore();
+  const { hasSeenOnboard, setHasSeenOnboard, hasUnseenCompletions, setTotalPendingTasks } = useAppStore();
   const { data, isLoading, isError } = useAgents();
 
   const [cachedAgents, setCachedAgentsState] = useState<Agent[]>(() => getCachedAgents() ?? []);
@@ -286,6 +283,16 @@ export function HomeView() {
       setCachedAgents(apiAgents);
     }
   }, [apiAgents]);
+
+  // Sync total pending task count to AppStore (for AppNav badge)
+  const totalPending = useMemo(
+    () => apiAgents.reduce((s, a) => s + (a.pendingTaskCount ?? a.stats?.pendingTasksCount ?? 0), 0),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [data],
+  );
+  useEffect(() => {
+    setTotalPendingTasks(totalPending);
+  }, [totalPending, setTotalPendingTasks]);
 
   const agents = apiAgents.length > 0 ? apiAgents : cachedAgents;
   const showSkeleton = isLoading && agents.length === 0;

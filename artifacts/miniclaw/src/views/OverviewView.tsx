@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { useTheme } from '@/lib/theme';
+import { MONO } from '@/lib/styles';
 import { useRouter } from '@/lib/store';
 import { useAgents, useGrowthSummary, useUsageStats, useTriggerReflection, usePollReflection } from '@/hooks/use-agents';
 import { StateIndicator, agentVisualState, STATE_COLOR, STATE_LABEL } from '@/components/StateIndicator';
@@ -54,11 +55,6 @@ function fmtCostUsd(n: number): string {
   if (n < 0.01) return '<$0.01';
   return `$${n.toFixed(2)}`;
 }
-
-const MONO: React.CSSProperties = {
-  fontFamily: 'ui-monospace, Menlo, monospace',
-  letterSpacing: '0.04em',
-};
 
 // ── MiniBar ───────────────────────────────────────────────────────────────────
 

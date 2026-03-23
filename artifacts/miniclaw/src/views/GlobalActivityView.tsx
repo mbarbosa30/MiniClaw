@@ -1,6 +1,7 @@
 import { useMemo, useState, useEffect } from 'react';
-import { Check, X, Plus } from 'lucide-react';
+import { Check, X, Plus, Heart } from 'lucide-react';
 import { useTheme } from '@/lib/theme';
+import { MONO } from '@/lib/styles';
 import { useRouter, useAppStore } from '@/lib/store';
 import {
   useAgents,
@@ -13,11 +14,6 @@ import {
 import type { AgentTask, FeedPost } from '@/types';
 import { AgentAvatar } from '@/components/AgentAvatar';
 import { TaskDetailSheet, type TaskWithAgent, type SheetVariant } from '@/components/TaskDetailSheet';
-
-const MONO: React.CSSProperties = {
-  fontFamily: 'ui-monospace, Menlo, monospace',
-  letterSpacing: '0.04em',
-};
 
 function fmtRelTime(dateStr?: string): string {
   if (!dateStr) return '';
@@ -45,7 +41,7 @@ function SectionLabel({ children, action }: { children: React.ReactNode; action?
   const t = useTheme();
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-      <p style={{ ...MONO, fontSize: 9, color: t.faint, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+      <p style={{ ...MONO, fontSize: 9, color: t.label, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
         {children}
       </p>
       {action}
@@ -203,9 +199,13 @@ function FeedRow({
         onClick={(e) => { e.stopPropagation(); onLike(); }}
         style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: 4 }}
       >
-        <span style={{ fontSize: 13, lineHeight: 1, color: post.liked ? '#ef4444' : t.faint, transition: 'color 0.15s' }}>
-          {post.liked ? '♥' : '♡'}
-        </span>
+        <Heart
+          size={13}
+          strokeWidth={1.5}
+          color={post.liked ? '#ef4444' : t.faint}
+          fill={post.liked ? '#ef4444' : 'none'}
+          style={{ transition: 'color 0.15s, fill 0.15s' }}
+        />
         {(post.likeCount ?? 0) > 0 && (
           <span style={{ ...MONO, fontSize: 9, color: t.faint }}>{post.likeCount}</span>
         )}
@@ -228,8 +228,7 @@ export function GlobalActivityView() {
 
   const [selectedTask, setSelectedTask] = useState<TaskWithAgent | null>(null);
   const [sheetVariant, setSheetVariant] = useState<SheetVariant>('completed');
-  const [sheetApprove, setSheetApprove] = useState<(() => void) | null>(null);
-  const [sheetReject, setSheetReject] = useState<(() => void) | null>(null);
+  const [sheetHandlers, setSheetHandlers] = useState<{ approve?: () => void; reject?: () => void }>({});
 
   const { data: agentData, isLoading: agentsLoading } = useAgents();
   const agents = agentData?.agents ?? [];
@@ -322,14 +321,12 @@ export function GlobalActivityView() {
   function openSheet(task: TaskWithAgent, variant: SheetVariant, approve?: () => void, reject?: () => void) {
     setSelectedTask(task);
     setSheetVariant(variant);
-    setSheetApprove(approve ? () => approve : null);
-    setSheetReject(reject ? () => reject : null);
+    setSheetHandlers({ approve, reject });
   }
 
   function closeSheet() {
     setSelectedTask(null);
-    setSheetApprove(null);
-    setSheetReject(null);
+    setSheetHandlers({});
   }
 
   return (
@@ -491,8 +488,8 @@ export function GlobalActivityView() {
         variant={sheetVariant}
         onClose={closeSheet}
         onViewAgent={(agentId) => push('agent-detail', { id: String(agentId) })}
-        onApprove={sheetApprove ?? undefined}
-        onReject={sheetReject ?? undefined}
+        onApprove={sheetHandlers.approve}
+        onReject={sheetHandlers.reject}
       />
     </div>
   );

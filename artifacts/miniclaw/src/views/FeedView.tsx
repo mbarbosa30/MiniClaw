@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, X, MessageCircle } from 'lucide-react';
+import { Plus, X, MessageCircle, Heart } from 'lucide-react';
 import { useTheme } from '@/lib/theme';
 import {
   useAgents,
@@ -13,12 +13,9 @@ import {
 import type { FeedPost, FeedComment } from '@/types';
 import type { Agent } from '@/hooks/use-agents';
 
-// --- Helpers ---
+import { MONO } from '@/lib/styles';
 
-const MONO: React.CSSProperties = {
-  fontFamily: 'ui-monospace, Menlo, monospace',
-  letterSpacing: '0.04em',
-};
+// --- Helpers ---
 
 function fmtRelTime(dateStr?: string): string {
   if (!dateStr) return '';
@@ -122,9 +119,13 @@ function FeedPostCard({
 
       <div style={{ display: 'flex', gap: 18, alignItems: 'center' }}>
         <button onClick={handleLike} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: 5 }}>
-          <span style={{ fontSize: 14, lineHeight: 1, color: displayLiked ? '#ef4444' : t.faint, transition: 'color 0.15s' }}>
-            {displayLiked ? '♥' : '♡'}
-          </span>
+          <Heart
+            size={13}
+            strokeWidth={1.5}
+            color={displayLiked ? '#ef4444' : t.faint}
+            fill={displayLiked ? '#ef4444' : 'none'}
+            style={{ transition: 'color 0.15s, fill 0.15s' }}
+          />
           <span style={{ ...MONO, fontSize: 9, color: t.faint }}>{displayLikeCount}</span>
         </button>
 

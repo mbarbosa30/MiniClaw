@@ -17,6 +17,8 @@ export function AppNav() {
   const push = useRouter((s) => s.push);
   const currentView = useRouter((s) => s.currentView.name) as ViewName;
   const hasUnseenCompletions = useAppStore((s) => s.hasUnseenCompletions);
+  const totalPendingTasks = useAppStore((s) => s.totalPendingTasks);
+  const showActivityBadge = hasUnseenCompletions || totalPendingTasks > 0;
 
   const activeTab: NavTab | null = TABS.some(tab => tab.id === currentView)
     ? (currentView as NavTab)
@@ -55,8 +57,8 @@ export function AppNav() {
             strokeWidth={activeTab === id ? 2.25 : 1.5}
             color={activeTab === id ? t.text : t.faint}
           />
-          {/* Amber dot badge on Activity tab when there are unseen task completions */}
-          {id === 'activity-global' && hasUnseenCompletions && (
+          {/* Amber dot badge on Activity tab when there are pending tasks or unseen completions */}
+          {id === 'activity-global' && showActivityBadge && (
             <span
               style={{
                 position: 'absolute',

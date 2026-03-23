@@ -552,7 +552,7 @@ export function TasksView() {
               }}
               onClick={() => setTab(tabId)}
             >
-              {tabId === 'pending' ? 'Action Required' : tabId === 'all' ? 'All Tasks' : 'Results'}
+              {tabId === 'pending' ? 'Review' : tabId === 'all' ? 'All Tasks' : 'Results'}
             </button>
           ))}
         </div>

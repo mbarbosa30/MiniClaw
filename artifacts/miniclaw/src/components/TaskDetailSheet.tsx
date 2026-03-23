@@ -1,14 +1,10 @@
 import { useMemo } from 'react';
 import { X, Check } from 'lucide-react';
 import { useTheme } from '@/lib/theme';
+import { MONO } from '@/lib/styles';
 import { useCompletedTasks } from '@/hooks/use-agents';
 import { AgentAvatar } from '@/components/AgentAvatar';
 import type { AgentTask } from '@/types';
-
-const MONO: React.CSSProperties = {
-  fontFamily: 'ui-monospace, Menlo, monospace',
-  letterSpacing: '0.04em',
-};
 
 export type TaskWithAgent = AgentTask & {
   agentId: string | number;
@@ -213,7 +209,7 @@ export function TaskDetailSheet({
               </button>
             </div>
 
-            <div style={{ flex: 1, overflowY: 'auto', padding: '16px 24px 100px' }}>
+            <div style={{ flex: 1, overflowY: 'auto', padding: '16px 24px 48px' }}>
               <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 16 }}>
                 {fullTask.skillId && (
                   <span style={{ ...MONO, fontSize: 9, color: t.faint, background: t.divider, borderRadius: 4, padding: '2px 6px' }}>
