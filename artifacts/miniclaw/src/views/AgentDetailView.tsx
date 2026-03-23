@@ -781,9 +781,22 @@ function ChatTab({
   const [tappedIndex, setTappedIndex] = useState<number | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const touchStartX = useRef(0);
   const touchStartY = useRef(0);
   const compact = useCompactConversation();
+
+  // Capture-phase touchstart so child stopPropagation() cannot block swipe tracking
+  useEffect(() => {
+    const el = messagesContainerRef.current;
+    if (!el) return;
+    const onTouchStartCapture = (e: TouchEvent) => {
+      touchStartX.current = e.touches[0].clientX;
+      touchStartY.current = e.touches[0].clientY;
+    };
+    el.addEventListener('touchstart', onTouchStartCapture, { capture: true, passive: true });
+    return () => el.removeEventListener('touchstart', onTouchStartCapture, { capture: true });
+  }, []);
 
   useEffect(() => {
     if (conversations && conversations.length > 0 && !activeConversationId) {
@@ -1209,17 +1222,17 @@ function ChatTab({
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: t.bg }}>
       {/* Messages */}
       <div
+        ref={messagesContainerRef}
         className="no-scrollbar"
         style={{ flex: 1, overflowY: 'auto', padding: '24px 32px 8px', display: 'flex', flexDirection: 'column', gap: 28 }}
-        onTouchStart={e => {
-          setTappedIndex(null);
-          touchStartX.current = e.touches[0].clientX;
-          touchStartY.current = e.touches[0].clientY;
-        }}
+        onTouchStart={() => setTappedIndex(null)}
         onTouchEnd={e => {
-          const dx = e.changedTouches[0].clientX - touchStartX.current;
-          const dy = Math.abs(e.changedTouches[0].clientY - touchStartY.current);
-          if (dx > 60 && dy < 40) pop();
+          const endX = e.changedTouches[0].clientX;
+          const endY = e.changedTouches[0].clientY;
+          const dx = endX - touchStartX.current;
+          const dy = Math.abs(endY - touchStartY.current);
+          // Only trigger if swipe started near left edge (≤60px) and moved right >60px with little vertical drift
+          if (touchStartX.current <= 60 && dx > 60 && dy < 40) pop();
         }}
       >
         {mergedMessages.map((m, i) => {

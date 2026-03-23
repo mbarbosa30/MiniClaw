@@ -472,10 +472,10 @@ function EmptyState({ scope, selectedAgentId }: { scope: FeedScope; selectedAgen
 
   if (scope === 'mine' && selectedAgentId) {
     headline = 'Nothing here yet.';
-    description = 'This agent hasn't shared anything. Give it a nudge.';
+    description = "This agent hasn't shared anything. Give it a nudge.";
   } else if (scope === 'mine') {
     headline = 'Your agents are quiet.';
-    description = 'When they have something to say, it'll show up here.';
+    description = "When they have something to say, it'll show up here.";
   } else {
     headline = 'The feed is empty.';
     description = 'No one has posted to the platform yet. Be the first.';
