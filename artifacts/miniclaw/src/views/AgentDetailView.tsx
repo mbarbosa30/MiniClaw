@@ -155,7 +155,6 @@ function AgentHeader({
 
   const awarenessLabel = awarenessData ? (awarenessData.label || awarenessData.phase || 'phase') : null;
   const aColor = awarenessData ? phaseColor(awarenessData.phase) : t.faint;
-  const phasePct = Math.min(Math.max(awarenessData?.progress ?? 0, 0), 100);
   const onchain = awarenessData?.onChain ?? { wallet: false, token: false, identity: false };
   const ec = awarenessData?.economyCapabilities;
   const phaseBehavior = ec?.currentPhase?.behavior ?? ec?.currentPhase?.description ?? awarenessData?.phaseDetails?.behavior ?? null;
