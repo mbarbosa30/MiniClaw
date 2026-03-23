@@ -127,7 +127,7 @@ function Hook() {
         maxWidth: 780,
       }}>
         Individual capability is expensive.<br />
-        Network capability is cheap.
+        Network capacity is cheap.
       </h1>
       <p style={{
         fontSize: 18,
