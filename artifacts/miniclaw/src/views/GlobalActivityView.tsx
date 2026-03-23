@@ -228,6 +228,8 @@ export function GlobalActivityView() {
 
   const [selectedTask, setSelectedTask] = useState<TaskWithAgent | null>(null);
   const [sheetVariant, setSheetVariant] = useState<SheetVariant>('completed');
+  const [sheetApprove, setSheetApprove] = useState<(() => void) | null>(null);
+  const [sheetReject, setSheetReject] = useState<(() => void) | null>(null);
 
   const { data: agentData, isLoading: agentsLoading } = useAgents();
   const agents = agentData?.agents ?? [];
@@ -317,13 +319,17 @@ export function GlobalActivityView() {
 
   const visibleFeed = feedPosts.slice(0, 10);
 
-  function openSheet(task: TaskWithAgent, variant: SheetVariant) {
+  function openSheet(task: TaskWithAgent, variant: SheetVariant, approve?: () => void, reject?: () => void) {
     setSelectedTask(task);
     setSheetVariant(variant);
+    setSheetApprove(approve ? () => approve : null);
+    setSheetReject(reject ? () => reject : null);
   }
 
   function closeSheet() {
     setSelectedTask(null);
+    setSheetApprove(null);
+    setSheetReject(null);
   }
 
   return (
@@ -362,7 +368,12 @@ export function GlobalActivityView() {
                   <TaskRow
                     task={task}
                     variant="pending"
-                    onPress={() => push('agent-detail', { id: String(task.agentId) })}
+                    onPress={() => openSheet(
+                      task,
+                      'pending',
+                      () => resolve.mutate({ agentId: task.agentId, taskId: task.id, action: 'approve' }),
+                      () => resolve.mutate({ agentId: task.agentId, taskId: task.id, action: 'reject' }),
+                    )}
                     onApprove={() => resolve.mutate({ agentId: task.agentId, taskId: task.id, action: 'approve' })}
                     onReject={() => resolve.mutate({ agentId: task.agentId, taskId: task.id, action: 'reject' })}
                   />
@@ -480,6 +491,8 @@ export function GlobalActivityView() {
         variant={sheetVariant}
         onClose={closeSheet}
         onViewAgent={(agentId) => push('agent-detail', { id: String(agentId) })}
+        onApprove={sheetApprove ?? undefined}
+        onReject={sheetReject ?? undefined}
       />
     </div>
   );

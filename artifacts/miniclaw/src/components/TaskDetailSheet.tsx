@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { X } from 'lucide-react';
+import { X, Check } from 'lucide-react';
 import { useTheme } from '@/lib/theme';
 import { useCompletedTasks } from '@/hooks/use-agents';
 import { AgentAvatar } from '@/components/AgentAvatar';
@@ -18,7 +18,7 @@ export type TaskWithAgent = AgentTask & {
   agentDescription?: string | null;
 };
 
-export type SheetVariant = 'running' | 'completed';
+export type SheetVariant = 'pending' | 'running' | 'completed';
 
 export function humanizeId(id?: string): string {
   if (!id) return '';
@@ -106,11 +106,15 @@ export function TaskDetailSheet({
   variant,
   onClose,
   onViewAgent,
+  onApprove,
+  onReject,
 }: {
   task: TaskWithAgent | null;
   variant: SheetVariant;
   onClose: () => void;
   onViewAgent?: (agentId: string | number) => void;
+  onApprove?: () => void;
+  onReject?: () => void;
 }) {
   const t = useTheme();
   const { data: completedTasks, isLoading: completedLoading } = useCompletedTasks(
@@ -238,6 +242,8 @@ export function TaskDetailSheet({
                 <span style={{ ...MONO, fontSize: 9, color: t.faint }}>
                   {variant === 'completed'
                     ? fmtAbsTime(fullTask.completedAt ?? fullTask.createdAt)
+                    : variant === 'pending'
+                    ? fmtAbsTime(fullTask.createdAt) + ' · needs approval'
                     : fmtAbsTime(fullTask.createdAt) + ' · running'}
                 </span>
               </div>
@@ -273,6 +279,69 @@ export function TaskDetailSheet({
                 </>
               )}
 
+              {variant === 'pending' && (
+                <div>
+                  {fullTask.description && (
+                    <div style={{ marginBottom: 14 }}>
+                      <p style={{ ...MONO, fontSize: 9, color: t.faint, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 5 }}>
+                        Description
+                      </p>
+                      <p style={{ fontSize: 12, fontWeight: 300, color: t.label, lineHeight: 1.55 }}>
+                        {fullTask.description}
+                      </p>
+                    </div>
+                  )}
+                  {(onApprove || onReject) && (
+                    <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
+                      {onApprove && (
+                        <button
+                          onClick={() => { onApprove(); onClose(); }}
+                          style={{
+                            flex: 1,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: 6,
+                            padding: '12px 0',
+                            borderRadius: 12,
+                            background: t.text,
+                            color: t.bg,
+                            fontSize: 14,
+                            fontWeight: 600,
+                            border: 'none',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          <Check size={15} strokeWidth={2.5} /> Approve
+                        </button>
+                      )}
+                      {onReject && (
+                        <button
+                          onClick={() => { onReject(); onClose(); }}
+                          style={{
+                            flex: 1,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: 6,
+                            padding: '12px 0',
+                            borderRadius: 12,
+                            background: t.surface,
+                            color: t.label,
+                            fontSize: 14,
+                            fontWeight: 600,
+                            border: `1px solid ${t.divider}`,
+                            cursor: 'pointer',
+                          }}
+                        >
+                          <X size={15} strokeWidth={2} /> Reject
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
               {variant === 'running' && (
                 <div>
                   {fullTask.description && (
@@ -292,7 +361,7 @@ export function TaskDetailSheet({
               )}
             </div>
 
-            {onViewAgent && (
+            {onViewAgent && variant !== 'pending' && (
               <div style={{
                 position: 'absolute',
                 bottom: 0,

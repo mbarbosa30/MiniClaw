@@ -567,7 +567,10 @@ export function OverviewView() {
         <UsageFetcher key={agent.id} agentId={agent.id} onData={handleUsageData} />
       ))}
 
-      <div className="flex-1 overflow-y-auto no-scrollbar" style={{ padding: '40px 32px 40px' }}>
+      <div className="flex-1 overflow-y-auto no-scrollbar" style={{ padding: '0 32px 40px' }}>
+        <p style={{ fontSize: 32, fontWeight: 200, letterSpacing: '-0.04em', color: t.text, lineHeight: 1, paddingTop: 32, paddingBottom: 32 }}>
+          Overview
+        </p>
 
         {/* ── Section 1: Agent Summary ─────────────────────────────────────── */}
         <SummaryHeader summary={summary} agentCount={agents.length} />

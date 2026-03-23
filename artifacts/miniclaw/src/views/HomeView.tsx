@@ -211,7 +211,8 @@ function AgentRow({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            padding: 0,
+            padding: '6px 2px',
+            minWidth: 32,
           }}
         >
           <MoreHorizontal size={13} strokeWidth={1.5} />
