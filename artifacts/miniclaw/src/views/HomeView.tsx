@@ -604,8 +604,8 @@ export function HomeView() {
             </p>
           )}
 
-          {/* Onboarding tips — visible only when user has exactly 1 agent */}
-          {agents.length === 1 && (
+          {/* Onboarding tips — visible only when user has exactly 1 agent and there are visible tips */}
+          {agents.length === 1 && TIPS.some(tip => !dismissedTips.has(tip.id)) && (
             <div style={{ marginTop: 32 }}>
               <p style={{ ...MONO, fontSize: 9, color: t.faint, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 14 }}>
                 What you can do
@@ -637,7 +637,7 @@ export function HomeView() {
                         <p style={{ fontSize: 13, fontWeight: 400, color: t.text, letterSpacing: '-0.015em', lineHeight: 1.3, marginBottom: 3 }}>
                           {tip.headline}
                         </p>
-                        <p style={{ fontSize: 11, fontWeight: 300, color: t.faint, lineHeight: 1.5, margin: 0 }}>
+                        <p style={{ fontSize: 11, fontWeight: 300, color: t.faint, lineHeight: 1.5, margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                           {tip.body}
                         </p>
                       </div>
