@@ -31,6 +31,40 @@ function fmtRelTime(dateStr?: string): string {
   return `${Math.floor(days / 30)}mo ago`;
 }
 
+// --- Agent monogram circle ---
+
+function AgentMonogram({ name }: { name: string }) {
+  const t = useTheme();
+  const initial = (name ?? 'A').charAt(0).toUpperCase();
+  return (
+    <div
+      style={{
+        width: 26,
+        height: 26,
+        borderRadius: '50%',
+        background: t.surface,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexShrink: 0,
+      }}
+    >
+      <span
+        style={{
+          ...MONO,
+          fontSize: 10,
+          fontWeight: 500,
+          color: t.label,
+          letterSpacing: '0.02em',
+          lineHeight: 1,
+        }}
+      >
+        {initial}
+      </span>
+    </div>
+  );
+}
+
 // --- Comment row ---
 
 function CommentRow({ comment }: { comment: FeedComment }) {
@@ -69,6 +103,7 @@ function FeedPostCard({
   const [expanded, setExpanded] = useState(false);
   const [commentText, setCommentText] = useState('');
   const [optimisticLiked, setOptimisticLiked] = useState<boolean | null>(null);
+  const [likePulseKey, setLikePulseKey] = useState(0);
 
   const displayLiked = optimisticLiked ?? post.liked ?? false;
   const baseLikeCount = post.likeCount ?? 0;
@@ -89,6 +124,7 @@ function FeedPostCard({
 
   function handleLike() {
     setOptimisticLiked(prev => !(prev ?? post.liked ?? false));
+    setLikePulseKey(k => k + 1);
     onLike(post);
   }
 
@@ -107,30 +143,42 @@ function FeedPostCard({
       initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.28 }}
-      style={{ paddingBottom: 20, marginBottom: 20, borderBottom: `1px solid ${t.divider}` }}
+      style={{ paddingBottom: 22, marginBottom: 22, borderBottom: `1px solid ${t.divider}` }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-        <span style={{ fontSize: 13, fontWeight: 400, letterSpacing: '-0.01em', color: t.text, flex: 1, minWidth: 0 }}>{agentName}</span>
+      {/* Agent identity row */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 11 }}>
+        <AgentMonogram name={agentName} />
+        <span style={{ fontSize: 13, fontWeight: 400, letterSpacing: '-0.01em', color: t.text, flex: 1, minWidth: 0 }}>
+          {agentName}
+        </span>
         <span style={{ ...MONO, fontSize: 9, color: t.faint }}>{fmtRelTime(post.createdAt)}</span>
       </div>
 
-      <p style={{ fontSize: 13, fontWeight: 300, color: t.text, lineHeight: 1.65, letterSpacing: '-0.01em', marginBottom: 14, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+      <p style={{ fontSize: 13, fontWeight: 300, color: t.text, lineHeight: 1.65, letterSpacing: '-0.01em', marginBottom: 16, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
         {post.content}
       </p>
 
-      <div style={{ display: 'flex', gap: 18, alignItems: 'center' }}>
-        <button onClick={handleLike} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: 5 }}>
-          <Heart
-            size={13}
-            strokeWidth={1.5}
-            color={displayLiked ? '#ef4444' : t.faint}
-            fill={displayLiked ? '#ef4444' : 'none'}
-            style={{ transition: 'color 0.15s, fill 0.15s' }}
-          />
+      <div style={{ display: 'flex', gap: 20, alignItems: 'center' }}>
+        <button onClick={handleLike} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
+          <motion.span
+            key={likePulseKey}
+            initial={{ scale: 1 }}
+            animate={likePulseKey > 0 ? { scale: [1, 1.35, 1] } : { scale: 1 }}
+            transition={{ duration: 0.15, ease: [0.34, 1.56, 0.64, 1] }}
+            style={{ display: 'flex', alignItems: 'center' }}
+          >
+            <Heart
+              size={13}
+              strokeWidth={1.5}
+              color={displayLiked ? '#ef4444' : t.faint}
+              fill={displayLiked ? '#ef4444' : 'none'}
+              style={{ transition: 'color 0.15s, fill 0.15s' }}
+            />
+          </motion.span>
           <span style={{ ...MONO, fontSize: 9, color: t.faint }}>{displayLikeCount}</span>
         </button>
 
-        <button onClick={() => setExpanded(e => !e)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: 5 }}>
+        <button onClick={() => setExpanded(e => !e)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
           <MessageCircle size={13} strokeWidth={1.5} color={expanded ? t.text : t.faint} />
           <span style={{ ...MONO, fontSize: 9, color: t.faint }}>{commentCountDisplay}</span>
         </button>
@@ -145,7 +193,7 @@ function FeedPostCard({
             transition={{ duration: 0.2 }}
             style={{ overflow: 'hidden' }}
           >
-            <div style={{ marginTop: 16 }}>
+            <div style={{ marginTop: 18 }}>
               {commentsLoading ? (
                 <p style={{ ...MONO, fontSize: 9, color: t.faint }}>Loading…</p>
               ) : comments.length === 0 ? (
@@ -217,11 +265,11 @@ function FeedSkeleton() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
       {[0, 1, 2].map(i => (
         <motion.div key={i} initial={{ opacity: 0.3 }} animate={{ opacity: [0.3, 0.6, 0.3] }} transition={{ duration: 1.5, repeat: Infinity, delay: i * 0.12 }}>
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 12 }}>
-            <div style={{ width: 22, height: 22, borderRadius: '50%', background: t.surface }} />
+          <div style={{ display: 'flex', gap: 9, alignItems: 'center', marginBottom: 11 }}>
+            <div style={{ width: 26, height: 26, borderRadius: '50%', background: t.surface }} />
             <div style={{ height: 10, width: '30%', background: t.surface, borderRadius: 3 }} />
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 16 }}>
             <div style={{ height: 10, width: '90%', background: t.surface, borderRadius: 3 }} />
             <div style={{ height: 10, width: '75%', background: t.surface, borderRadius: 3 }} />
             <div style={{ height: 10, width: '55%', background: t.surface, borderRadius: 3 }} />
@@ -261,6 +309,20 @@ function ComposeSheet({
   }
 
   const canPost = content.trim().length > 0 && selectedAgentId !== '' && !isPending;
+
+  const chipStyle = (active: boolean): React.CSSProperties => ({
+    background: active ? t.text : t.surface,
+    color: active ? t.bg : t.label,
+    border: 'none',
+    borderRadius: 100,
+    padding: '5px 14px',
+    fontSize: 11,
+    fontFamily: 'inherit',
+    cursor: 'pointer',
+    transition: 'background 0.15s, color 0.15s',
+    whiteSpace: 'nowrap',
+    flexShrink: 0,
+  });
 
   return (
     <>
@@ -306,35 +368,23 @@ function ComposeSheet({
           </button>
         </div>
 
-        {/* Agent picker — only when 2+ agents */}
+        {/* Agent picker — pill chips, only when 2+ agents */}
         {agents.length >= 2 && (
           <div>
-            <label style={{ fontFamily: 'ui-monospace, Menlo, monospace', fontSize: 9, color: t.faint, letterSpacing: '0.07em', textTransform: 'uppercase', display: 'block', marginBottom: 8 }}>
+            <label style={{ ...MONO, fontSize: 9, color: t.faint, letterSpacing: '0.07em', textTransform: 'uppercase', display: 'block', marginBottom: 9 }}>
               Post as
             </label>
-            <select
-              value={selectedAgentId}
-              onChange={e => setSelectedAgentId(e.target.value)}
-              style={{
-                width: '100%',
-                background: t.surface,
-                color: t.text,
-                border: 'none',
-                borderRadius: 8,
-                padding: '9px 12px',
-                fontSize: 13,
-                fontFamily: 'inherit',
-                outline: 'none',
-                appearance: 'none',
-                cursor: 'pointer',
-              }}
-            >
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
               {agents.map(a => (
-                <option key={a.id} value={String(a.id)}>
+                <button
+                  key={a.id}
+                  style={chipStyle(selectedAgentId === String(a.id))}
+                  onClick={() => setSelectedAgentId(String(a.id))}
+                >
                   {a.name}
-                </option>
+                </button>
               ))}
-            </select>
+            </div>
           </div>
         )}
 
@@ -412,6 +462,37 @@ function ScopeToggle({ scope, onScope }: { scope: FeedScope; onScope: (s: FeedSc
   );
 }
 
+// --- Empty state ---
+
+function EmptyState({ scope, selectedAgentId }: { scope: FeedScope; selectedAgentId: string | null }) {
+  const t = useTheme();
+
+  let headline: string;
+  let description: string;
+
+  if (scope === 'mine' && selectedAgentId) {
+    headline = 'Nothing here yet.';
+    description = 'This agent hasn't shared anything. Give it a nudge.';
+  } else if (scope === 'mine') {
+    headline = 'Your agents are quiet.';
+    description = 'When they have something to say, it'll show up here.';
+  } else {
+    headline = 'The feed is empty.';
+    description = 'No one has posted to the platform yet. Be the first.';
+  }
+
+  return (
+    <div style={{ paddingTop: 32 }}>
+      <p style={{ fontSize: 13, fontWeight: 400, color: t.label, letterSpacing: '-0.01em', marginBottom: 5 }}>
+        {headline}
+      </p>
+      <p style={{ ...MONO, fontSize: 10, color: t.faint, lineHeight: 1.6 }}>
+        {description}
+      </p>
+    </div>
+  );
+}
+
 // --- Feed View ---
 
 export function FeedView() {
@@ -427,7 +508,6 @@ export function FeedView() {
   const [composeOpen, setComposeOpen] = useState(false);
   const { mutate: likePost } = useLikeFeedPost();
 
-  // Reset per-agent filter when switching to global scope
   function handleScopeChange(next: FeedScope) {
     setScope(next);
     if (next === 'global') setSelectedAgentId(null);
@@ -444,6 +524,21 @@ export function FeedView() {
     likePost({ agentId: post.agentId, postId: post.id });
   }
 
+  // Ambient context line
+  const ambientText = !isLoading
+    ? scope === 'mine' && selectedAgentId != null
+      ? posts.length === 1
+        ? '1 post'
+        : `${posts.length} posts`
+      : scope === 'mine'
+        ? agents.length === 1
+          ? '1 agent'
+          : `${agents.length} agents`
+        : posts.length === 1
+          ? '1 post'
+          : `${posts.length} posts`
+    : null;
+
   return (
     <div
       style={{
@@ -457,11 +552,18 @@ export function FeedView() {
       }}
     >
       <div className="flex-1 overflow-y-auto no-scrollbar" style={{ padding: '0 32px 40px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', paddingTop: 32, paddingBottom: 32 }}>
-          <p style={{ fontSize: 32, fontWeight: 200, letterSpacing: '-0.04em', color: t.text, lineHeight: 1, flex: 1, margin: 0 }}>
-            Feed
-          </p>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', paddingTop: 32, paddingBottom: 28 }}>
+          <div style={{ flex: 1 }}>
+            <p style={{ fontSize: 32, fontWeight: 200, letterSpacing: '-0.04em', color: t.text, lineHeight: 1, margin: 0 }}>
+              Feed
+            </p>
+            {ambientText && (
+              <p style={{ ...MONO, fontSize: 9, color: t.faint, marginTop: 6, lineHeight: 1 }}>
+                {ambientText}
+              </p>
+            )}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14, paddingTop: 4 }}>
             <button
               onClick={() => push('activity-global')}
               style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 6, display: 'flex', alignItems: 'center', color: t.faint, position: 'relative' }}
@@ -496,14 +598,7 @@ export function FeedView() {
             </button>
           </div>
         ) : posts.length === 0 ? (
-          <p style={{ fontSize: 13, color: t.faint, fontWeight: 300, lineHeight: 1.6, paddingTop: 8 }}>
-            No posts yet.{' '}
-            {scope === 'mine' && selectedAgentId
-              ? "This agent hasn't published anything."
-              : scope === 'mine'
-              ? 'Your agents will appear here when they share updates.'
-              : 'Nothing published on the platform yet.'}
-          </p>
+          <EmptyState scope={scope} selectedAgentId={selectedAgentId} />
         ) : (
           <div>
             {posts.map((post, i) => (
