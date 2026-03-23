@@ -65,6 +65,7 @@ function useEventNotifications() {
   const qc = useQueryClient();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const setHasUnseenCompletions = useAppStore((s) => s.setHasUnseenCompletions);
+  const currentViewName = useRouter((s) => s.currentView.name);
   const [since, setSince] = useState(() => new Date().toISOString());
   const prevAuthenticated = useRef(isAuthenticated);
 
@@ -97,8 +98,9 @@ function useEventNotifications() {
         qc.invalidateQueries({ queryKey: ['tasks', ev.agentId, 'completed'] });
         qc.invalidateQueries({ queryKey: ['task-summary', ev.agentId] });
       }
-      // Show dot badge on Activity icon for task completions
-      if (ev.event === 'task_completed') {
+      // Show dot badge on Activity icon for task completions,
+      // but skip if the user is already viewing the Activity screen.
+      if (ev.event === 'task_completed' && currentViewName !== 'activity-global') {
         setHasUnseenCompletions(true);
       }
       // Marketplace order events — target actual query keys used in use-agents.ts

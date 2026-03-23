@@ -234,9 +234,27 @@ export function GlobalActivityView() {
 
   const agentIds = agentsLoading ? [] : agents.map((a) => a.id);
   const summaries = useAllTaskSummaries(agentIds);
-  // Fallback: fetch completed tasks per-agent when recentlyCompleted.items is empty
-  // (some backend responses only return count, not items).
-  const completedFallbacks = useAllCompletedTasks(agentIds);
+
+  // Determine which agents need the completed-task fallback:
+  // only those whose summary has recentlyCompleted.count > 0 but items is empty.
+  // useAllCompletedTasks uses the same cache key as useCompletedTasks so already-cached
+  // data is returned instantly; new fetches only happen for the agents that truly need it.
+  const agentIdsNeedingFallback = agentIds.filter((_, i) => {
+    const rc = summaries[i]?.data?.recentlyCompleted;
+    return rc !== undefined && (rc.items ?? []).length === 0 && (rc.count ?? 0) > 0;
+  });
+  const completedFallbackResults = useAllCompletedTasks(agentIdsNeedingFallback);
+
+  // Build a map from agentId → completed task list for O(1) lookup in the loop below.
+  const fallbackByAgentId = useMemo(() => {
+    const map = new Map<string, AgentTask[]>();
+    agentIdsNeedingFallback.forEach((id, i) => {
+      const d = completedFallbackResults[i]?.data;
+      if (d) map.set(String(id), d);
+    });
+    return map;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [completedFallbackResults]);
 
   const { data: feedPosts = [], isLoading: feedLoading } = useFeed();
 
@@ -272,7 +290,7 @@ export function GlobalActivityView() {
     (result.data.scheduled?.items ?? []).forEach((t) => running.push(attach(t)));
 
     // Use recentlyCompleted.items from the summary if populated.
-    // Fall back to useAllCompletedTasks data when items is empty but count > 0 —
+    // Fall back to per-agent completed task fetch when items is empty but count > 0 —
     // some backend responses only return the count field, not the items array.
     const summaryItems = result.data.recentlyCompleted?.items ?? [];
     const summaryCount = result.data.recentlyCompleted?.count ?? 0;
@@ -280,7 +298,7 @@ export function GlobalActivityView() {
       summaryItems.length > 0
         ? summaryItems
         : summaryCount > 0
-        ? (completedFallbacks[i]?.data ?? [])
+        ? (fallbackByAgentId.get(String(agent.id)) ?? [])
         : [];
 
     itemSource
