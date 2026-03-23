@@ -206,17 +206,6 @@ function ProfileSection() {
         </div>
 
         <div>
-          <label style={fieldLabelStyle}>Email <span style={{ textTransform: 'none', letterSpacing: 0, fontWeight: 400, opacity: 0.7 }}>(optional)</span></label>
-          <input
-            type="email"
-            value={userProfile.email ?? ''}
-            placeholder="you@example.com"
-            onChange={(e) => handleChange('email', e.target.value)}
-            style={fieldStyle}
-          />
-        </div>
-
-        <div>
           <label style={fieldLabelStyle}>X / Twitter handle <span style={{ textTransform: 'none', letterSpacing: 0, fontWeight: 400, opacity: 0.7 }}>(optional)</span></label>
           <div style={{ position: 'relative' }}>
             <span style={{
@@ -231,6 +220,17 @@ function ProfileSection() {
               style={{ ...fieldStyle, paddingLeft: 30 }}
             />
           </div>
+        </div>
+
+        <div>
+          <label style={fieldLabelStyle}>Email <span style={{ textTransform: 'none', letterSpacing: 0, fontWeight: 400, opacity: 0.7 }}>(optional)</span></label>
+          <input
+            type="email"
+            value={userProfile.email ?? ''}
+            placeholder="you@example.com"
+            onChange={(e) => handleChange('email', e.target.value)}
+            style={fieldStyle}
+          />
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>

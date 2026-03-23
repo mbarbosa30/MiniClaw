@@ -312,7 +312,7 @@ function SkeletonRow({ index }: { index: number }) {
 export function HomeView() {
   const t = useTheme();
   const push = useRouter((s) => s.push);
-  const { hasSeenOnboard, setHasSeenOnboard, hasUnseenCompletions, dismissedTips, dismissTip } = useAppStore();
+  const { hasSeenOnboard, setHasSeenOnboard, hasUnseenCompletions, dismissedTips, dismissTip, forceShowTips, setForceShowTips } = useAppStore();
   const { data, isLoading, isError } = useAgents();
 
   const [cachedAgents, setCachedAgentsState] = useState<Agent[]>(() => getCachedAgents() ?? []);
@@ -330,6 +330,13 @@ export function HomeView() {
 
   const agents = apiAgents.length > 0 ? apiAgents : cachedAgents;
   const showSkeleton = isLoading && agents.length === 0;
+
+  // Auto-clear forceShowTips once all tips have been dismissed
+  useEffect(() => {
+    if (forceShowTips && !TIPS.some(tip => !dismissedTips.has(tip.id))) {
+      setForceShowTips(false);
+    }
+  }, [dismissedTips, forceShowTips, setForceShowTips]);
 
   // Clear the at-limit message whenever the agent count drops back below the cap
   useEffect(() => {
@@ -579,8 +586,8 @@ export function HomeView() {
             </p>
           )}
 
-          {/* Onboarding tips — visible only when user has exactly 1 agent and there are visible tips */}
-          {agents.length === 1 && TIPS.some(tip => !dismissedTips.has(tip.id)) && (
+          {/* Onboarding tips — visible when user has 1 agent OR tips were explicitly reset from Settings */}
+          {(agents.length === 1 || forceShowTips) && TIPS.some(tip => !dismissedTips.has(tip.id)) && (
             <div style={{ marginTop: 32 }}>
               <p style={{ ...MONO, fontSize: 9, color: t.faint, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 14 }}>
                 What you can do

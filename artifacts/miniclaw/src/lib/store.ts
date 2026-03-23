@@ -165,6 +165,8 @@ interface AppStore {
   dismissedTips: Set<string>;
   dismissTip: (id: string) => void;
   resetTips: () => void;
+  forceShowTips: boolean;
+  setForceShowTips: (v: boolean) => void;
 }
 
 const TIPS_DISMISSED_KEY = 'miniclaw-onboard-tips-dismissed';
@@ -219,6 +221,8 @@ export const useAppStore = create<AppStore>((set) => ({
   }),
   resetTips: () => {
     try { localStorage.removeItem(TIPS_DISMISSED_KEY); } catch { /* noop */ }
-    set({ dismissedTips: new Set() });
+    set({ dismissedTips: new Set(), forceShowTips: true });
   },
+  forceShowTips: false,
+  setForceShowTips: (v) => set({ forceShowTips: v }),
 }));
