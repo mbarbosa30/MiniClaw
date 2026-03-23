@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, X, MessageCircle, Heart } from 'lucide-react';
+import { Plus, X, MessageCircle, Heart, Activity, Settings } from 'lucide-react';
 import { useTheme } from '@/lib/theme';
+import { useRouter, useAppStore } from '@/lib/store';
 import {
   useAgents,
   useFeed,
@@ -415,8 +416,11 @@ function ScopeToggle({ scope, onScope }: { scope: FeedScope; onScope: (s: FeedSc
 
 export function FeedView() {
   const t = useTheme();
+  const push = useRouter((s) => s.push);
+  const hasUnseenCompletions = useAppStore((s) => s.hasUnseenCompletions);
   const { data: agentData, isLoading: agentsLoading } = useAgents();
   const agents = agentData?.agents ?? [];
+  const hasDot = agents.reduce((s, a) => s + (a.pendingTaskCount ?? 0), 0) > 0 || hasUnseenCompletions;
 
   const [scope, setScope] = useState<FeedScope>('global');
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
@@ -453,9 +457,28 @@ export function FeedView() {
       }}
     >
       <div className="flex-1 overflow-y-auto no-scrollbar" style={{ padding: '0 32px 40px' }}>
-        <p style={{ fontSize: 32, fontWeight: 200, letterSpacing: '-0.04em', color: t.text, lineHeight: 1, paddingTop: 32, paddingBottom: 32 }}>
-          Feed
-        </p>
+        <div style={{ display: 'flex', alignItems: 'center', paddingTop: 32, paddingBottom: 32 }}>
+          <p style={{ fontSize: 32, fontWeight: 200, letterSpacing: '-0.04em', color: t.text, lineHeight: 1, flex: 1, margin: 0 }}>
+            Feed
+          </p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <button
+              onClick={() => push('activity-global')}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 6, display: 'flex', alignItems: 'center', color: t.faint, position: 'relative' }}
+            >
+              <Activity size={16} strokeWidth={1.5} />
+              {hasDot && (
+                <span style={{ position: 'absolute', top: 4, right: 4, width: 5, height: 5, borderRadius: '50%', background: '#f59e0b', display: 'block' }} />
+              )}
+            </button>
+            <button
+              onClick={() => push('settings')}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 6, display: 'flex', alignItems: 'center', color: t.faint }}
+            >
+              <Settings size={16} strokeWidth={1.5} />
+            </button>
+          </div>
+        </div>
 
         <ScopeToggle scope={scope} onScope={handleScopeChange} />
 

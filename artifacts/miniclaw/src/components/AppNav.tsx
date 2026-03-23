@@ -1,14 +1,12 @@
-import { List, BarChart2, Activity, Newspaper, ShoppingBag } from 'lucide-react';
+import { List, BarChart2, Newspaper, ShoppingBag } from 'lucide-react';
 import { useTheme } from '@/lib/theme';
-import { useRouter, useAppStore, type ViewName } from '@/lib/store';
-import { useAgents } from '@/hooks/use-agents';
+import { useRouter, type ViewName } from '@/lib/store';
 
-type NavTab = 'home' | 'overview' | 'activity-global' | 'feed' | 'marketplace';
+type NavTab = 'home' | 'overview' | 'feed' | 'marketplace';
 
 const TABS: { id: NavTab; Icon: React.ElementType }[] = [
   { id: 'home', Icon: List },
   { id: 'overview', Icon: BarChart2 },
-  { id: 'activity-global', Icon: Activity },
   { id: 'feed', Icon: Newspaper },
   { id: 'marketplace', Icon: ShoppingBag },
 ];
@@ -17,12 +15,6 @@ export function AppNav() {
   const t = useTheme();
   const push = useRouter((s) => s.push);
   const currentView = useRouter((s) => s.currentView.name) as ViewName;
-  const hasUnseenCompletions = useAppStore((s) => s.hasUnseenCompletions);
-  const { data: agentData } = useAgents();
-  const totalPendingTasks = (agentData?.agents ?? []).reduce(
-    (s, a) => s + (a.pendingTaskCount ?? a.stats?.pendingTasksCount ?? 0), 0,
-  );
-  const showActivityBadge = hasUnseenCompletions || totalPendingTasks > 0;
 
   const activeTab: NavTab | null = TABS.some(tab => tab.id === currentView)
     ? (currentView as NavTab)
@@ -61,21 +53,6 @@ export function AppNav() {
             strokeWidth={activeTab === id ? 2.25 : 1.5}
             color={activeTab === id ? t.text : t.faint}
           />
-          {/* Amber dot badge on Activity tab when there are pending tasks or unseen completions */}
-          {id === 'activity-global' && showActivityBadge && (
-            <span
-              style={{
-                position: 'absolute',
-                top: 6,
-                right: 'calc(50% - 14px)',
-                width: 5,
-                height: 5,
-                borderRadius: '50%',
-                background: '#f59e0b',
-                display: 'block',
-              }}
-            />
-          )}
         </button>
       ))}
     </div>

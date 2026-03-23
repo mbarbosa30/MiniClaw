@@ -4,10 +4,11 @@ import {
   Search, X, Star, Heart, SlidersHorizontal,
   Bot, FileText, TrendingUp, Globe, Code2, BarChart2,
   Megaphone, Languages, Image, Music, Zap, ShoppingBag,
-  User,
+  User, Activity, Settings,
   type LucideIcon,
 } from 'lucide-react';
 import { useTheme } from '@/lib/theme';
+import { useRouter, useAppStore } from '@/lib/store';
 import {
   useMarketplaceServices,
   usePlaceOrder,
@@ -1230,6 +1231,8 @@ type MarketplaceTab = 'browse' | 'orders' | 'saved';
 
 export function MarketplaceView() {
   const t = useTheme();
+  const push = useRouter((s) => s.push);
+  const hasUnseenCompletions = useAppStore((s) => s.hasUnseenCompletions);
   const [tab, setTab] = useState<MarketplaceTab>('browse');
   const [selectedService, setSelectedService] = useState<MarketplaceService | null>(null);
   const { data: agentsData } = useAgents();
@@ -1238,6 +1241,7 @@ export function MarketplaceView() {
   const activeAgentId = selectedAgentId ?? firstAgentId;
   const [savedIds, toggleSave] = useSavedServices();
   const [lastPlacedOrder, setLastPlacedOrder] = useState<{ orderId: string; agentId: string | number } | undefined>(undefined);
+  const hasDot = (agentsData?.agents ?? []).reduce((s, a) => s + (a.pendingTaskCount ?? 0), 0) > 0 || hasUnseenCompletions;
 
   const handleOrderPlaced = useCallback((orderId: string) => {
     setLastPlacedOrder({ orderId, agentId: activeAgentId! });
@@ -1256,9 +1260,28 @@ export function MarketplaceView() {
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: t.bg, transition: 'background 0.3s ease', minHeight: 0, position: 'relative' }}>
       <div className="flex-1 overflow-y-auto no-scrollbar" style={{ padding: '0 32px 40px', overflowX: 'hidden' }}>
-        <p style={{ fontSize: 32, fontWeight: 200, letterSpacing: '-0.04em', color: t.text, lineHeight: 1, paddingTop: 32, marginBottom: 32 }}>
-          Marketplace
-        </p>
+        <div style={{ display: 'flex', alignItems: 'center', paddingTop: 32, marginBottom: 32 }}>
+          <p style={{ fontSize: 32, fontWeight: 200, letterSpacing: '-0.04em', color: t.text, lineHeight: 1, flex: 1, margin: 0 }}>
+            Marketplace
+          </p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <button
+              onClick={() => push('activity-global')}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 6, display: 'flex', alignItems: 'center', color: t.faint, position: 'relative' }}
+            >
+              <Activity size={16} strokeWidth={1.5} />
+              {hasDot && (
+                <span style={{ position: 'absolute', top: 4, right: 4, width: 5, height: 5, borderRadius: '50%', background: '#f59e0b', display: 'block' }} />
+              )}
+            </button>
+            <button
+              onClick={() => push('settings')}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 6, display: 'flex', alignItems: 'center', color: t.faint }}
+            >
+              <Settings size={16} strokeWidth={1.5} />
+            </button>
+          </div>
+        </div>
 
         {/* Tab switcher */}
         <div style={{ display: 'flex', gap: 4, background: t.surface, borderRadius: 10, padding: 4, marginBottom: 24, alignSelf: 'flex-start' }}>
