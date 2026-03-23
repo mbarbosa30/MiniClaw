@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, MoreHorizontal, Bot, Settings } from 'lucide-react';
+import { Plus, MoreHorizontal, Bot, Settings, Activity } from 'lucide-react';
 import { useTheme } from '@/lib/theme';
 import { useRouter, useAppStore } from '@/lib/store';
 import { useAgents } from '@/hooks/use-agents';
@@ -397,6 +397,34 @@ export function HomeView() {
                 <Plus size={16} strokeWidth={1.5} />
               </button>
             )}
+            {/* Activity shortcut — amber dot when any agent has pending tasks */}
+            <button
+              onClick={() => push('activity-global')}
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                padding: 6,
+                display: 'flex',
+                alignItems: 'center',
+                color: t.faint,
+                position: 'relative',
+              }}
+            >
+              <Activity size={16} strokeWidth={1.5} />
+              {agents.reduce((s, a) => s + (a.pendingTaskCount ?? 0), 0) > 0 && (
+                <span style={{
+                  position: 'absolute',
+                  top: 4,
+                  right: 4,
+                  width: 5,
+                  height: 5,
+                  borderRadius: '50%',
+                  background: '#f59e0b',
+                  display: 'block',
+                }} />
+              )}
+            </button>
             <button
               onClick={() => push('settings')}
               style={{

@@ -785,14 +785,18 @@ function normaliseFeedResponse(raw: RawFeedEnvelope): FeedPost[] {
   return env.posts ?? env.items ?? env.feed ?? [];
 }
 
-// GET /v1/feed?source=miniclaw&sort=recent&includeComments=1 — social feed across all MiniClaw agents.
-// Optionally narrow to a single agent with agentId.
-export function useFeed(filters?: { agentId?: string | number }) {
+// GET /v1/feed — social feed.
+// scope='mine' (default): source=miniclaw — posts from the user's own MiniClaw agents.
+// scope='global': no source filter — posts from all agents across the platform.
+// Optionally narrow to a single agent with agentId (only relevant in 'mine' scope).
+export function useFeed(filters?: { agentId?: string | number; scope?: 'global' | 'mine' }) {
+  const scope = filters?.scope ?? 'mine';
   const agentKey = filters?.agentId != null ? String(filters.agentId) : 'all';
   return useQuery<FeedPost[]>({
-    queryKey: ['feed', agentKey],
+    queryKey: ['feed', scope, agentKey],
     queryFn: async () => {
-      const params = new URLSearchParams({ source: 'miniclaw', sort: 'recent', includeComments: '1', limit: '20' });
+      const params = new URLSearchParams({ sort: 'recent', includeComments: '1', limit: '50' });
+      if (scope === 'mine') params.set('source', 'miniclaw');
       if (filters?.agentId != null) params.set('agentId', String(filters.agentId));
       const raw = await apiFetch<RawFeedEnvelope>(`/api/selfclaw/v1/feed?${params.toString()}`);
       return normaliseFeedResponse(raw);

@@ -38,22 +38,23 @@ export const STATE_LABEL: Record<VisualState, string> = {
   sleeping:   'Sleeping',
   running:    'Working on a task',
   waiting:    'Waiting',
-  pending:    'active',
+  pending:    'Standby',
   idle:       'Standing by',
 };
 
 export function agentVisualState(agent: Agent): VisualState {
-  const rs = agent.runtimeStatus;
-  if (rs === 'thinking')   return 'thinking';
-  if (rs === 'working')    return 'working';
-  if (rs === 'reflecting') return 'reflecting';
-  if (rs === 'observing')  return 'observing';
-  if (rs === 'composing')  return 'composing';
-  if (rs === 'resting')    return 'resting';
-  if (rs === 'sleeping')   return 'sleeping';
-  if (rs === 'running')    return 'running';
-  if (rs === 'waiting')    return 'waiting';
-  if (agent.status === 'active') return 'pending';
+  // Prefer liveStatus (returned by GET /v1/hosted-agents since 2026-03),
+  // fall back to legacy runtimeStatus field for older API responses.
+  const ls = agent.liveStatus ?? agent.runtimeStatus;
+  if (ls === 'thinking')   return 'thinking';
+  if (ls === 'working')    return 'working';
+  if (ls === 'reflecting') return 'reflecting';
+  if (ls === 'observing')  return 'observing';
+  if (ls === 'composing')  return 'composing';
+  if (ls === 'resting')    return 'resting';
+  if (ls === 'sleeping')   return 'sleeping';
+  if (ls === 'running')    return 'running';
+  if (ls === 'waiting')    return 'waiting';
   return 'idle';
 }
 

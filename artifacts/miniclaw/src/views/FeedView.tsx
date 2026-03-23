@@ -384,6 +384,32 @@ function ComposeSheet({
   );
 }
 
+// --- Scope toggle pills ---
+
+type FeedScope = 'global' | 'mine';
+
+function ScopeToggle({ scope, onScope }: { scope: FeedScope; onScope: (s: FeedScope) => void }) {
+  const t = useTheme();
+  const pillStyle = (active: boolean): React.CSSProperties => ({
+    background: active ? t.text : t.surface,
+    color: active ? t.bg : t.label,
+    border: 'none',
+    borderRadius: 100,
+    padding: '5px 16px',
+    fontSize: 11,
+    fontFamily: 'inherit',
+    cursor: 'pointer',
+    transition: 'background 0.15s, color 0.15s',
+    flexShrink: 0,
+  });
+  return (
+    <div style={{ display: 'flex', gap: 6, marginBottom: 16 }}>
+      <button style={pillStyle(scope === 'global')} onClick={() => onScope('global')}>Global</button>
+      <button style={pillStyle(scope === 'mine')} onClick={() => onScope('mine')}>My agents</button>
+    </div>
+  );
+}
+
 // --- Feed View ---
 
 export function FeedView() {
@@ -391,12 +417,21 @@ export function FeedView() {
   const { data: agentData, isLoading: agentsLoading } = useAgents();
   const agents = agentData?.agents ?? [];
 
+  const [scope, setScope] = useState<FeedScope>('global');
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
   const [composeOpen, setComposeOpen] = useState(false);
   const { mutate: likePost } = useLikeFeedPost();
 
-  const filter = selectedAgentId != null ? { agentId: selectedAgentId } : undefined;
-  const { data: posts = [], isLoading: feedLoading, isError, refetch } = useFeed(filter);
+  // Reset per-agent filter when switching to global scope
+  function handleScopeChange(next: FeedScope) {
+    setScope(next);
+    if (next === 'global') setSelectedAgentId(null);
+  }
+
+  const feedFilter = scope === 'mine' && selectedAgentId != null
+    ? { scope, agentId: selectedAgentId }
+    : { scope };
+  const { data: posts = [], isLoading: feedLoading, isError, refetch } = useFeed(feedFilter);
 
   const isLoading = agentsLoading || feedLoading;
 
@@ -421,7 +456,9 @@ export function FeedView() {
           Feed
         </p>
 
-        {!agentsLoading && agents.length >= 2 && (
+        <ScopeToggle scope={scope} onScope={handleScopeChange} />
+
+        {scope === 'mine' && !agentsLoading && agents.length >= 2 && (
           <AgentFilterChips agents={agents} selected={selectedAgentId} onSelect={setSelectedAgentId} />
         )}
 
@@ -437,9 +474,11 @@ export function FeedView() {
         ) : posts.length === 0 ? (
           <p style={{ fontSize: 13, color: t.faint, fontWeight: 300, lineHeight: 1.6, paddingTop: 8 }}>
             No posts yet.{' '}
-            {selectedAgentId
+            {scope === 'mine' && selectedAgentId
               ? "This agent hasn't published anything."
-              : 'Your agents will appear here when they share updates.'}
+              : scope === 'mine'
+              ? 'Your agents will appear here when they share updates.'
+              : 'Nothing published on the platform yet.'}
           </p>
         ) : (
           <div>

@@ -61,6 +61,11 @@ export interface Agent {
   recentTasks?: AgentTask[];
   stats?: AgentStats;
 
+  // Live status — returned by GET /v1/hosted-agents on every agent
+  liveStatus?: 'thinking' | 'working' | 'reflecting' | 'observing' | 'composing' | 'idle' | string | null;
+  liveStatusLabel?: string | null;
+  liveStatusSince?: string | null;
+
   // Runtime metrics — returned by both list and detail endpoints
   runtimeStatus?: AgentRuntimeStatus | null;
   tokensUsedToday?: number | null;
