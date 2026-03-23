@@ -3,7 +3,7 @@ import { useAgent, useConversations, useMessages, useAwareness, useCompactConver
 import { useRouter } from '@/lib/store';
 import { useTheme } from '@/lib/theme';
 import { Button } from '@/components/ui';
-import { MoreHorizontal, Copy, Check, RefreshCw } from 'lucide-react';
+import { MoreHorizontal, Copy, Check } from 'lucide-react';
 import { apiFetch, apiFetchWithHeaders, apiFetchStream, ApiError } from '@/lib/api-client';
 import type { Agent, ChatMessage, AgentAwareness } from '@/types';
 import ReactMarkdown from 'react-markdown';
@@ -556,12 +556,10 @@ function mdToPlainText(md: string): string {
 function MessageActions({
   content,
   isAssistant,
-  onRegenerate,
   t,
 }: {
   content: string;
   isAssistant: boolean;
-  onRegenerate?: () => void;
   t: ReturnType<typeof useTheme>;
 }) {
   const [copied, setCopied] = useState(false);
@@ -620,18 +618,105 @@ function MessageActions({
           ? <Check size={13} />
           : <Copy size={13} />}
       </button>
-      {isAssistant && onRegenerate && (
-        <button
-          style={btnStyle}
-          onClick={onRegenerate}
-          title="Regenerate"
-          onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = t.label; }}
-          onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = t.faint; }}
-        >
-          <RefreshCw size={13} />
-        </button>
-      )}
     </div>
+  );
+}
+
+type LocalMessageForMeta = {
+  latencyMs?: number;
+  _ts?: number;
+  createdAt?: string;
+  promptTokens?: number;
+  completionTokens?: number;
+  tokensUsed?: number;
+  memoriesUsed?: number;
+  content: string;
+};
+
+function AssistantMeta({ m, t }: { m: LocalMessageForMeta; t: ReturnType<typeof useTheme> }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    const text = mdToPlainText(m.content);
+    const execFallback = () => {
+      try {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 1500);
+      } catch { }
+    };
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(text).then(() => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 1500);
+      }).catch(execFallback);
+    } else {
+      execFallback();
+    }
+  };
+
+  if (m.latencyMs === undefined) return null;
+
+  const relTime = fmtRelative(m._ts, m.createdAt);
+  const tokStr = (() => {
+    if (m.promptTokens != null && m.completionTokens != null) {
+      return `p:${m.promptTokens.toLocaleString()} c:${m.completionTokens.toLocaleString()}`;
+    }
+    if (m.tokensUsed != null && m.tokensUsed > 0) return `${m.tokensUsed.toLocaleString()} tok`;
+    return undefined;
+  })();
+  const memStr = m.memoriesUsed != null && m.memoriesUsed > 0 ? `${m.memoriesUsed} mem` : undefined;
+  const parts = [`${(m.latencyMs / 1000).toFixed(1)}s`, tokStr, memStr, relTime || undefined].filter(Boolean);
+  const totalTok = (m.promptTokens ?? 0) + (m.completionTokens ?? 0);
+  const tokForBar = totalTok > 0 ? totalTok : (m.tokensUsed ?? 0);
+  const effortW = tokForBar > 0
+    ? `${Math.min(Math.max(tokForBar / 4000, 0.08), 1) * 100}%`
+    : '8%';
+
+  return (
+    <>
+      <div style={{ display: 'flex', alignItems: 'center' }}>
+        <span style={{
+          fontFamily: 'ui-monospace, Menlo, monospace',
+          fontSize: 9,
+          letterSpacing: '0.04em',
+          color: t.faint,
+          opacity: 0.7,
+        }}>
+          {parts.join(' · ')}
+        </span>
+        <button
+          onClick={handleCopy}
+          style={{
+            marginLeft: 'auto',
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            padding: '2px 4px',
+            display: 'flex',
+            alignItems: 'center',
+            color: t.faint,
+            opacity: 0.45,
+            lineHeight: 1,
+          }}
+        >
+          {copied ? <Check size={11} /> : <Copy size={11} />}
+        </button>
+      </div>
+      <div style={{
+        height: 1,
+        width: effortW,
+        background: `linear-gradient(to right, ${t.divider}, transparent)`,
+        marginTop: 2,
+      }} />
+    </>
   );
 }
 
@@ -691,10 +776,13 @@ function ChatTab({
     'What can you do that would genuinely help me today?',
   ]);
   const [compactBanner, setCompactBanner] = useState<{ tokensSaved: number; error?: boolean } | null>(null);
+  const pop = useRouter(s => s.pop);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [tappedIndex, setTappedIndex] = useState<number | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const touchStartX = useRef(0);
+  const touchStartY = useRef(0);
   const compact = useCompactConversation();
 
   useEffect(() => {
@@ -1123,7 +1211,16 @@ function ChatTab({
       <div
         className="no-scrollbar"
         style={{ flex: 1, overflowY: 'auto', padding: '24px 32px 8px', display: 'flex', flexDirection: 'column', gap: 28 }}
-        onTouchStart={() => setTappedIndex(null)}
+        onTouchStart={e => {
+          setTappedIndex(null);
+          touchStartX.current = e.touches[0].clientX;
+          touchStartY.current = e.touches[0].clientY;
+        }}
+        onTouchEnd={e => {
+          const dx = e.changedTouches[0].clientX - touchStartX.current;
+          const dy = Math.abs(e.changedTouches[0].clientY - touchStartY.current);
+          if (dx > 60 && dy < 40) pop();
+        }}
       >
         {mergedMessages.map((m, i) => {
           const isActiveStream = isStreaming && i === mergedMessages.length - 1 && m.role === 'assistant' && !m._proactiveId;
@@ -1222,18 +1319,6 @@ function ChatTab({
             );
           }
 
-          // For regenerate: find the preceding user message in the original messages array
-          // (not mergedMessages, since setMessages operates on the original list)
-          const messagesBeforeThis = mergedMessages.slice(0, i).filter(x => !x._proactiveId);
-          const lastRealUserMsg = [...messagesBeforeThis].reverse().find(x => x.role === 'user');
-          const lastRealUserMsgOrigIdx = lastRealUserMsg
-            ? messages.findIndex(x => x === lastRealUserMsg || (x.content === lastRealUserMsg.content && x.role === 'user' && x._ts === lastRealUserMsg._ts))
-            : -1;
-          const handleRegenerate = lastRealUserMsg && lastRealUserMsgOrigIdx >= 0 ? () => {
-            setMessages(prev => prev.slice(0, lastRealUserMsgOrigIdx));
-            handleSend(lastRealUserMsg.content);
-          } : undefined;
-
           return (
             <div
               key={i}
@@ -1265,67 +1350,7 @@ function ChatTab({
                   <MdContent content={m.content} t={t} />
                 </div>
               )}
-              {!isActiveStream && m.content && (
-                <div style={{
-                  opacity: isVisible ? 1 : 0,
-                  transition: 'opacity 0.15s',
-                  pointerEvents: isVisible ? 'auto' : 'none',
-                }}>
-                  <MessageActions
-                    content={m.content}
-                    isAssistant={true}
-                    onRegenerate={handleRegenerate}
-                    t={t}
-                  />
-                </div>
-              )}
-              {!isActiveStream && m.latencyMs !== undefined && (() => {
-                const relTime = fmtRelative(m._ts, m.createdAt);
-                const tokStr = (() => {
-                  if (m.promptTokens != null && m.completionTokens != null) {
-                    return `p:${m.promptTokens.toLocaleString()} c:${m.completionTokens.toLocaleString()}`;
-                  }
-                  if (m.tokensUsed != null && m.tokensUsed > 0) {
-                    return `${m.tokensUsed.toLocaleString()} tok`;
-                  }
-                  return undefined;
-                })();
-                const memStr = m.memoriesUsed != null && m.memoriesUsed > 0
-                  ? `${m.memoriesUsed} mem`
-                  : undefined;
-                const parts = [
-                  `${(m.latencyMs / 1000).toFixed(1)}s`,
-                  tokStr,
-                  memStr,
-                  relTime || undefined,
-                ].filter(Boolean);
-                const totalTok = (m.promptTokens ?? 0) + (m.completionTokens ?? 0);
-                const PER_MSG_MAX = 4000;
-                const tokForBar = totalTok > 0 ? totalTok : (m.tokensUsed ?? 0);
-                const effortW = tokForBar > 0
-                  ? `${Math.min(Math.max(tokForBar / PER_MSG_MAX, 0.08), 1) * 100}%`
-                  : '8%';
-                return (
-                  <>
-                    <p style={{
-                      fontFamily: 'ui-monospace, Menlo, monospace',
-                      fontSize: 9,
-                      letterSpacing: '0.04em',
-                      color: t.faint,
-                      margin: 0,
-                      opacity: 0.7,
-                    }}>
-                      {parts.join(' · ')}
-                    </p>
-                    <div style={{
-                      height: 1,
-                      width: effortW,
-                      background: `linear-gradient(to right, ${t.divider}, transparent)`,
-                      marginTop: 2,
-                    }} />
-                  </>
-                );
-              })()}
+              {!isActiveStream && <AssistantMeta m={m} t={t} />}
             </div>
           );
         })}
@@ -1525,8 +1550,9 @@ function ChatTab({
               color: t.text,
               fontFamily: 'inherit',
               lineHeight: 1.5,
+              minHeight: 52,
             }}
-            rows={1}
+            rows={2}
           />
           {/* Compact button — visible when conversation is long enough */}
           {activeConversationId && messages.length >= 10 && !isStreaming && (
