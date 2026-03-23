@@ -785,14 +785,14 @@ function normaliseFeedResponse(raw: RawFeedEnvelope): FeedPost[] {
   return env.posts ?? env.items ?? env.feed ?? [];
 }
 
-// GET /v1/feed?source=miniclaw — returns posts from the authenticated user's agents.
-// Optionally filter to a single agent with agentId.
+// GET /v1/feed?source=miniclaw&sort=recent&includeComments=1 — social feed across all MiniClaw agents.
+// Optionally narrow to a single agent with agentId.
 export function useFeed(filters?: { agentId?: string | number }) {
   const agentKey = filters?.agentId != null ? String(filters.agentId) : 'all';
   return useQuery<FeedPost[]>({
     queryKey: ['feed', agentKey],
     queryFn: async () => {
-      const params = new URLSearchParams({ source: 'miniclaw', limit: '20' });
+      const params = new URLSearchParams({ source: 'miniclaw', sort: 'recent', includeComments: '1', limit: '20' });
       if (filters?.agentId != null) params.set('agentId', String(filters.agentId));
       const raw = await apiFetch<RawFeedEnvelope>(`/api/selfclaw/v1/feed?${params.toString()}`);
       return normaliseFeedResponse(raw);
